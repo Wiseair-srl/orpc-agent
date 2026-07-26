@@ -1,0 +1,75 @@
+# oRPC Agent documentation
+
+> Make agents first-class clients of your oRPC application.
+>
+> **Status:** Design phase. These documents define the proposed v0.1 of oRPC Agent — they are the source of truth the implementation is built from. Every API is **Proposed API** until packages ship. Independent community project, not affiliated with the oRPC maintainers.
+
+**Start here:** [Getting started](getting-started.md) · **The idea in one page:** [Architecture overview](architecture/overview.md) · **The worked example:** [Customer-support agent](examples/customer-support-agent.md)
+
+## Documentation map
+
+Audience key: **U** = application developers using the framework · **I** = implementers/contributors building it · **S** = security reviewers.
+
+### Concepts — the mental model (U)
+
+| Doc | Answers | Builds on |
+|---|---|---|
+| [capabilities](concepts/capabilities.md) | What is a capability; why not "tool"; granularity | — |
+| [registry](concepts/registry.md) | Identity, inclusion, filtering | capabilities |
+| [runtime](concepts/runtime.md) | What executes; the result envelope | capabilities |
+| [context](concepts/context.md) | Actor vs execution context; `ctx.agent` | runtime |
+| [policies](concepts/policies.md) | Decisions, phases, precedence — normative semantics | runtime |
+| [approvals](concepts/approvals.md) | The lifecycle; input binding — normative semantics | policies |
+| [errors](concepts/errors.md) | Two-face errors; stages; model feedback | runtime |
+| [lifecycle](concepts/lifecycle.md) | One request end-to-end, narrated | all of the above |
+
+### Architecture — normative design (I)
+
+| Doc | Answers |
+|---|---|
+| [overview](architecture/overview.md) | Layers, boundaries, the five core objects |
+| [execution-pipeline](architecture/execution-pipeline.md) | **The** stage-by-stage runtime spec (cited as "stage N") |
+| [package-boundaries](architecture/package-boundaries.md) | Five packages, dependency rules, non-responsibilities |
+| [adapter-model](architecture/adapter-model.md) | The four adapter obligations; conformance |
+| [decisions](architecture/decisions.md) | ADR-001…011 |
+
+### Security — binding invariants (S, U, I)
+
+| Doc | Answers |
+|---|---|
+| [security-model](security/security-model.md) | SI-1…SI-12; the five gates; honest non-claims |
+| [authorization](security/authorization.md) | Four layers; middleware authority; multi-tenancy |
+| [prompt-injection](security/prompt-injection.md) | What's bounded, what isn't, what's yours |
+| [sensitive-data](security/sensitive-data.md) | Five lenses; redaction defaults |
+| [idempotency-and-retries](security/idempotency-and-retries.md) | Exact guarantees and non-guarantees |
+| [threat-model](security/threat-model.md) | Assets, adversaries, T1–T15 |
+
+### Adapters (U)
+
+[ai-sdk](adapters/ai-sdk.md) · [mcp](adapters/mcp.md) · [opentelemetry](adapters/opentelemetry.md) · [testing](adapters/testing.md)
+
+### Guides — task-oriented (U)
+
+[defining-capabilities](guides/defining-capabilities.md) · [capability-exposure](guides/capability-exposure.md) · [adding-policies](guides/adding-policies.md) · [human-approval](guides/human-approval.md) · [application-context](guides/application-context.md) · [auditing](guides/auditing.md) · [testing-capabilities](guides/testing-capabilities.md) · [migrating-existing-tools](guides/migrating-existing-tools.md)
+
+### Reference — proposed API contracts (U, I)
+
+[core](reference/core.md) · [metadata](reference/metadata.md) · [runtime](reference/runtime.md) · [events](reference/events.md) · [errors](reference/errors.md) · [configuration](reference/configuration.md)
+
+### Project (I)
+
+| Doc | Answers |
+|---|---|
+| [implementation/brief](implementation/brief.md) | The definitive build instructions for the coding agent |
+| [implementation/milestones](implementation/milestones.md) | M1–M9 increments with acceptance criteria |
+| [open-questions](open-questions.md) | Every unresolved decision, in one place |
+| [roadmap](roadmap.md) → [ROADMAP](../ROADMAP.md) | What's v0.1, what's later, what's never |
+| [faq](faq.md) · [glossary](glossary.md) | Quick answers · enforced terminology |
+| [contributing/](contributing/development.md) | Dev setup, docs style, releases, governance |
+
+## Reading paths
+
+- **"Should we adopt this?"** — [overview](architecture/overview.md) → [security-model](security/security-model.md) → [example](examples/customer-support-agent.md) → [faq](faq.md)
+- **"I'm integrating it."** — [getting-started](getting-started.md) → guides in order → [reference](reference/core.md)
+- **"I'm reviewing its security."** — all six security docs → [execution-pipeline](architecture/execution-pipeline.md) → [threat-model](security/threat-model.md)
+- **"I'm implementing it."** — [implementation/brief](implementation/brief.md) → [execution-pipeline](architecture/execution-pipeline.md) → [reference](reference/core.md) → [milestones](implementation/milestones.md)
