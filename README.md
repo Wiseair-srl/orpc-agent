@@ -7,7 +7,7 @@
 [![CI](https://github.com/Wiseair-srl/orpc-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/Wiseair-srl/orpc-agent/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%E2%89%A520.19-brightgreen.svg)](package.json)
-[![Status](https://img.shields.io/badge/status-v0.1%20unpublished-orange.svg)](ROADMAP.md)
+[![npm](https://img.shields.io/npm/v/%40orpc-agent%2Fcore?label=npm&color=cb3837)](https://www.npmjs.com/package/@orpc-agent/core)
 
 [Getting started](docs/getting-started.md) · [Architecture](docs/architecture/execution-pipeline.md) · [Security model](docs/security/security-model.md) · [Examples](docs/examples/customer-support-agent.md) · [Roadmap](ROADMAP.md)
 
@@ -15,11 +15,15 @@
 
 Your application UI, an AI runtime, an MCP client, a workflow, and your tests can all call the same typed oRPC procedures, under one set of validation rules, permissions, approvals, execution policies, and observability.
 
-> [!IMPORTANT]
-> **v0.1 is implemented in this repository and not yet published to npm.** You get the complete design documentation and the code built from it: five packages under [`packages/`](packages) (core, ai-sdk, mcp, opentelemetry, testing) plus the runnable [customer-support reference app](examples/customer-support). CI runs the governance suite on every push (208 tests across 18 files). Publication waits on scope registration ([Q1](docs/open-questions.md#q1)); progress lives in the [ROADMAP](ROADMAP.md).
+> [!NOTE]
+> **v0.1 is published to npm** as five packages: [`@orpc-agent/core`](https://www.npmjs.com/package/@orpc-agent/core), [`@orpc-agent/ai-sdk`](https://www.npmjs.com/package/@orpc-agent/ai-sdk), [`@orpc-agent/mcp`](https://www.npmjs.com/package/@orpc-agent/mcp), [`@orpc-agent/opentelemetry`](https://www.npmjs.com/package/@orpc-agent/opentelemetry), [`@orpc-agent/testing`](https://www.npmjs.com/package/@orpc-agent/testing). The design documentation in [`docs/`](docs) is normative; CI runs the governance suite on every push (208 tests across 18 files). Progress lives in the [ROADMAP](ROADMAP.md).
 
 ```bash
-# try it from a clean checkout
+pnpm add @orpc-agent/core @orpc/server
+```
+
+```bash
+# or try it from a clean checkout
 pnpm install && pnpm build && pnpm test
 pnpm --filter customer-support-example demo   # the documented end-to-end flow, scripted
 pnpm --filter mastra-task-board-example dev   # full-stack example: board UI + Mastra agent

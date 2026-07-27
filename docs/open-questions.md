@@ -1,13 +1,9 @@
 # Open design questions
 
-> **Status:** Living document. Every unresolved decision lives here — not scattered through the docs. Each entry states the decision needed, options, a recommendation, implications, and whether v0.1 implementation is blocked. With v0.1 implemented, **Q2 is resolved** (see its entry); none of the rest blocked the build, and **Q1 blocks only *publishing***.
+> **Status:** Living document. Every unresolved decision lives here — not scattered through the docs. Each entry states the decision needed, options, a recommendation, implications, and whether v0.1 implementation is blocked. With v0.1 implemented and published, **Q1 and Q2 are resolved** (see their entries); none of the rest blocked the build.
 
 ## Q1 — Final npm scope <a id="q1"></a>
-**Decision.** Confirm `@orpc-agent/*` (register the scope; courtesy note to oRPC maintainers re: naming proximity).
-**Options.** (a) `@orpc-agent/*`; (b) different name entirely (e.g. `@capably/*`) avoiding any oRPC-adjacent claim; (c) seek oRPC blessing for upstream scope.
-**Recommendation.** (a), with the independence disclaimer everywhere; revisit (c) only if maintainers initiate.
-**Implications.** Rename before first publish is mechanical; after, it's a breaking migration.
-**Blocking?** Publishing only (M-release). Code uses the placeholder meanwhile (ADR-011).
+**Status: RESOLVED (2026-07-27).** Option (a) confirmed: npm org `orpc-agent` registered (owner: pbwise), all five packages published at 0.1.0 under `@orpc-agent/*` with the independence disclaimer in every description and README. Release flow: changesets (linked lockstep across `@orpc-agent/*`), `pnpm release` locally or the CI release job on main (needs `NPM_TOKEN` + `RELEASE_TOKEN` secrets). Courtesy note to oRPC maintainers still pending.
 
 ## Q2 — oRPC peer version range <a id="q2"></a>
 **Status: RESOLVED (v0.1).** Pinned `@orpc/server ^1.14.10`; the runtime uses the `call` utility (middleware chain runs unchanged); stage-5 validation is runtime-side (governance needs the value pre-execution) while the handler's value comes from oRPC's own in-call parse; output validation is delegated to oRPC's in-call validation and mapped to `OUTPUT_INVALID`. Full findings: [ADR-001 addendum](architecture/decisions.md#adr-001-orpc-procedures-are-the-source-of-truth).

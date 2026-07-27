@@ -1,8 +1,8 @@
 # Roadmap
 
-> **Status:** v0.1 implemented in-repo (all acceptance criteria green, including the MCP adapter — it did not slip). No packages are published yet; publication awaits scope registration ([Q1](docs/open-questions.md#q1)). Scope commitments below are firm.
+> **Status:** v0.1 implemented and **published to npm** (all acceptance criteria green, including the MCP adapter — it did not slip). Five packages live under `@orpc-agent/*` at 0.1.0 ([Q1 resolved](docs/open-questions.md#q1)). Scope commitments below are firm.
 
-## Now — v0.1 "Governed core" (implemented; publication pending)
+## Now — v0.1 "Governed core" (published)
 
 The smallest coherent release proving the thesis: *define a capability once, expose it through multiple governed surfaces.*
 

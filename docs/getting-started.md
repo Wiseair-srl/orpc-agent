@@ -1,6 +1,6 @@
 # Getting started
 
-> **Status:** Implemented (v0.1, in-repo). Packages are **not yet published** to npm; inside this repository the walkthrough below works as written against the workspace packages, and the [customer-support example](examples/customer-support-agent.md) runs it end to end.
+> **Status:** Implemented and published (v0.1). Install the packages from npm (`pnpm add @orpc-agent/core @orpc/server`); inside this repository the walkthrough below also works as written against the workspace packages, and the [customer-support example](examples/customer-support-agent.md) runs it end to end.
 
 Goal: from an existing oRPC app to a governed AI-SDK tool call in five steps — then the one-line paths to everything else.
 
