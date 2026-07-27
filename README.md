@@ -1,10 +1,22 @@
+<div align="center">
+
 # oRPC Agent
 
-> Make agents first-class clients of your oRPC application.
+**Make agents first-class clients of your oRPC application.**
 
-Expose the same typed oRPC procedures to application UIs, AI runtimes, MCP clients, workflows, and tests — with shared validation, permissions, approvals, execution policies, and observability.
+[![CI](https://github.com/Wiseair-srl/orpc-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/Wiseair-srl/orpc-agent/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Node](https://img.shields.io/badge/node-%E2%89%A520.19-brightgreen.svg)](package.json)
+[![Status](https://img.shields.io/badge/status-v0.1%20unpublished-orange.svg)](ROADMAP.md)
 
-**⚠️ Project status: v0.1 implemented in-repo, not yet published.** This repository contains the complete design documentation **and** the v0.1 implementation built from it: five packages under [`packages/`](packages) (core, ai-sdk, mcp, opentelemetry, testing) and the runnable [customer-support reference app](examples/customer-support). The full governance test suite runs in CI (`pnpm install && pnpm build && pnpm test`); npm publication is pending scope registration ([Q1](docs/open-questions.md#q1)). Follow the [ROADMAP](ROADMAP.md).
+[Getting started](docs/getting-started.md) · [Architecture](docs/architecture/execution-pipeline.md) · [Security model](docs/security/security-model.md) · [Examples](docs/examples/customer-support-agent.md) · [Roadmap](ROADMAP.md)
+
+</div>
+
+Your application UI, an AI runtime, an MCP client, a workflow, and your tests can all call the same typed oRPC procedures, under one set of validation rules, permissions, approvals, execution policies, and observability.
+
+> [!IMPORTANT]
+> **v0.1 is implemented in this repository and not yet published to npm.** You get the complete design documentation and the code built from it: five packages under [`packages/`](packages) (core, ai-sdk, mcp, opentelemetry, testing) plus the runnable [customer-support reference app](examples/customer-support). CI runs the governance suite on every push (208 tests across 18 files). Publication waits on scope registration ([Q1](docs/open-questions.md#q1)); progress lives in the [ROADMAP](ROADMAP.md).
 
 ```bash
 # try it from a clean checkout
@@ -16,36 +28,37 @@ pnpm docs:dev                                 # browse the documentation site lo
 
 ## The idea
 
-An AI agent must not call business logic directly. It requests a **capability**: an ordinary oRPC procedure enriched with explicit governance metadata — exposure per surface, side-effect and risk classification, policies, approvals, redaction. One definition serves every client:
+An AI agent must not call business logic directly. It requests a capability: an ordinary oRPC procedure carrying explicit governance metadata, which says where it is exposed, whether it writes, how risky it is, which policies and approvals apply, and what gets redacted on the way out.
 
 > Define a capability once. Expose it through multiple governed surfaces.
 
-```text
-        Model provider / agent runtime
-                     |
-                     v
-             Protocol adapter
-      @orpc-agent/ai-sdk   @orpc-agent/mcp
-                     |
-                     v
-            oRPC Agent runtime
-   exposure · validation · policies · approvals
-     · timeout/cancel · audit · tracing
-                     |
-                     v
-             oRPC capabilities
-   your procedures — middleware and app
-     authorization run here, unchanged
-                     |
-                     v
-     application services and infrastructure
+```mermaid
+flowchart TD
+    M["Model provider / agent runtime"]
+    A["Protocol adapter<br/>@orpc-agent/ai-sdk · @orpc-agent/mcp"]
+    R["oRPC Agent runtime<br/>exposure · validation · policies · approvals<br/>timeout and cancel · audit · tracing"]
+    C["oRPC capabilities<br/>your procedures. Middleware and app<br/>authorization run here, unchanged"]
+    S["Application services and infrastructure"]
+
+    M -->|"tool call (untrusted)"| A
+    A -->|"actor + context"| R
+    R -->|"validated input"| C
+    C --> S
+
+    style M stroke:#f97316,stroke-width:2px
+    style A stroke:#f97316,stroke-width:2px
+    style R stroke:#22c55e,stroke-width:3px
+    style C stroke:#3b82f6,stroke-width:2px
+    style S stroke:#3b82f6,stroke-width:2px
 ```
+
+Everything above the runtime is untrusted. Everything below it is your application, unchanged.
 
 ## Why
 
-Teams with typed oRPC procedures keep re-implementing them as hand-written AI tools: duplicated schemas that drift, ad-hoc auth per tool, string errors that leak internals, no audit trail, no approval story. Meanwhile "the model can't see the tool" gets mistaken for security.
+Teams with typed oRPC procedures keep re-implementing them as hand-written AI tools. The schemas get duplicated and drift apart, auth is written per tool, string errors leak internals, nothing is audited, and there is no story for approvals. Meanwhile "the model can't see the tool" gets mistaken for security.
 
-oRPC Agent is the layer between agent runtimes and business logic: it agent-enables an **existing** oRPC application without a new full-stack framework, and treats the model end of every surface as untrusted input. It stays deliberately narrow — UI-independent, database-independent, auth-provider-independent, model-provider-independent, workflow-engine-independent.
+oRPC Agent sits between agent runtimes and business logic. It agent-enables an existing oRPC application instead of asking you to adopt a new full-stack framework, and it treats the model end of every surface as untrusted input. The scope stays narrow on purpose: no opinion about your UI, database, auth provider, model provider, or workflow engine.
 
 ## Quick start
 
@@ -82,51 +95,86 @@ const tools = await toAISDKTools(runtime, { actor, context });
 
 Full walkthrough: [docs/getting-started.md](docs/getting-started.md).
 
-## Core features (v0.1, implemented)
+## What happens on a call
 
-- **Capabilities, not tools** — procedures are the single source of truth; "tool" is just an adapter representation ([ADR-001](docs/architecture/decisions.md#adr-001-orpc-procedures-are-the-source-of-truth), [ADR-002](docs/architecture/decisions.md#adr-002-capability-is-the-internal-abstraction))
-- **Explicit, per-surface exposure** — deny by default across `direct` / `aiSdk` / `mcp` / `workflow` / `test`
-- **A single governed pipeline** — validation, policies, approvals, timeout/cancellation, retries, redaction, error normalization: [15 specified stages](docs/architecture/execution-pipeline.md)
-- **Deterministic policies** — allow / deny / hide / require-approval, deny-wins precedence, fail-closed
-- **Input-bound approvals** — hash-bound to the exact validated input, single-use, expiring, no self-approval
-- **Two-face errors** — model-safe public face, private diagnostics; concealment for hidden capabilities
-- **Structured audit events + OpenTelemetry tracing** — storage-neutral, payload-free by default
-- **Deterministic testing** — assert exposure, policies, approvals, redaction with no LLM in the loop
+Every invocation goes through the same [15 stages](docs/architecture/execution-pipeline.md), in the same order, on every surface. A refund that needs a manager looks like this:
 
-## Security model in one paragraph
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Model
+    participant Adapter as Adapter (ai-sdk / mcp)
+    participant Runtime as Agent runtime
+    participant Proc as Your oRPC procedure
 
-Everything model-side of the adapter is untrusted. Twelve binding invariants (SI-1…SI-12) govern the design: deny-by-default exposure; enforcement at execution time (tool filtering is UX, not security); the model is never the actor; approvals come from outside the model and bind the exact input; policy failures fail closed; hidden and nonexistent capabilities are indistinguishable; internals never reach models; audit and traces carry no payloads by default; writes are never auto-retried; every execution is bounded and cancellable. Your oRPC middleware remains the authoritative authorization layer on every call. **Not claimed:** solving prompt injection (impact is bounded, not occurrence), exactly-once execution, or safety without application-level authorization. Read: [security model](docs/security/security-model.md), [threat model](docs/security/threat-model.md).
+    Model->>Adapter: refunds.issue({ orderId, amount })
+    Adapter->>Runtime: execute(capability, input, actor, context)
+    Runtime->>Runtime: exposure check · input validation · actor check
+    Runtime->>Runtime: policies → require approval (amount > $500)
+    Runtime-->>Model: pending approval (input hash bound, single use)
+    Note over Runtime: A human approves out of band,<br/>never the model
+    Model->>Adapter: retry with approval token
+    Adapter->>Runtime: execute(...)
+    Runtime->>Proc: validated input, your middleware runs
+    Proc-->>Runtime: result
+    Runtime->>Runtime: output validation · redaction · audit event
+    Runtime-->>Model: model-safe result
+```
+
+## What v0.1 gives you
+
+Procedures are the single source of truth, and a "tool" is only how an adapter represents one ([ADR-001](docs/architecture/decisions.md#adr-001-orpc-procedures-are-the-source-of-truth), [ADR-002](docs/architecture/decisions.md#adr-002-capability-is-the-internal-abstraction)). On top of that:
+
+- Exposure is explicit and per surface, denied by default across `direct`, `aiSdk`, `mcp`, `workflow`, and `test`
+- One governed pipeline handles validation, policies, approvals, timeout and cancellation, retries, redaction, and error normalization
+- Policies are deterministic: allow, deny, hide, or require approval, with deny winning and failures closing the gate
+- Approvals are hash-bound to the exact validated input, single-use, expiring, and never self-granted
+- Errors have two faces: a model-safe public one and private diagnostics, with concealment for hidden capabilities
+- Audit events and OpenTelemetry spans are storage-neutral and carry no payloads by default
+- Tests assert exposure, policies, approvals, and redaction with no LLM in the loop
+
+## Security model
+
+Everything model-side of the adapter is untrusted. Twelve binding invariants (SI-1 to SI-12) hold the design together:
+
+- Exposure is denied by default, and enforcement happens at execution time. Filtering the tool list is UX, not security
+- The model is never the actor, and approvals come from outside the model and bind the exact input
+- Policy failures fail closed. A hidden capability and a nonexistent one look identical from the outside
+- Internals never reach models. Audit records and traces carry no payloads by default
+- Writes are never auto-retried, and every execution is bounded and cancellable
+
+Your oRPC middleware stays the authoritative authorization layer on every call. What this does not claim: solving prompt injection (it bounds the impact, not the occurrence), exactly-once execution, or safety without application-level authorization. Read the [security model](docs/security/security-model.md) and the [threat model](docs/security/threat-model.md).
 
 ## Packages
 
 | Package | Purpose |
 |---|---|
-| `@orpc-agent/core` | Capability model, registry, runtime, policies, approvals, errors, events — no provider/protocol deps |
+| `@orpc-agent/core` | Capability model, registry, runtime, policies, approvals, errors, events. No provider or protocol dependencies |
 | `@orpc-agent/ai-sdk` | Vercel AI SDK v5 tools over the runtime |
 | `@orpc-agent/mcp` | MCP server adapter with per-session identity |
-| `@orpc-agent/opentelemetry` | Tracing adapter (spans + conventions) |
+| `@orpc-agent/opentelemetry` | Tracing adapter (spans and conventions) |
 | `@orpc-agent/testing` | Deterministic governance testing |
 
-Boundaries and rules: [package-boundaries](docs/architecture/package-boundaries.md). Scope name is a placeholder pending registration ([ADR-011](docs/architecture/decisions.md#adr-011-npm-scope-and-project-independence)).
+Boundaries and rules: [package-boundaries](docs/architecture/package-boundaries.md). The scope name is a placeholder pending registration ([ADR-011](docs/architecture/decisions.md#adr-011-npm-scope-and-project-independence)).
 
 ## Examples
 
-**Customer-support agent** (flagship): the dashboard UI, an AI assistant, and an MCP endpoint share nine governed capabilities: refunds over $500 require manager approval (input-hash-bound, single-use); sending customer messages requires human confirmation; refunds aren't exposed over MCP at all; PII is redacted from model-visible output; every step lands in the audit trail. The full narrative, code, and failure branches: [docs/examples/customer-support-agent.md](docs/examples/customer-support-agent.md).
+**Customer-support agent** (flagship). A dashboard UI, an AI assistant, and an MCP endpoint share nine governed capabilities. Refunds over $500 need manager approval, bound to the input hash and usable once. Sending a customer message needs human confirmation. Refunds are not exposed over MCP at all. PII is redacted from model-visible output, and every step lands in the audit trail. Narrative, code, and failure branches: [docs/examples/customer-support-agent.md](docs/examples/customer-support-agent.md).
 
-**Mastra task board** (full-stack): a React board on plain typed oRPC plus a [Mastra](https://mastra.ai) chat agent reaching the same four capabilities through the governed runtime — approvals in the UI, redaction, live audit ledger. Model-agnostic via OpenRouter (`pnpm --filter mastra-task-board-example dev`; needs Node ≥ 22.13). Walkthrough: [docs/examples/mastra-task-board.md](docs/examples/mastra-task-board.md).
+**Mastra task board** (full-stack). A React board on plain typed oRPC, plus a [Mastra](https://mastra.ai) chat agent that reaches the same four capabilities through the governed runtime, with approvals in the UI, redaction, and a live audit ledger. Model-agnostic via OpenRouter. Run it with `pnpm --filter mastra-task-board-example dev` (needs Node 22.13 or later). Walkthrough: [docs/examples/mastra-task-board.md](docs/examples/mastra-task-board.md).
 
 ## Non-goals
 
-No agent loop, planner, prompts, or memory. No workflow engine (durable execution integrates via adapters). No bundled databases for approvals or audit. No auth provider. No UI framework. No exactly-once claims. Not a replacement for oRPC — it requires it. Full list: [ROADMAP — non-goals](ROADMAP.md#non-goals-permanent).
+No agent loop, planner, prompts, or memory. No workflow engine, though durable execution integrates via adapters. No bundled databases for approvals or audit, no auth provider, no UI framework, no exactly-once claims. It does not replace oRPC either. It requires it. Full list: [ROADMAP, non-goals](ROADMAP.md#non-goals-permanent).
 
 ## Roadmap
 
-**v0.1 "Governed core"**: the five packages + reference example, per the [implementation brief](docs/implementation/brief.md). **v0.2 "Durability seams"**: persistent approval coordination, first workflow-engine adapter, MCP dynamic listings. **Later**: streaming capabilities, quotas, more adapters. Details and open questions: [ROADMAP.md](ROADMAP.md), [docs/open-questions.md](docs/open-questions.md).
+v0.1 "Governed core" is the five packages and the reference example, per the [implementation brief](docs/implementation/brief.md). v0.2 "Durability seams" adds persistent approval coordination, the first workflow-engine adapter, and MCP dynamic listings. After that: streaming capabilities, quotas, and more adapters. Details and open questions in [ROADMAP.md](ROADMAP.md) and [docs/open-questions.md](docs/open-questions.md).
 
 ## Contributing
 
-Design review, security analysis, and doc fixes are the most valuable contributions right now; implementation proceeds milestone by milestone. Start with [CONTRIBUTING.md](CONTRIBUTING.md); security reports via [SECURITY.md](SECURITY.md); conduct per the [Code of Conduct](CODE_OF_CONDUCT.md); decisions per [GOVERNANCE.md](GOVERNANCE.md).
+Design review, security analysis, and doc fixes are the most useful contributions right now. Implementation proceeds milestone by milestone. Start with [CONTRIBUTING.md](CONTRIBUTING.md), report security issues via [SECURITY.md](SECURITY.md), follow the [Code of Conduct](CODE_OF_CONDUCT.md), and see [GOVERNANCE.md](GOVERNANCE.md) for how decisions get made.
 
 ## License and independence
 
-MIT. oRPC Agent is an **independent community project** — not affiliated with, endorsed by, or maintained by the oRPC project. It builds on oRPC with respect and gratitude; if the oRPC maintainers ever want this work closer to home, the door is open ([ADR-011](docs/architecture/decisions.md#adr-011-npm-scope-and-project-independence)).
+MIT. oRPC Agent is an independent community project, not affiliated with, endorsed by, or maintained by the oRPC project. It builds on oRPC with respect and gratitude, and if the oRPC maintainers ever want this work closer to home, the door is open ([ADR-011](docs/architecture/decisions.md#adr-011-npm-scope-and-project-independence)).
