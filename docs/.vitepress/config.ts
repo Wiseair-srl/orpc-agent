@@ -72,7 +72,7 @@ export default defineConfig({
       { text: "Concepts", link: "/concepts/capabilities", activeMatch: "^/concepts/" },
       { text: "Reference", link: "/reference/metadata", activeMatch: "^/(reference|adapters)/" },
       { text: "Security", link: "/security/security-model", activeMatch: "^/security/" },
-      { text: "Example", link: "/examples/customer-support-agent", activeMatch: "^/examples/" },
+      { text: "Examples", link: "/examples/customer-support-agent", activeMatch: "^/examples/" },
       {
         text: "Project",
         activeMatch: "^/(roadmap|open-questions|faq|glossary|implementation|contributing|appendix)",
@@ -170,8 +170,11 @@ export default defineConfig({
         ],
       },
       {
-        text: "Example",
-        items: [{ text: "Customer-support agent", link: "/examples/customer-support-agent" }],
+        text: "Examples",
+        items: [
+          { text: "Customer-support agent", link: "/examples/customer-support-agent" },
+          { text: "Mastra task board", link: "/examples/mastra-task-board" },
+        ],
       },
       {
         text: "Project",

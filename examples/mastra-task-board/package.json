@@ -1,0 +1,42 @@
+{
+  "name": "mastra-task-board-example",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "dev": "concurrently -k -n server,web -c blue,green \"tsx watch src/server.ts\" \"vite --config web/vite.config.ts\"",
+    "build": "vite build --config web/vite.config.ts",
+    "start": "tsx src/server.ts",
+    "demo": "tsx src/demo.ts",
+    "typecheck": "tsc -p tsconfig.json && tsc -p web/tsconfig.json"
+  },
+  "dependencies": {
+    "@hono/node-server": "^2.0.12",
+    "@mastra/core": "^1.52.1",
+    "@orpc-agent/ai-sdk": "workspace:*",
+    "@orpc-agent/core": "workspace:*",
+    "@orpc-agent/testing": "workspace:*",
+    "@orpc/client": "^1.14.10",
+    "@orpc/server": "^1.14.10",
+    "ai": "^5.0.220",
+    "hono": "^4.12.32",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@ai-sdk/provider": "^2.0.0",
+    "@types/node": "^24.13.3",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.4",
+    "concurrently": "^10.0.4",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.2",
+    "vite": "^8.1.5",
+    "vitest": "^4.1.10"
+  }
+}

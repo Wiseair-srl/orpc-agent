@@ -10,6 +10,7 @@ Expose the same typed oRPC procedures to application UIs, AI runtimes, MCP clien
 # try it from a clean checkout
 pnpm install && pnpm build && pnpm test
 pnpm --filter customer-support-example demo   # the documented end-to-end flow, scripted
+pnpm --filter mastra-task-board-example dev   # full-stack example: board UI + Mastra agent
 pnpm docs:dev                                 # browse the documentation site locally
 ```
 
@@ -108,9 +109,11 @@ Everything model-side of the adapter is untrusted. Twelve binding invariants (SI
 
 Boundaries and rules: [package-boundaries](docs/architecture/package-boundaries.md). Scope name is a placeholder pending registration ([ADR-011](docs/architecture/decisions.md#adr-011-npm-scope-and-project-independence)).
 
-## Flagship example
+## Examples
 
-A customer-support agent where the dashboard UI, an AI assistant, and an MCP endpoint share nine governed capabilities: refunds over $500 require manager approval (input-hash-bound, single-use); sending customer messages requires human confirmation; refunds aren't exposed over MCP at all; PII is redacted from model-visible output; every step lands in the audit trail. The full narrative, code, and failure branches: [docs/examples/customer-support-agent.md](docs/examples/customer-support-agent.md).
+**Customer-support agent** (flagship): the dashboard UI, an AI assistant, and an MCP endpoint share nine governed capabilities: refunds over $500 require manager approval (input-hash-bound, single-use); sending customer messages requires human confirmation; refunds aren't exposed over MCP at all; PII is redacted from model-visible output; every step lands in the audit trail. The full narrative, code, and failure branches: [docs/examples/customer-support-agent.md](docs/examples/customer-support-agent.md).
+
+**Mastra task board** (full-stack): a React board on plain typed oRPC plus a [Mastra](https://mastra.ai) chat agent reaching the same four capabilities through the governed runtime — approvals in the UI, redaction, live audit ledger. Model-agnostic via OpenRouter (`pnpm --filter mastra-task-board-example dev`; needs Node ≥ 22.13). Walkthrough: [docs/examples/mastra-task-board.md](docs/examples/mastra-task-board.md).
 
 ## Non-goals
 
