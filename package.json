@@ -12,12 +12,16 @@
     "typecheck": "pnpm -r typecheck",
     "check:boundaries": "node scripts/check-boundaries.mjs",
     "check:docs": "node scripts/check-docs-consistency.mjs",
-    "check:api": "node scripts/check-api-surface.mjs"
+    "check:api": "node scripts/check-api-surface.mjs",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
   },
   "devDependencies": {
     "@orpc/server": "1.14.10",
     "@types/node": "^24.13.3",
     "typescript": "^5.9.2",
+    "vitepress": "^1.6.4",
     "vitest": "^4.1.10",
     "zod": "^4.4.3"
   }

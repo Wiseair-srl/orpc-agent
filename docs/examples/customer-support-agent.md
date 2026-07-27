@@ -1,6 +1,6 @@
 # Example: customer-support agent
 
-> **Status:** Implemented — the flagship reference application for v0.1, runnable under [`examples/customer-support/`](../../examples/customer-support). Its test suite is the executable version of this document; `pnpm --filter customer-support-example demo` prints the end-to-end flow below.
+> **Status:** Implemented — the flagship reference application for v0.1, runnable under `examples/customer-support/` in the repository. Its test suite is the executable version of this document; `pnpm --filter customer-support-example demo` prints the end-to-end flow below.
 
 One application, three clients of the same nine capabilities: a support dashboard (UI), an AI assistant in that dashboard (AI SDK), and an MCP endpoint for read-only external tooling. It exercises every v0.1 feature: authenticated context, org isolation, reads and writes, visibility, execution-time authorization, approval, audit, tracing, structured errors, cancellation, and deterministic tests.
 

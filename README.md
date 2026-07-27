@@ -10,6 +10,7 @@ Expose the same typed oRPC procedures to application UIs, AI runtimes, MCP clien
 # try it from a clean checkout
 pnpm install && pnpm build && pnpm test
 pnpm --filter customer-support-example demo   # the documented end-to-end flow, scripted
+pnpm docs:dev                                 # browse the documentation site locally
 ```
 
 ## The idea

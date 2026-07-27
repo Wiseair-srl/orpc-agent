@@ -1,0 +1,77 @@
+/**
+ * oRPC Agent docs theme. Deliberately distinct from oRPC's own branding
+ * (independent project): a governed-teal accent on the default theme.
+ */
+
+:root {
+  --vp-c-brand-1: #0d9488;
+  --vp-c-brand-2: #0f766e;
+  --vp-c-brand-3: #115e59;
+  --vp-c-brand-soft: rgba(13, 148, 136, 0.14);
+
+  --vp-home-hero-name-color: transparent;
+  --vp-home-hero-name-background: linear-gradient(120deg, #0d9488 30%, #38bdf8);
+  --vp-home-hero-image-background-image: linear-gradient(
+    -45deg,
+    rgba(13, 148, 136, 0.55) 40%,
+    rgba(56, 189, 248, 0.45) 60%
+  );
+  --vp-home-hero-image-filter: blur(56px);
+}
+
+.dark {
+  --vp-c-brand-1: #2dd4bf;
+  --vp-c-brand-2: #14b8a6;
+  --vp-c-brand-3: #0d9488;
+  --vp-c-brand-soft: rgba(45, 212, 191, 0.16);
+}
+
+/* Every page opens with a `> **Status:** …` blockquote; render these (and all
+   blockquotes) as quiet callouts instead of grey slabs. */
+.vp-doc blockquote {
+  border-left: 3px solid var(--vp-c-brand-1);
+  border-radius: 0 8px 8px 0;
+  background-color: var(--vp-c-brand-soft);
+  padding: 12px 16px;
+  margin: 16px 0;
+}
+
+.vp-doc blockquote > p {
+  font-size: 14px;
+  color: var(--vp-c-text-1);
+}
+
+/* Tables carry a lot of the normative content — give headers a little weight
+   and keep the text comfortably compact. */
+.vp-doc th {
+  background-color: var(--vp-c-bg-soft);
+  white-space: nowrap;
+}
+
+.vp-doc table {
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+
+/* ASCII pipeline/architecture diagrams: tighten line height so box art
+   reads as one figure. */
+.vp-doc div[class*="language-text"] pre {
+  line-height: 1.35;
+}
+
+/* Inline code chips slightly tinted toward the brand for scannability. */
+.vp-doc :not(pre) > code {
+  border-radius: 5px;
+}
+
+/* Home: feature cards get a hover lift. */
+.VPFeature {
+  transition:
+    border-color 0.25s,
+    transform 0.25s;
+}
+
+.VPFeature:hover {
+  border-color: var(--vp-c-brand-1);
+  transform: translateY(-2px);
+}

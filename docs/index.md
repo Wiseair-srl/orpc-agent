@@ -1,7 +1,51 @@
-# oRPC Agent documentation
+---
+layout: home
 
-> Make agents first-class clients of your oRPC application.
->
+hero:
+  name: oRPC Agent
+  text: Governed capabilities for AI agents
+  tagline: Make agents first-class clients of your oRPC application — the same typed procedures, with explicit exposure, policies, approvals, audit, and tracing.
+  image:
+    src: /logo.svg
+    alt: oRPC Agent
+  actions:
+    - theme: brand
+      text: Get started
+      link: /getting-started
+    - theme: alt
+      text: The worked example
+      link: /examples/customer-support-agent
+    - theme: alt
+      text: Security model
+      link: /security/security-model
+
+features:
+  - icon: 🧩
+    title: Capabilities, not tools
+    details: An ordinary oRPC procedure plus governance metadata is a capability. One definition serves your UI, AI runtimes, MCP clients, and tests — no duplicated schemas that drift.
+    link: /concepts/capabilities
+  - icon: 🚪
+    title: Deny-by-default exposure
+    details: Nothing is reachable on any surface without an explicit expose flag — and filtering is UX, never security. Every invocation re-checks everything at execution time.
+    link: /guides/capability-exposure
+  - icon: ⚖️
+    title: Deterministic policies
+    details: allow / deny / hide / require-approval with deny-wins precedence. Policies that throw or time out fail closed. Every stance lands in the audit record.
+    link: /concepts/policies
+  - icon: ✅
+    title: Input-bound approvals
+    details: Approvals hash-bind the exact validated input, execute at most once, expire, and reject self-approval. Models can trigger the flow; they can never decide it.
+    link: /concepts/approvals
+  - icon: 🎭
+    title: Two-face errors
+    details: A model-safe public face and a private diagnostic body. Hidden, unexposed, and nonexistent capabilities are externally indistinguishable.
+    link: /concepts/errors
+  - icon: 🔍
+    title: Evidence built in
+    details: Structured audit events and OpenTelemetry spans for every governed step — payload-free by default — plus a testing package that asserts governance with no LLM in the loop.
+    link: /guides/auditing
+---
+
 > **Status:** v0.1 implemented in-repo, not yet published to npm. These documents are the source of truth the implementation was built from; where the build forced a change, the [decision records](architecture/decisions.md) carry an as-built addendum. Independent community project, not affiliated with the oRPC maintainers.
 
 **Start here:** [Getting started](getting-started.md) · **The idea in one page:** [Architecture overview](architecture/overview.md) · **The worked example:** [Customer-support agent](examples/customer-support-agent.md)
@@ -31,7 +75,7 @@ Audience key: **U** = application developers using the framework · **I** = impl
 | [execution-pipeline](architecture/execution-pipeline.md) | **The** stage-by-stage runtime spec (cited as "stage N") |
 | [package-boundaries](architecture/package-boundaries.md) | Five packages, dependency rules, non-responsibilities |
 | [adapter-model](architecture/adapter-model.md) | The four adapter obligations; conformance |
-| [decisions](architecture/decisions.md) | ADR-001…011 |
+| [decisions](architecture/decisions.md) | ADR-001…012 |
 
 ### Security — binding invariants (S, U, I)
 
@@ -52,7 +96,7 @@ Audience key: **U** = application developers using the framework · **I** = impl
 
 [defining-capabilities](guides/defining-capabilities.md) · [capability-exposure](guides/capability-exposure.md) · [adding-policies](guides/adding-policies.md) · [human-approval](guides/human-approval.md) · [application-context](guides/application-context.md) · [auditing](guides/auditing.md) · [testing-capabilities](guides/testing-capabilities.md) · [migrating-existing-tools](guides/migrating-existing-tools.md)
 
-### Reference — proposed API contracts (U, I)
+### Reference — API contracts (U, I)
 
 [core](reference/core.md) · [metadata](reference/metadata.md) · [runtime](reference/runtime.md) · [events](reference/events.md) · [errors](reference/errors.md) · [configuration](reference/configuration.md)
 
@@ -63,7 +107,7 @@ Audience key: **U** = application developers using the framework · **I** = impl
 | [implementation/brief](implementation/brief.md) | The definitive build instructions for the coding agent |
 | [implementation/milestones](implementation/milestones.md) | M1–M9 increments with acceptance criteria |
 | [open-questions](open-questions.md) | Every unresolved decision, in one place |
-| [roadmap](roadmap.md) → [ROADMAP](../ROADMAP.md) | What's v0.1, what's later, what's never |
+| [roadmap](roadmap.md) | What's v0.1, what's later, what's never |
 | [faq](faq.md) · [glossary](glossary.md) | Quick answers · enforced terminology |
 | [contributing/](contributing/development.md) | Dev setup, docs style, releases, governance |
 

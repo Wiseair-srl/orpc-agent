@@ -22,14 +22,35 @@
 - Honest-claims vocabulary: "designed to", "reduces the impact of", "requires application-level authorization" — never "fully secure", "solves prompt injection", "exactly-once", "zero configuration", "production-safe by default".
 - Concise where possible, detailed where lifecycle or security semantics matter. No decorative prose.
 
-## Consistency checks before merging
+## Site tooling and local preview
 
-Run the grep pass (a script lands with M1; until then, manually):
+The docs render as a VitePress site; config lives in `docs/.vitepress/` (nav, sidebar, local search, theme).
 
 ```bash
+pnpm docs:dev       # live preview at localhost:5173
+pnpm docs:build     # production build — FAILS on dead links (runs in CI)
+```
+
+Conventions the site relies on:
+
+- New pages must be added to the sidebar in `docs/.vitepress/config.ts`.
+- Links to repository-root files (`ROADMAP.md`, `CONTRIBUTING.md`, `SECURITY.md`, `GOVERNANCE.md`, `CODE_OF_CONDUCT.md`) are rewritten at render time to the wrapper pages under `/roadmap` and `/appendix/*`, which `@include` the root markdown — link the root file with a normal relative path and the site handles it. Links into source directories (`packages/`, `examples/`) cannot render on the site; name the path in inline code instead.
+- The `> **Status:** …` blockquote under each H1 is styled as a callout by the theme — keep it the first element after the title.
+
+## Consistency checks before merging
+
+Run the checks:
+
+```bash
+pnpm check:docs     # symbols, error codes, event names, spans vs implementation
+pnpm docs:build     # every relative link resolves
+```
+
+```bash
+# also verify manually when touching canon:
 # symbols that must not exist (old/renamed): defineAgentAction, AgentToolError, AgentMetadata, createOpenTelemetryPlugin
 # enums spelled exactly: "aiSdk" (never "ai-sdk" as a surface value), sideEffect values, error codes
-# every relative link resolves; every SI-n ≤ 12, ADR ≤ 011, stage ≤ 15, T ≤ 15, Q ≤ 11, M ≤ 9
+# every SI-n ≤ 12, ADR ≤ 012, stage ≤ 15, T ≤ 15, Q ≤ 11, M ≤ 9
 ```
 
 ## When code and docs disagree
