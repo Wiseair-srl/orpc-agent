@@ -1,6 +1,6 @@
 # Capabilities
 
-> **Status:** Design draft — v0.1 concepts. APIs shown are **Proposed API**.
+> **Status:** Implemented in v0.1 — v0.1 concepts. APIs shown are the as-built v0.1 surface.
 
 A **capability** is a governed application operation derived from an oRPC procedure. It is the central abstraction of oRPC Agent — not "tool", which is only how one adapter represents a capability on one surface ([ADR-002](../architecture/decisions.md#adr-002-capability-is-the-internal-abstraction)).
 

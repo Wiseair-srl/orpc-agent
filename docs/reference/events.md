@@ -1,6 +1,6 @@
 # Reference: events and tracing
 
-> **Status:** Proposed API — v0.1 design target. Stability: experimental (event names intended stable from 0.1; fields may be added, never repurposed).
+> **Status:** Implemented in v0.1. Stability: experimental (event names intended stable from 0.1; fields may be added, never repurposed).
 
 Package: `@orpc-agent/core` (emission, types); `@orpc-agent/opentelemetry` (span implementation). Distinctions between audit, tracing, logs, and metrics: [guides/auditing.md](../guides/auditing.md#audit-vs-tracing-vs-logs-vs-metrics).
 

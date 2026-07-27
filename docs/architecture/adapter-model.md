@@ -1,6 +1,6 @@
 # Adapter model
 
-> **Status:** Design draft — normative contract for v0.1 adapters. All APIs shown are **Proposed API**.
+> **Status:** Implemented in v0.1 — normative contract for v0.1 adapters. APIs shown are the as-built v0.1 surface.
 
 An **adapter** exposes capabilities to one external protocol or runtime. Adapters are thin by design: every governance decision belongs to the runtime, so that a capability behaves identically no matter which surface invokes it. If an adapter ever makes an authorization decision, that is a bug ([ADR-002](decisions.md#adr-002-capability-is-the-internal-abstraction), [ADR-005](decisions.md#adr-005-discovery-and-execution-authorization-are-separate)).
 
@@ -77,7 +77,7 @@ Adapters must forward whatever cancellation primitive their protocol provides; t
 Adapters own the mapping from protocol session to application identity:
 
 ```ts
-// Proposed API — MCP adapter option
+// MCP adapter option
 createContext: async (session) => ({
   actor: { id: session.userId, kind: "user" },
   context: await buildAppContext(session),   // the app's oRPC context

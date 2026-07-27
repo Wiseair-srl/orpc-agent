@@ -1,6 +1,6 @@
 # Contributing to oRPC Agent
 
-Thanks for your interest. The project is in **design phase**: the documentation in `docs/` is the source of truth, and the most valuable contributions right now are design review, security analysis, and documentation fixes — followed by implementation work against the [milestone plan](docs/implementation/milestones.md).
+Thanks for your interest. v0.1 is **implemented in-repo but unpublished**: the documentation in `docs/` remains the source of truth, and the code under `packages/` is built from it. The most valuable contributions right now are security analysis, review of the as-built code against the documented invariants, and documentation fixes — plus the v0.2 items on the [ROADMAP](ROADMAP.md).
 
 ## Ground rules
 

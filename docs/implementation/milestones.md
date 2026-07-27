@@ -1,6 +1,6 @@
 # Implementation milestones
 
-> **Status:** Normative plan for building v0.1. Companion to the [implementation brief](brief.md). Each increment is independently reviewable; do not start an increment before its dependencies are merged.
+> **Status:** Delivered — M1–M9 are all merged. Kept as the record of how v0.1 was sequenced. Companion to the [implementation brief](brief.md). Each increment is independently reviewable; do not start an increment before its dependencies are merged.
 
 ## Dependency graph
 

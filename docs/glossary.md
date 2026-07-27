@@ -1,6 +1,6 @@
 # Glossary
 
-> **Status:** Design draft. This vocabulary is enforced across all documentation and code. When two terms are listed as "not interchangeable", the distinction is load-bearing — using one for the other has caused real design bugs elsewhere.
+> **Status:** Implemented in v0.1. This vocabulary is enforced across all documentation and code. When two terms are listed as "not interchangeable", the distinction is load-bearing — using one for the other has caused real design bugs elsewhere.
 
 ## Core terms
 

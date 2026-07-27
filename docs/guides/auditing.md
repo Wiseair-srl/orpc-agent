@@ -1,6 +1,6 @@
 # Guide: auditing
 
-> **Status:** Design draft — Proposed API. Event catalog: [reference/events.md](../reference/events.md). Design rationale: [ADR-010](../architecture/decisions.md#adr-010-audit-events-are-structured-and-storage-neutral).
+> **Status:** Implemented in v0.1. Event catalog: [reference/events.md](../reference/events.md). Design rationale: [ADR-010](../architecture/decisions.md#adr-010-audit-events-are-structured-and-storage-neutral).
 
 The runtime emits a complete, structured record of every governed interaction — including the denied ones. Persistence is yours: **no sink configured means no audit trail stored**, and that should feel as wrong as running without backups.
 

@@ -45,7 +45,7 @@ Teams with typed oRPC procedures keep re-implementing them as hand-written AI to
 
 oRPC Agent is the layer between agent runtimes and business logic: it agent-enables an **existing** oRPC application without a new full-stack framework, and treats the model end of every surface as untrusted input. It stays deliberately narrow — UI-independent, database-independent, auth-provider-independent, model-provider-independent, workflow-engine-independent.
 
-## Quick start (Proposed API)
+## Quick start
 
 ```ts
 import { os } from "@orpc/server";
@@ -80,7 +80,7 @@ const tools = await toAISDKTools(runtime, { actor, context });
 
 Full walkthrough: [docs/getting-started.md](docs/getting-started.md).
 
-## Core features (v0.1 design target)
+## Core features (v0.1, implemented)
 
 - **Capabilities, not tools** — procedures are the single source of truth; "tool" is just an adapter representation ([ADR-001](docs/architecture/decisions.md#adr-001-orpc-procedures-are-the-source-of-truth), [ADR-002](docs/architecture/decisions.md#adr-002-capability-is-the-internal-abstraction))
 - **Explicit, per-surface exposure** — deny by default across `direct` / `aiSdk` / `mcp` / `workflow` / `test`
@@ -95,7 +95,7 @@ Full walkthrough: [docs/getting-started.md](docs/getting-started.md).
 
 Everything model-side of the adapter is untrusted. Twelve binding invariants (SI-1…SI-12) govern the design: deny-by-default exposure; enforcement at execution time (tool filtering is UX, not security); the model is never the actor; approvals come from outside the model and bind the exact input; policy failures fail closed; hidden and nonexistent capabilities are indistinguishable; internals never reach models; audit and traces carry no payloads by default; writes are never auto-retried; every execution is bounded and cancellable. Your oRPC middleware remains the authoritative authorization layer on every call. **Not claimed:** solving prompt injection (impact is bounded, not occurrence), exactly-once execution, or safety without application-level authorization. Read: [security model](docs/security/security-model.md), [threat model](docs/security/threat-model.md).
 
-## Packages (planned)
+## Packages
 
 | Package | Purpose |
 |---|---|

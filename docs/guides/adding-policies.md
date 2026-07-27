@@ -1,6 +1,6 @@
 # Guide: adding policies
 
-> **Status:** Design draft — Proposed API. Semantics: [concepts/policies.md](../concepts/policies.md). This guide is the practical path: which policy to write, where to attach it, how to keep it testable.
+> **Status:** Implemented in v0.1. Semantics: [concepts/policies.md](../concepts/policies.md). This guide is the practical path: which policy to write, where to attach it, how to keep it testable.
 
 ## Start from the sentence
 

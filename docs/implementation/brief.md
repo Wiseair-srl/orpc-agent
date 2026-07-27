@@ -1,6 +1,6 @@
 # Implementation brief for the coding agent
 
-> **Status:** Definitive build instructions for v0.1. If this brief and another doc disagree, the [execution pipeline](../architecture/execution-pipeline.md) and [reference](../reference/core.md) win, and the disagreement is a bug to report. Begin coding from this document without reinterpreting the project.
+> **Status:** Delivered — these were the build instructions for v0.1, and v0.1 is implemented against them (all acceptance criteria green). Kept as the record of what was specified; the [decision records](../architecture/decisions.md) carry the as-built addenda. If this brief and another doc disagree, the [execution pipeline](../architecture/execution-pipeline.md) and [reference](../reference/core.md) win, and the disagreement is a bug to report. Begin coding from this document without reinterpreting the project.
 
 ## Project objective
 

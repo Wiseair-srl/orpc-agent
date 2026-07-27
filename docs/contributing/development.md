@@ -1,6 +1,6 @@
 # Contributing: development
 
-> **Status:** Design draft — describes the intended dev environment; scaffolding lands with milestone M1.
+> **Status:** Implemented in v0.1 — describes the dev environment as scaffolded (pnpm workspace, TypeScript strict, Vitest, boundary/API/docs checks in CI).
 
 ## Setup
 

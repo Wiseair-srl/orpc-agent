@@ -1,6 +1,6 @@
 # Context and actors
 
-> **Status:** Design draft — v0.1 concepts. APIs shown are **Proposed API**.
+> **Status:** Implemented in v0.1 — v0.1 concepts. APIs shown are the as-built v0.1 surface.
 
 Two request-scoped objects travel with every invocation and are easy to conflate. They answer different questions:
 

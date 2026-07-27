@@ -1,6 +1,6 @@
 # Errors
 
-> **Status:** Design draft — v0.1 concepts. Contract tables live in [reference/errors.md](../reference/errors.md).
+> **Status:** Implemented in v0.1 — v0.1 concepts. Contract tables live in [reference/errors.md](../reference/errors.md).
 
 Error design is security design here. A stack trace that helps you debug also teaches a manipulated model your table names. oRPC Agent therefore separates every failure into a **model-safe face** and a **private diagnostic body**, and never lets adapters see the latter.
 

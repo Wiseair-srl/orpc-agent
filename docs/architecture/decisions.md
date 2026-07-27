@@ -1,6 +1,6 @@
 # Architecture decision records
 
-> **Status:** All ADRs below are **Accepted (design phase)** — they bind the v0.1 implementation. Revisiting one requires a superseding ADR.
+> **Status:** All ADRs below are **Accepted** — they bound the v0.1 implementation and describe it as built (several carry as-built addenda). Revisiting one requires a superseding ADR.
 
 Format per record: context → decision → alternatives → consequences → unresolved questions.
 

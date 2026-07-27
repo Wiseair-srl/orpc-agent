@@ -1,6 +1,6 @@
 # Architecture overview
 
-> **Status:** Design draft — describes the proposed v0.1 architecture. No packages are published yet. All APIs shown are **Proposed API**.
+> **Status:** Implemented in v0.1 — describes the architecture as built. Packages are not yet published to npm.
 
 This document is the normative starting point for understanding oRPC Agent. It defines the system's thesis, its layers, and the boundaries between them. Every other document assumes the model described here.
 

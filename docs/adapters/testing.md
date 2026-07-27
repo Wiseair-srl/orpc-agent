@@ -1,6 +1,6 @@
 # Adapter: testing
 
-> **Status:** Design draft — Proposed API, v0.1 target. Package: `@orpc-agent/testing`. Depends only on `@orpc-agent/core` — no model, no network, no protocol SDKs.
+> **Status:** Implemented in v0.1. Package: `@orpc-agent/testing`. Depends only on `@orpc-agent/core` — no model, no network, no protocol SDKs.
 
 Governance you can't test deterministically is governance you don't have. This package makes exposure, policies, approvals, redaction, and audit behavior assertable in plain unit tests — **without invoking an LLM**. Surface id defaults to **`test`**, overridable per call to simulate any surface.
 

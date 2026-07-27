@@ -1,6 +1,6 @@
 # FAQ
 
-> **Status:** Design draft.
+> **Status:** Implemented in v0.1.
 
 ## Positioning
 
@@ -65,4 +65,4 @@ Yes — `surface: "direct"` gives UI actions the same audit trail and policy eva
 It runs, unchanged, on every governed invocation — inside the procedure call, as always, and it remains the authoritative authorization layer (ADR-008).
 
 **When is v0.1?**
-When the [implementation brief](implementation/brief.md)'s acceptance criteria pass. Scope is fixed ([ROADMAP](../ROADMAP.md)); dates aren't promised in design phase.
+v0.1 is implemented in-repo — the [implementation brief](implementation/brief.md)'s acceptance criteria all pass. What remains before an npm release is scope registration ([Q1](open-questions.md#q1)); scope is fixed ([ROADMAP](../ROADMAP.md)) and release dates are still not promised.

@@ -1,6 +1,6 @@
 # Approvals
 
-> **Status:** Design draft — v0.1 concepts and normative approval semantics. APIs shown are **Proposed API**.
+> **Status:** Implemented in v0.1 — v0.1 concepts and normative approval semantics. APIs shown are the as-built v0.1 surface.
 
 An **approval** is a trusted decision required before a capability executes. It is a *lifecycle*, not a boolean: requested, pending, decided, expiring, consumed — each transition attributable and audited.
 

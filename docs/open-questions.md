@@ -1,6 +1,6 @@
 # Open design questions
 
-> **Status:** Living document. Every unresolved decision lives here — not scattered through the docs. Each entry states the decision needed, options, a recommendation, implications, and whether v0.1 implementation is blocked. **None of Q1–Q11 blocks starting M1–M8**; Q1 blocks *publishing*.
+> **Status:** Living document. Every unresolved decision lives here — not scattered through the docs. Each entry states the decision needed, options, a recommendation, implications, and whether v0.1 implementation is blocked. With v0.1 implemented, **Q2 is resolved** (see its entry); none of the rest blocked the build, and **Q1 blocks only *publishing***.
 
 ## Q1 — Final npm scope <a id="q1"></a>
 **Decision.** Confirm `@orpc-agent/*` (register the scope; courtesy note to oRPC maintainers re: naming proximity).

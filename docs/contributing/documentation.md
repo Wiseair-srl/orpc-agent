@@ -13,7 +13,7 @@
 
 ## Style rules
 
-- **Status header** under every H1 stating draft/proposed status. Never present unimplemented behavior as shipped; use the labels **Proposed API**, **Design target**, **Planned**, **Deferred**.
+- **Status header** under every H1 stating implementation status. Never present unimplemented behavior as shipped: shipped pages say **Implemented in v0.1**, and anything not yet built is labelled **Planned** or **Deferred**.
 - **Terminology per the [glossary](../glossary.md)** — especially tool/capability, user/actor, authn/authz, permission/approval, retry/replay, audit/tracing.
 - **One API, everywhere.** Code examples use the exact public symbols from [reference/core](../reference/core.md); the example domain is the customer-support app (`orders.refund`, $500 threshold, `orders:refund` permission). Don't invent parallel examples with new names.
 - **Cite anchors, don't restate**: pipeline stages ("stage 8"), invariants ("SI-5"), decisions ("ADR-006"), threats ("T7"). If you must restate, you're probably editing the wrong file.
@@ -34,4 +34,4 @@ Run the grep pass (a script lands with M1; until then, manually):
 
 ## When code and docs disagree
 
-The docs win until an ADR says otherwise; the disagreement is filed as a bug either way ([CONTRIBUTING](../../CONTRIBUTING.md#working-agreements)). During M9 a final sweep replaces "Design target" phrasing with as-built truth.
+The docs win until an ADR says otherwise; the disagreement is filed as a bug either way ([CONTRIBUTING](../../CONTRIBUTING.md#working-agreements)). M9's final sweep replaced the pre-implementation "Proposed API"/"Design target" phrasing with as-built truth.

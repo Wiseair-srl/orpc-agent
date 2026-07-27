@@ -1,6 +1,6 @@
 # Adapter: MCP
 
-> **Status:** Design draft — Proposed API, v0.1 target (final core-track increment; may slip to v0.2 — see [ROADMAP](../../ROADMAP.md)). Package: `@orpc-agent/mcp`. Peer: `@modelcontextprotocol/sdk`, `@orpc-agent/core`.
+> **Status:** Implemented in v0.1 (it shipped with the release; it did not slip). Package: `@orpc-agent/mcp`. Peer: `@modelcontextprotocol/sdk`, `@orpc-agent/core`.
 
 Exposes a runtime as a Model Context Protocol server. Surface id: **`mcp`**. This is the highest-exposure surface — callers are external processes you don't ship — so its docs lean harder on identity than any other adapter's.
 

@@ -1,6 +1,6 @@
 # Guide: human approval
 
-> **Status:** Design draft — Proposed API. Semantics: [concepts/approvals.md](../concepts/approvals.md). This guide wires the full loop: gate → surface → decide → resume — plus the inline variant.
+> **Status:** Implemented in v0.1. Semantics: [concepts/approvals.md](../concepts/approvals.md). This guide wires the full loop: gate → surface → decide → resume — plus the inline variant.
 
 ## 1. Gate the capability
 

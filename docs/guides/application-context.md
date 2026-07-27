@@ -1,6 +1,6 @@
 # Guide: application context
 
-> **Status:** Design draft — Proposed API. Concepts: [context and actors](../concepts/context.md).
+> **Status:** Implemented in v0.1. Concepts: [context and actors](../concepts/context.md).
 
 The rule of this guide: **agent invocations reuse your existing oRPC context, built by your existing factory, from authenticated data.** No parallel context system.
 

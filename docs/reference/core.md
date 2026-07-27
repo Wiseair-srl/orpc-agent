@@ -1,6 +1,6 @@
 # Reference: core
 
-> **Status:** Proposed API — v0.1 design target. Stability: experimental unless noted.
+> **Status:** Implemented in v0.1. Stability: experimental unless noted.
 
 Package: `@orpc-agent/core`. This page covers the definition-side API: `agentProcedure`, the registry, policies, decision helpers, and schema utilities. The execution-side API (`createAgentRuntime`, `invoke`, `describe`, `resume`, approvals) is in [runtime.md](runtime.md); errors in [errors.md](errors.md); events in [events.md](events.md).
 
@@ -18,7 +18,7 @@ function agentProcedure<B extends AnyORPCBuilder>(builder: B): AgentEnabledBuild
 
 **Returns.** The builder; `.meta({ agent: … })` is now type-checked against `AgentMeta`, and handlers/middleware can read `context.agent` (present only on agent-runtime invocations; `undefined` on plain HTTP/RPC calls — check before use).
 
-**Errors.** None at runtime. The precise generic plumbing follows oRPC's builder generics and is pinned during implementation (Design target).
+**Errors.** None at runtime. The precise generic plumbing follows oRPC's builder generics and is pinned during implementation (as built: it follows oRPC's `Builder` generics and is pinned to the peer range in ADR-001's addendum).
 
 **Example.**
 

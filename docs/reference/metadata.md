@@ -1,6 +1,6 @@
 # Reference: capability metadata
 
-> **Status:** Proposed API — v0.1 design target. Stability: experimental.
+> **Status:** Implemented in v0.1. Stability: experimental.
 
 Package: `@orpc-agent/core`. The `AgentMeta` object is the declaration that turns an oRPC procedure into a capability. It lives in the procedure's ordinary oRPC metadata under the `agent` key and is validated when `createCapabilityRegistry` builds the registry.
 
@@ -112,7 +112,6 @@ Cosmetic/protocol hints only (tool naming, MCP annotations). Nothing here may ch
 ## Declaring metadata
 
 ```ts
-// Proposed API
 import { os } from "@orpc/server";
 import { agentProcedure } from "@orpc-agent/core";
 import * as z from "zod";

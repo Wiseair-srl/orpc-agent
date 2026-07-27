@@ -1,6 +1,6 @@
 # Package boundaries
 
-> **Status:** Design draft — proposed v0.1 package layout. No packages are published yet. npm names use the `@orpc-agent` scope as a placeholder pending registration ([ADR-011](decisions.md#adr-011-npm-scope-and-project-independence)).
+> **Status:** Implemented in v0.1 — the package layout as built. Packages are not yet published to npm. npm names use the `@orpc-agent` scope as a placeholder pending registration ([ADR-011](decisions.md#adr-011-npm-scope-and-project-independence)).
 
 ## Monorepo layout
 

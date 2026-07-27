@@ -1,6 +1,6 @@
 # Capability registry
 
-> **Status:** Design draft — v0.1 concepts. APIs shown are **Proposed API**.
+> **Status:** Implemented in v0.1 — v0.1 concepts. APIs shown are the as-built v0.1 surface.
 
 The **registry** is the typed collection that turns annotated procedures into addressable capabilities. It answers: *what capabilities exist, what are they called, and which subset applies here?*
 
@@ -57,7 +57,7 @@ const supportRuntime = createAgentRuntime({ registry: readOnly, policies });
 | `filter(query \| fn)` | Purpose-specific runtimes |
 | `inspect()` | Review: what's in, what's out, why |
 
-A recommended practice (Design target, not enforced): snapshot `ids()` plus each capability's `{ sideEffect, risk, expose }` in a checked-in file, so any change to the governed surface shows up in diff review.
+A recommended practice (recommended, not enforced; the reference example ships one as a test snapshot): snapshot `ids()` plus each capability's `{ sideEffect, risk, expose }` in a checked-in file, so any change to the governed surface shows up in diff review.
 
 ## Multiple registries
 

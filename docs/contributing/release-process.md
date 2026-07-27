@@ -1,6 +1,6 @@
 # Contributing: release process
 
-> **Status:** Design draft — applies from the first published release onward.
+> **Status:** Implemented in v0.1 — applies from the first published release onward.
 
 ## Versioning
 

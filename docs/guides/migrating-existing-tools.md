@@ -1,6 +1,6 @@
 # Guide: migrating existing tools
 
-> **Status:** Design draft — Proposed API. For teams with hand-written AI SDK tools (or similar) moving to governed capabilities — incrementally, tool by tool.
+> **Status:** Implemented in v0.1. For teams with hand-written AI SDK tools (or similar) moving to governed capabilities — incrementally, tool by tool.
 
 ## Where you are
 

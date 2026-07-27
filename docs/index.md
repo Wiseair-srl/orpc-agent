@@ -2,7 +2,7 @@
 
 > Make agents first-class clients of your oRPC application.
 >
-> **Status:** Design phase. These documents define the proposed v0.1 of oRPC Agent — they are the source of truth the implementation is built from. Every API is **Proposed API** until packages ship. Independent community project, not affiliated with the oRPC maintainers.
+> **Status:** v0.1 implemented in-repo, not yet published to npm. These documents are the source of truth the implementation was built from; where the build forced a change, the [decision records](architecture/decisions.md) carry an as-built addendum. Independent community project, not affiliated with the oRPC maintainers.
 
 **Start here:** [Getting started](getting-started.md) · **The idea in one page:** [Architecture overview](architecture/overview.md) · **The worked example:** [Customer-support agent](examples/customer-support-agent.md)
 
