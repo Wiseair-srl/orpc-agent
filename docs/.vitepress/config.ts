@@ -137,6 +137,9 @@ export default defineConfig({
           { text: "Human approval", link: "/guides/human-approval" },
           { text: "Auditing", link: "/guides/auditing" },
           { text: "Application context", link: "/guides/application-context" },
+          { text: "Headless invocations", link: "/guides/headless-invocations" },
+          { text: "Workflow steps", link: "/guides/workflow-steps" },
+          { text: "MCP authentication", link: "/guides/mcp-authentication" },
           { text: "Testing capabilities", link: "/guides/testing-capabilities" },
           { text: "Migrating existing tools", link: "/guides/migrating-existing-tools" },
         ],
@@ -159,6 +162,7 @@ export default defineConfig({
         items: [
           { text: "Vercel AI SDK", link: "/adapters/ai-sdk" },
           { text: "MCP", link: "/adapters/mcp" },
+          { text: "Postgres persistence", link: "/adapters/postgres" },
           { text: "OpenTelemetry", link: "/adapters/opentelemetry" },
           { text: "Testing", link: "/adapters/testing" },
         ],

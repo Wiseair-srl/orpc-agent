@@ -50,6 +50,8 @@ await runtime.approvals.decide(id, {
 
 Design the card for a ten-second read: **what** (capability + redacted input), **who asked** (actor), **why gated** (reasons), **when it dies** (expiresAt). The runtime enforces the structural rules — pending-only, expiry, approver ≠ requester (SI-4).
 
+Match expiry to the surface: the 15-minute default (`defaults.approvalExpiresInMs`) assumes the approver is present. A dashboard someone checks a few times a day needs hours (`meta.approval.expiresInMs` per gate, or the runtime default) — otherwise requests expire before anyone sees them and every approval becomes a re-ask.
+
 ## 4. Execute the approved operation
 
 Deciding records intent; executing is separate and explicit:
@@ -92,7 +94,22 @@ const runtime = createAgentRuntime({
 
 ## Production coordinator
 
-The default in-memory coordinator **loses records on restart** — dev/test only. Production implements the five-method interface over your database:
+The default in-memory coordinator **loses records on restart** — dev/test only. On Postgres, use the reference implementation and you're done:
+
+```ts
+import { createPgApprovalCoordinator, APPROVALS_DDL } from "@orpc-agent/postgres";
+
+const runtime = createAgentRuntime({
+  registry, policies,
+  approvals: {
+    coordinator: createPgApprovalCoordinator({
+      query: (sql, params) => pool.query(sql, params),
+    }),
+  },
+});
+```
+
+Details, DDL, and the JSON round-trip caveat for `Date`-bearing inputs: [adapters/postgres.md](../adapters/postgres.md). On any other store, implement the five-method interface yourself:
 
 ```ts
 export function createDbApprovalCoordinator(db: Database): ApprovalCoordinator {
@@ -109,7 +126,7 @@ export function createDbApprovalCoordinator(db: Database): ApprovalCoordinator {
 }
 ```
 
-Contract points that matter: `decide` and `markConsumed` are compare-and-set operations; expiry is evaluated against the coordinator's clock; store the validated input verbatim — the hash check (SI-5) detects drift. Workflow-engine-backed coordinators are the planned durable path ([ADR-007](../architecture/decisions.md#adr-007-durable-execution-is-adapter-based)).
+Contract points that matter: `decide` and `markConsumed` are compare-and-set operations; expiry is evaluated against the coordinator's clock; store the validated input verbatim — the hash check (SI-5) detects drift. Run the shared contract suite (`test-fixtures/approval-coordinator-contract.ts`) against your implementation — it is the same suite the in-memory and Postgres coordinators pass. Workflow-engine-backed coordinators are the planned durable path ([ADR-007](../architecture/decisions.md#adr-007-durable-execution-is-adapter-based)).
 
 ## Checklist
 

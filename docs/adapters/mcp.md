@@ -31,7 +31,7 @@ await mcp.connect(transport);   // stdio, Streamable HTTP — the app picks and 
 
 | Option | Required | Notes |
 |---|---|---|
-| `createContext` | yes | Session → `{ actor, context }`. The adapter refuses to serve sessions where it returns nothing — there is no anonymous default; model anonymity explicitly (`kind: "anonymous"`) if you truly mean it |
+| `createContext` | yes | Session → `{ actor, context }`. The adapter refuses to serve sessions where it returns nothing — there is no anonymous default; model anonymity explicitly (`kind: "anonymous"`) if you truly mean it. `session.authInfo` is the MCP SDK's `AuthInfo` (typed since v0.2) — `token`, `clientId`, `scopes` as real fields. Wiring an authorization server: [guides/mcp-authentication.md](../guides/mcp-authentication.md) |
 | `serverInfo` | no | Defaults to `{ name: "orpc-agent", version: <pkg> }` |
 | `filter` | no | Listing-shaping only, not authorization (SI-2) |
 | `toolNaming` | no | Default `.`→`_`; `meta.adapters.mcp.toolName` overrides; collisions throw |

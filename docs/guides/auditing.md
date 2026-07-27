@@ -19,27 +19,37 @@ Audit events share `executionId` with traces — pivot from a record to its trac
 
 ## Minimal wiring
 
+On Postgres, the reference sink is one line ([adapters/postgres.md](../adapters/postgres.md)):
+
 ```ts
+import { createPgAuditSink, AUDIT_DDL } from "@orpc-agent/postgres";
+
 const runtime = createAgentRuntime({
   registry, policies,
-  audit: async (event) => {
-    await db.agentAuditEvents.insert({
-      type: event.type,
-      at: event.timestamp,
-      executionId: event.executionId,
-      capabilityId: event.capabilityId,
-      surface: event.surface,
-      actorId: event.actor.id,
-      actorKind: event.actor.kind,
-      correlationId: event.correlationId,
-      inputHash: event.inputHash,
-      data: event.data,          // jsonb; payload-free by contract (SI-10)
-    });
-  },
+  audit: { sinks: [createPgAuditSink({ query: (sql, params) => pool.query(sql, params) })] },
 });
 ```
 
-An append-only table with indexes on `(capabilityId, at)`, `(actorId, at)`, `(executionId)` answers most questions you'll ever ask it.
+On any other store, a sink is just a function:
+
+```ts
+audit: async (event) => {
+  await db.agentAuditEvents.insert({
+    type: event.type,
+    at: event.timestamp,
+    executionId: event.executionId,
+    capabilityId: event.capabilityId,
+    surface: event.surface,
+    actorId: event.actor.id,
+    actorKind: event.actor.kind,
+    correlationId: event.correlationId,
+    inputHash: event.inputHash,
+    data: event.data,          // jsonb; payload-free by contract (SI-10)
+  });
+},
+```
+
+An append-only table with indexes on `(capabilityId, at)`, `(actorId, at)`, `(executionId)` answers most questions you'll ever ask it — the reference sink's `AUDIT_DDL` is exactly that table.
 
 Multiple sinks compose (`audit: [dbSink, siemSink]`) — each isolated: one sink failing never blocks another, and in default mode never blocks execution (`onSinkError` receives failures).
 

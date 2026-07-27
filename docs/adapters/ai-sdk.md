@@ -85,6 +85,17 @@ model re-invokes — new execution, new decision, consumed approvals don't re-fi
 
 The inline `approvals.handler` mode exists for short-latency confirmation UIs (the human is present and the transport can hold the call open) — see [guides/human-approval.md](../guides/human-approval.md#inline-confirmation).
 
+## Host loops with their own approval UX
+
+Agent frameworks that consume AI SDK tools (Mastra, and others) often ship their own tool-approval mechanism — a pre-execution "approve this tool call?" gate rendered by the host's stream. When a governed runtime sits underneath, **pick one authority, and it must be the runtime**:
+
+- Host-loop approval decides on the *raw tool-call arguments, before `invoke`*: no canonical input hash (SI-5), no coordinator record, no `capability.approval_requested`/`approved` audit events, no expiry, no self-approval check. For governed operations that is a shadow approval system your audit trail cannot see.
+- Running both gates double-prompts: the host asks, then the runtime's policy suspends the same call again.
+
+So: **do not enable the host's tool approval for governed tools.** Let orpc-agent's policies decide, and render the `approval-required` envelope — it is a typed tool result (`AISDKToolResult`), so your UI can render an approve/deny card generically from the stream's tool-result parts (or from a pending-approvals fetch), then call your `decide` + `resume` endpoints. The [Mastra task board example](../examples/mastra-task-board.md) is this exact wiring, working.
+
+For requester-confirmed gates where the human is present in the chat, the composition from the [ADR-006 addendum](../architecture/decisions.md#adr-006-approvals-are-external-and-input-bound) fits streaming UIs: an inline `approvals.handler` holds the call open for `human-confirmation` types and returns `undefined` for everything else, deferring manager-type approvals to the coordinator flow unchanged.
+
 ## Cancellation
 
 The AI SDK's per-call `abortSignal` flows into `runtime.invoke`, composes with the capability timeout, and reaches the handler (SI-12). Aborting the chat request cancels in-flight capability calls; the audit trail shows `capability.cancelled`.
