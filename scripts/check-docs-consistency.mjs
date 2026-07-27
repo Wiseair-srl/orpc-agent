@@ -77,6 +77,8 @@ const requiredSymbols = [
   "testClock",
   "approvalProbe",
   "capturedAudit",
+  "createPgApprovalCoordinator",
+  "createPgAuditSink",
 ];
 for (const symbol of requiredSymbols) {
   if (!docs.includes(symbol)) failures.push(`public symbol ${symbol} not found in docs`);

@@ -24,6 +24,16 @@ const FORBIDDEN_IMPORTS = {
     /^@opentelemetry\//,
     /^@orpc-agent\/(?!core)/,
   ],
+  // Driver-agnosticism is an ADR-013 bound: src never imports a database
+  // driver (tests may — pglite and pg are devDependencies only).
+  postgres: [
+    /^ai($|\/)/,
+    /^@modelcontextprotocol\//,
+    /^@opentelemetry\//,
+    /^@orpc-agent\/(?!core)/,
+    /^pg($|\/)/,
+    /^@electric-sql\//,
+  ],
 };
 
 function* walkFiles(dir) {
@@ -64,6 +74,22 @@ if (existsSync(corePkgPath)) {
   for (const dep of runtimeDeps) {
     if (/^ai$|^@modelcontextprotocol\/|^@opentelemetry\//.test(dep)) {
       failures.push(`packages/core/package.json: forbidden runtime dependency "${dep}"`);
+    }
+  }
+}
+
+// postgres package must not list a database driver as a runtime dependency
+// (ADR-013: the query function is the seam; drivers are the app's choice).
+const postgresPkgPath = join(root, "packages", "postgres", "package.json");
+if (existsSync(postgresPkgPath)) {
+  const postgresPkg = JSON.parse(readFileSync(postgresPkgPath, "utf8"));
+  const runtimeDeps = Object.keys({
+    ...postgresPkg.dependencies,
+    ...postgresPkg.peerDependencies,
+  });
+  for (const dep of runtimeDeps) {
+    if (/^pg$|^@electric-sql\//.test(dep)) {
+      failures.push(`packages/postgres/package.json: forbidden runtime dependency "${dep}"`);
     }
   }
 }

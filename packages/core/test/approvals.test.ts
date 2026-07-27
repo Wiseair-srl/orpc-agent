@@ -8,6 +8,7 @@ import { agentProcedure } from "../src/procedure";
 import { definePolicy } from "../src/policy/define";
 import { allow, deny, requireApproval } from "../src/policy/helpers";
 import { canonicalJson, hashInput } from "../src/canonical";
+import { describeApprovalCoordinatorContract } from "../../../test-fixtures/approval-coordinator-contract";
 import { capturedEvents, dana, mutableClock, priya } from "./helpers";
 import type { ApprovalCoordinator } from "../src/approvals/types";
 import type { AgentInvocationInfo } from "../src/types";
@@ -466,28 +467,9 @@ describe("inline handler mode", () => {
   });
 });
 
-describe("coordinator contract", () => {
-  test("list filters by status, capability, and actor", async () => {
-    const { runtime, coordinator } = makeRuntime();
-    await runtime.invoke("orders.refund", REFUND_649, options);
-    const second = await runtime.invoke("orders.refund", { ...REFUND_649, amount: 700 }, options);
-    if (second.status !== "approval-required") expect.unreachable();
-    await runtime.approvals.decide(second.approval.id, { status: "rejected", approver: priya });
-
-    const pending = await coordinator.list!({ status: "pending" });
-    expect(pending).toHaveLength(1);
-    const forDana = await coordinator.list!({ actorId: "u_dana" });
-    expect(forDana).toHaveLength(2);
-    const forCap = await coordinator.list!({ capabilityId: "orders.refund", status: "rejected" });
-    expect(forCap).toHaveLength(1);
-  });
-
-  test("markConsumed refuses non-approved records", async () => {
-    const { runtime, coordinator } = makeRuntime();
-    const pending = await runtime.invoke("orders.refund", REFUND_649, options);
-    if (pending.status !== "approval-required") expect.unreachable();
-    await expect(coordinator.markConsumed(pending.approval.id, "exe_x")).rejects.toThrowError(
-      /cannot be consumed/,
-    );
-  });
-});
+// The full store-level behavioral contract is shared with every other
+// coordinator implementation (test-fixtures/approval-coordinator-contract.ts);
+// the in-memory coordinator is its reference consumer.
+describeApprovalCoordinatorContract("in-memory", async (now) =>
+  createInMemoryApprovalCoordinator({ now }),
+);

@@ -89,6 +89,12 @@ const REQUIRED = {
     values: ["createAgentTestRuntime", "fakeActor", "testClock", "approvalProbe", "capturedAudit"],
     types: [],
   },
+  postgres: {
+    entry: "packages/postgres/dist/index.js",
+    dts: "packages/postgres/dist/index.d.ts",
+    values: ["createPgApprovalCoordinator", "createPgAuditSink", "APPROVALS_DDL", "AUDIT_DDL"],
+    types: ["PgQuery", "PgApprovalCoordinatorOptions", "PgAuditSinkOptions", "PgAuditSink"],
+  },
 };
 
 for (const [name, spec] of Object.entries(REQUIRED)) {
