@@ -4,7 +4,13 @@
 
 Expose the same typed oRPC procedures to application UIs, AI runtimes, MCP clients, workflows, and tests — with shared validation, permissions, approvals, execution policies, and observability.
 
-**⚠️ Project status: design phase.** No packages are published. This repository currently contains the complete design documentation — the source of truth from which v0.1 is being implemented. Every API below is **Proposed API**; nothing on this page describes shipped behavior. Follow the [ROADMAP](ROADMAP.md).
+**⚠️ Project status: v0.1 implemented in-repo, not yet published.** This repository contains the complete design documentation **and** the v0.1 implementation built from it: five packages under [`packages/`](packages) (core, ai-sdk, mcp, opentelemetry, testing) and the runnable [customer-support reference app](examples/customer-support). The full governance test suite runs in CI (`pnpm install && pnpm build && pnpm test`); npm publication is pending scope registration ([Q1](docs/open-questions.md#q1)). Follow the [ROADMAP](ROADMAP.md).
+
+```bash
+# try it from a clean checkout
+pnpm install && pnpm build && pnpm test
+pnpm --filter customer-support-example demo   # the documented end-to-end flow, scripted
+```
 
 ## The idea
 

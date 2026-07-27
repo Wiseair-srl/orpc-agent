@@ -18,7 +18,14 @@ Format per record: context → decision → alternatives → consequences → un
 
 **Consequences.** The framework inherits oRPC's evolution (a peer-dependency version policy is required). Capabilities work as normal procedures in existing routers, HTTP handlers, and OpenAPI generation with zero changes. Anything oRPC cannot express (e.g., non-serializable inputs) constrains capabilities too.
 
-**Unresolved.** Which minimum oRPC version to pin as peer range (tracked in [open-questions](../open-questions.md#q2)).
+**Unresolved.** None — resolved by the addendum below.
+
+**Addendum (as built, v0.1 — resolves [Q2](../open-questions.md#q2)).**
+- Peer range: `@orpc/server ^1.14.10` (pinned at M1 start). The runtime invokes procedures via oRPC's `call` utility with `{ context, signal, path }`, so the full middleware chain runs exactly as on HTTP paths.
+- Input validation runs twice by necessity, once per purpose: the runtime validates at stage 5 (policies, hashes, and approvals need the validated value *before* execution), and oRPC validates inside `call` (that parse feeds the handler). Fresh invocations pass the **raw** input to `call` — for deterministic schemas both parses agree, and middleware placed before the validation index sees the same raw input it would see on HTTP. Resumption passes the **stored** input; oRPC's in-call parse is exactly the "re-validate against the current schema" step the pipeline mandates (the runtime additionally re-validates *before* consuming the record so schema drift cannot burn an approval).
+- Output validation is delegated to oRPC's in-call validation (no double validation). Its failure shape (`ORPCError` `INTERNAL_SERVER_ERROR` with a `ValidationError` cause) is mapped to `OUTPUT_INVALID` with `executedBeforeFailure: true`; the equivalent `BAD_REQUEST` shape maps to `INPUT_INVALID`. This detection is version-coupled to the pinned range and revisited on peer bumps.
+- Event-iterator (streaming) procedures are detected via `@orpc/contract`'s schema marker symbol (matched by description, `ORPC_EVENT_ITERATOR_DETAILS`) and rejected at registry build, per the v0.1 scope exclusion.
+- Lazy routers/procedures are rejected at registry build with a clear error (registry construction is synchronous); resolve with `unlazyRouter` first.
 
 ---
 
@@ -94,6 +101,8 @@ Format per record: context → decision → alternatives → consequences → un
 
 **Unresolved.** Whether one approval may cover a bounded session of identical calls (rejected for v0.1; [open-questions](../open-questions.md#q5)).
 
+**Addendum (as built, v0.1).** The inline `approvals.handler` and the coordinator flow compose instead of being strictly mutually exclusive: the handler may return `undefined` to defer a given request to the coordinator (suspend/resume) flow. This keeps one chat runtime able to confirm `human-confirmation` gates inline while manager-type approvals still suspend for the dashboard — the exact shape of the reference example. A decided request never resumes; a deferred request follows the coordinator lifecycle unchanged. Inline decisions are subject to the same `rejectSelfApproval` check; the reference example's chat-runtime variant disables it for requester-confirmed sends only, with the reason documented at the config site, while the dashboard/resume runtime keeps the default.
+
 ---
 
 ## ADR-007: Durable execution is adapter-based
@@ -165,3 +174,28 @@ Format per record: context → decision → alternatives → consequences → un
 **Consequences.** Scope must be registered before first publish; docs mark the scope as placeholder until then.
 
 **Unresolved.** Final scope confirmation and a courtesy heads-up to the oRPC maintainers ([open-questions](../open-questions.md#q1)).
+
+---
+
+## ADR-012: As-built API deltas for v0.1
+
+**Context.** Implementing M1–M9 against the reference docs surfaced a small set of API details the design pages had not pinned. Per the review protocol, each is recorded here and reflected in the reference pages; none changes a documented behavior, and every security invariant test passes unweakened.
+
+**Decision.** The following are part of the v0.1 as-built surface:
+
+1. **`runtime.registry`** — `AgentRuntime` exposes its registry read-only. Adapters need capability meta for protocol concerns (`adapters.*.toolName`, MCP `annotations`) that descriptors deliberately omit; going through the runtime keeps adapters free of second sources of truth.
+2. **`inspect().unexposed`** — the registry's inspect result adds the ids of capabilities whose expose map enables no surface (the "defined, reachable nowhere" staging state the metadata page says `inspect()` flags).
+3. **`policyDecisions[].type` may be `"error"`** — a policy that threw or timed out is recorded honestly in the audit stance list instead of being coerced into a decision it never made (fail-closed handling is unchanged: `POLICY_FAILED`).
+4. **Per-attempt timeout timer** — the execution timeout arms per stage-11 attempt (the caller signal spans the whole execution and is always terminal). This is what makes `TIMEOUT` retryable-in-practice for reads with retry config, per the errors table; timed-out writes remain never-retried (SI-11).
+5. **Canonical JSON strictness** — function- and symbol-valued object properties make an input unserializable (`APPROVAL_UNSERIALIZABLE_INPUT`) instead of being silently dropped à la `JSON.stringify`: an approval hash must never bind less than the value that executes (SI-5). `undefined`-valued properties are dropped (semantically absent); `Date` serializes via `toJSON`.
+6. **`resume` of an unknown approval id** returns a failed envelope with `INTERNAL_ERROR` (stage `approval`) rather than a dedicated code — the closed error table has no "approval not found" entry, and inventing one was out of scope for v0.1.
+7. **Policy timeout is a shared batch deadline** (`defaults.policyTimeoutMs` per evaluation batch, as the configuration table states); a policy exceeding the remaining budget fails the batch closed.
+8. **Coordinator decision events** carry the **approver** as the envelope actor (the acting entity for that event); the requester remains on all execution events and in the record itself.
+9. **Builds are ESM-only** (`type: module`, Node ≥ 20.19). "CJS compatibility left to the build tool" resolved to not shipping CJS in v0.1; revisit on demand.
+10. **The adapter conformance checklist** ships as shared in-repo test infrastructure (`test-fixtures/conformance.ts`, exercised by both adapter packages) rather than as a public export of `@orpc-agent/testing` — the required public API list is closed, and the checklist's consumers are adapter authors working in-tree. Promoting it to a public subpath is a candidate for 0.2.
+11. **`toolNaming`** adapter options are functions `(capabilityId) => string` replacing the default `.`→`_` mapping; per-capability `meta.adapters.*.toolName` overrides still win. Collisions throw at adapter build.
+12. **The testing package** declares `@orpc/server` as a peer (handler `overrides` reconstruct procedures) and `createAgentTestRuntime` accepts an optional `tracing` adapter for conformance suites. Both keep the no-protocol-SDK rule intact.
+
+**Consequences.** Reference pages note items 1–3 and 6–8 inline; the brief's "no other public surface" rule now reads against this ADR. Nothing here weakens an SI-* invariant.
+
+**Unresolved.** None.

@@ -1,8 +1,8 @@
 # Roadmap
 
-> **Status:** Design phase. No packages are published. Scope commitments below are firm; dates are deliberately absent until v0.1 implementation is underway.
+> **Status:** v0.1 implemented in-repo (all acceptance criteria green, including the MCP adapter — it did not slip). No packages are published yet; publication awaits scope registration ([Q1](docs/open-questions.md#q1)). Scope commitments below are firm.
 
-## Now — v0.1 "Governed core" (in design → implementation)
+## Now — v0.1 "Governed core" (implemented; publication pending)
 
 The smallest coherent release proving the thesis: *define a capability once, expose it through multiple governed surfaces.*
 

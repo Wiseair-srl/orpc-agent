@@ -43,7 +43,7 @@ type AuditEnvelope = {
 | `capability.failed` | Terminal failure | `code`, `stage`, `retryable`, `attempts`, `executedBeforeFailure?: boolean`, `policyDecisions?` |
 | `capability.cancelled` | Terminal abort | `code: "TIMEOUT" \| "CANCELLED"`, `durationMs` |
 
-`policyDecisions` records every evaluated policy's stance — `{ policy: string; type: PolicyDecision["type"] }[]` — because stage 7 evaluates all policies precisely so this record is complete.
+`policyDecisions` records every evaluated policy's stance — `{ policy: string; type: PolicyDecision["type"] | "error" }[]` — because stage 7 evaluates all policies precisely so this record is complete. `"error"` marks a policy that threw or timed out (recorded honestly; the combined outcome is `POLICY_FAILED`, fail closed).
 
 `capability.denied` deliberately contains the **true** reason even when the external error was the concealed `CAPABILITY_NOT_FOUND` (SI-8 conceals from clients, never from your audit trail).
 

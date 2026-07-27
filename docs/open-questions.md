@@ -10,11 +10,7 @@
 **Blocking?** Publishing only (M-release). Code uses the placeholder meanwhile (ADR-011).
 
 ## Q2 — oRPC peer version range <a id="q2"></a>
-**Decision.** Minimum `@orpc/server` version and the exact server-side call utility the runtime uses (`call` vs router-client), plus where output validation actually runs (oRPC's own validation vs runtime-side re-validation) — avoid double validation.
-**Options.** Pin latest stable major at M1 start; runtime-side validation always (portable, possibly duplicated) vs delegate to oRPC when it validates outputs (coupled, no duplication).
-**Recommendation.** Pin at M1 start; verify against the pinned version's behavior and implement output validation exactly once (delegate if oRPC provides it on direct calls; otherwise runtime-side). Record the finding as an addendum to ADR-001.
-**Implications.** Affects stage 12 implementation detail only; the contract (OUTPUT_INVALID semantics) is fixed either way.
-**Blocking?** M2 needs the answer on day one — resolve during M1.
+**Status: RESOLVED (v0.1).** Pinned `@orpc/server ^1.14.10`; the runtime uses the `call` utility (middleware chain runs unchanged); stage-5 validation is runtime-side (governance needs the value pre-execution) while the handler's value comes from oRPC's own in-call parse; output validation is delegated to oRPC's in-call validation and mapped to `OUTPUT_INVALID`. Full findings: [ADR-001 addendum](architecture/decisions.md#adr-001-orpc-procedures-are-the-source-of-truth).
 
 ## Q3 — JSON Schema conversion beyond Zod v4 <a id="q3"></a>
 **Decision.** Adopt a community Standard-Schema→JSON-Schema converter as a default fallback, or stay registry-only (built-in Zod v4, everything else user-registered)?

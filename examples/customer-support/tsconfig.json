@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "paths": {
+      "@orpc-agent/core": ["../../packages/core/src/index.ts"],
+      "@orpc-agent/core/schema": ["../../packages/core/src/schema/index.ts"],
+      "@orpc-agent/testing": ["../../packages/testing/src/index.ts"],
+      "@orpc-agent/ai-sdk": ["../../packages/ai-sdk/src/index.ts"],
+      "@orpc-agent/mcp": ["../../packages/mcp/src/index.ts"],
+      "@orpc-agent/opentelemetry": ["../../packages/opentelemetry/src/index.ts"]
+    }
+  },
+  "include": ["src", "test"]
+}

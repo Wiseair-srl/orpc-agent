@@ -1,0 +1,39 @@
+{
+  "name": "@orpc-agent/ai-sdk",
+  "version": "0.1.0",
+  "description": "Vercel AI SDK v5 adapter for oRPC Agent: per-request tool sets from a governed runtime. Independent community project, not affiliated with or endorsed by the oRPC maintainers.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@orpc-agent/core": "workspace:*"
+  },
+  "peerDependencies": {
+    "ai": "^5.0.0"
+  },
+  "devDependencies": {
+    "@ai-sdk/provider": "^2.0.0",
+    "@orpc/server": "^1.14.10",
+    "@types/node": "^24.13.3",
+    "ai": "^5.0.220",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.2",
+    "vitest": "^4.1.10",
+    "zod": "^4.4.3"
+  }
+}

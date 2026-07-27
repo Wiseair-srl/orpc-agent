@@ -1,0 +1,24 @@
+{
+  "name": "orpc-agent-monorepo",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "packageManager": "pnpm@10.15.0",
+  "scripts": {
+    "build": "pnpm -r --filter './packages/*' build",
+    "test": "vitest run",
+    "typecheck": "pnpm -r typecheck",
+    "check:boundaries": "node scripts/check-boundaries.mjs",
+    "check:docs": "node scripts/check-docs-consistency.mjs",
+    "check:api": "node scripts/check-api-surface.mjs"
+  },
+  "devDependencies": {
+    "@orpc/server": "1.14.10",
+    "@types/node": "^24.13.3",
+    "typescript": "^5.9.2",
+    "vitest": "^4.1.10",
+    "zod": "^4.4.3"
+  }
+}

@@ -96,7 +96,7 @@ expect(t.audit.events().map(e => e.type)).toEqual(expect.arrayContaining([
 
 ## Adapter conformance
 
-A conformance checklist (exported as a describe-block factory, Design target) that every adapter package runs against a fixture registry:
+A conformance checklist, implemented as a describe-block factory, that every adapter package runs against a shared fixture registry. As built in v0.1 it ships as in-repo test infrastructure (`test-fixtures/conformance.ts`, exercised by both `@orpc-agent/ai-sdk` and `@orpc-agent/mcp`) rather than a public export — see [ADR-012](../architecture/decisions.md#adr-012-as-built-api-deltas-for-v01). The checks:
 
 1. Discovery lists exactly the exposed, non-hidden capabilities for the adapter's surface.
 2. Raw arguments reach the runtime unvalidated (a schema-invalid call yields `INPUT_INVALID` *from the runtime*).

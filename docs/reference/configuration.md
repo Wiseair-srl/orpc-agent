@@ -11,7 +11,7 @@ Single page for every knob, its default, and where it applies. Precedence for ov
 | `registry` | `CapabilityRegistry` | — (required) | |
 | `policies` | `AgentPolicy[]` | `[]` | Evaluated in order, before per-capability `meta.policies` |
 | `approvals.coordinator` | `ApprovalCoordinator` | in-memory | Dev/test default; production supplies persistent impl |
-| `approvals.handler` | `(req) => Promise<ApprovalDecision>` | — | Inline mode; used instead of suspend/resume when set |
+| `approvals.handler` | `(req) => Promise<ApprovalDecision \| undefined>` | — | Inline mode; deciding requests never suspend; returning `undefined` defers that request to the coordinator flow (ADR-006 addendum) |
 | `approvals.rejectSelfApproval` | `boolean` | `true` | SI-4; disable only with a documented reason |
 | `audit` | sink \| sink[] \| `{ sinks, strict, onSinkError }` | none | No sink = no audit persistence; docs warn loudly |
 | `audit.strict` | `boolean` | `false` | Await `capability.started` before execution; fail with `AUDIT_UNAVAILABLE` |

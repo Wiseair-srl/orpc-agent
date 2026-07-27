@@ -1,6 +1,6 @@
 # Getting started
 
-> **Status:** Design draft — Proposed API. Packages are **not yet published**; this walkthrough shows the intended v0.1 experience so you can evaluate the design (and so the implementation has a target to hit).
+> **Status:** Implemented (v0.1, in-repo). Packages are **not yet published** to npm; inside this repository the walkthrough below works as written against the workspace packages, and the [customer-support example](examples/customer-support-agent.md) runs it end to end.
 
 Goal: from an existing oRPC app to a governed AI-SDK tool call in five steps — then the one-line paths to everything else.
 

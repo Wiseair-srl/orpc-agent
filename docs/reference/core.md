@@ -52,7 +52,11 @@ interface CapabilityRegistry {
   get(id: string): AgentCapability | undefined;
   capabilities(): AgentCapability[];
   filter(query: CapabilityQuery | ((c: AgentCapability) => boolean)): CapabilityRegistry;
-  inspect(): { capabilities: AgentCapability[]; excluded: { path: string; reason: "no-agent-meta" }[] };
+  inspect(): {
+    capabilities: AgentCapability[];
+    excluded: { path: string; reason: "no-agent-meta" }[];
+    unexposed: string[];   // ids whose expose map enables no surface (staging state)
+  };
 }
 
 type CapabilityQuery = {

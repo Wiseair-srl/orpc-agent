@@ -27,7 +27,7 @@ type AgentRuntimeOptions<TContext> = {
 
 type ApprovalsConfig = {
   coordinator?: ApprovalCoordinator;                       // default: createInMemoryApprovalCoordinator()
-  handler?: (req: ApprovalRequest) => Promise<ApprovalDecision>; // inline mode; mutually exclusive with resume-based flow
+  handler?: (req: ApprovalRequest) => Promise<ApprovalDecision | undefined>; // inline mode; `undefined` defers this request to the coordinator flow (ADR-006 addendum)
   rejectSelfApproval?: boolean;                            // default true (SI-4)
 };
 ```
@@ -35,6 +35,8 @@ type ApprovalsConfig = {
 **Generic parameter.** `TContext` — the application's oRPC context type; enforced on `invoke`/`describe`/`resume` options so agent calls carry the same context procedures already expect.
 
 **Construction behavior.** Pure and synchronous: wires configuration, verifies the registry's schemas are convertible for exposed schema-consuming surfaces, and returns. No I/O.
+
+**`runtime.registry`.** The runtime exposes its registry read-only. Adapters read capability meta from it for protocol concerns descriptors deliberately omit (tool-name overrides, MCP annotations) — see [ADR-012](../architecture/decisions.md#adr-012-as-built-api-deltas-for-v01).
 
 ---
 

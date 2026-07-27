@@ -1,0 +1,36 @@
+{
+  "name": "@orpc-agent/mcp",
+  "version": "0.1.0",
+  "description": "Model Context Protocol server adapter for oRPC Agent runtimes. Independent community project, not affiliated with or endorsed by the oRPC maintainers.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "files": ["dist"],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@orpc-agent/core": "workspace:*"
+  },
+  "peerDependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.0"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@orpc/server": "^1.14.10",
+    "@types/node": "^24.13.3",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.2",
+    "vitest": "^4.1.10",
+    "zod": "^4.4.3"
+  }
+}

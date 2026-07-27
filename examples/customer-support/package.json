@@ -1,0 +1,34 @@
+{
+  "name": "customer-support-example",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "scripts": {
+    "demo": "tsx src/demo.ts",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@opentelemetry/api": "^1.9.0",
+    "@orpc-agent/ai-sdk": "workspace:*",
+    "@orpc-agent/core": "workspace:*",
+    "@orpc-agent/mcp": "workspace:*",
+    "@orpc-agent/opentelemetry": "workspace:*",
+    "@orpc-agent/testing": "workspace:*",
+    "@orpc/server": "^1.14.10",
+    "ai": "^5.0.220",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@ai-sdk/provider": "^2.0.0",
+    "@opentelemetry/context-async-hooks": "^2.0.0",
+    "@opentelemetry/sdk-trace-base": "^2.0.0",
+    "@types/node": "^24.13.3",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.2",
+    "vitest": "^4.1.10"
+  }
+}

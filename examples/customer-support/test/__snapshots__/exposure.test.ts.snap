@@ -1,0 +1,111 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`exposure per surface > classification snapshot: the governed surface is a reviewed diff 1`] = `
+[
+  {
+    "expose": [
+      "aiSdk",
+      "mcp",
+      "direct",
+      "test",
+    ],
+    "id": "customers.search",
+    "risk": "medium",
+    "sideEffect": "read",
+  },
+  {
+    "expose": [
+      "aiSdk",
+      "mcp",
+      "direct",
+      "test",
+    ],
+    "id": "customers.get",
+    "risk": "high",
+    "sideEffect": "read",
+  },
+  {
+    "expose": [
+      "aiSdk",
+      "mcp",
+      "direct",
+      "test",
+    ],
+    "id": "orders.list",
+    "risk": "low",
+    "sideEffect": "read",
+  },
+  {
+    "expose": [
+      "aiSdk",
+      "mcp",
+      "direct",
+      "test",
+    ],
+    "id": "orders.get",
+    "risk": "medium",
+    "sideEffect": "read",
+  },
+  {
+    "expose": [
+      "aiSdk",
+      "mcp",
+      "direct",
+      "test",
+    ],
+    "id": "orders.checkRefundEligibility",
+    "risk": "low",
+    "sideEffect": "read",
+  },
+  {
+    "expose": [
+      "aiSdk",
+      "direct",
+      "test",
+    ],
+    "id": "orders.refund",
+    "risk": "high",
+    "sideEffect": "write",
+  },
+  {
+    "expose": [
+      "aiSdk",
+      "direct",
+      "test",
+    ],
+    "id": "messages.draft",
+    "risk": "low",
+    "sideEffect": "none",
+  },
+  {
+    "expose": [
+      "aiSdk",
+      "direct",
+      "test",
+    ],
+    "id": "messages.send",
+    "risk": "high",
+    "sideEffect": "external",
+  },
+  {
+    "expose": [
+      "aiSdk",
+      "direct",
+      "test",
+    ],
+    "id": "messages.getCustomerThread",
+    "risk": "medium",
+    "sideEffect": "read",
+  },
+  {
+    "expose": [
+      "aiSdk",
+      "direct",
+      "test",
+    ],
+    "id": "cases.escalate",
+    "risk": "medium",
+    "sideEffect": "write",
+  },
+]
+`;
