@@ -107,6 +107,18 @@ subpath @orpc-agent/core/schema: toJsonSchema, registerSchemaConverter
 
 **Maturity target.** v0.1 experimental.
 
+## @orpc-agent/postgres
+
+**Purpose.** Postgres reference implementations of the durability seams: `ApprovalCoordinator` (compare-and-set consumption, lazy clock-injected expiry) and `AuditSink` (strict-mode-safe, optional terminal-event batching). Bounds: [ADR-013](decisions.md#adr-013-postgres-reference-persistence-package).
+
+**Public exports.** `createPgApprovalCoordinator(options)`, `createPgAuditSink(options)`, `APPROVALS_DDL`, `AUDIT_DDL`; types `PgQuery`, `PgApprovalCoordinatorOptions`, `PgAuditSinkOptions`, `PgAuditSink`.
+
+**Dependencies.** `@orpc-agent/core` only — **no database driver**; the `PgQuery` function is the seam, and the boundary check bans `pg`/pglite imports from `src/`.
+
+**Non-responsibilities.** No migrations framework (DDL ships as strings; the app owns its schema lifecycle), no connection pooling, no retention/pruning policy.
+
+**Maturity target.** v0.2 experimental.
+
 ## @orpc-agent/testing
 
 **Purpose.** Deterministic verification of governance without a model: direct invocation with fake actors, policy decision assertions, approval probes (auto-approve / auto-reject / manual), captured audit events, fake clock, handler overrides.

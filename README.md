@@ -16,7 +16,7 @@
 Your application UI, an AI runtime, an MCP client, a workflow, and your tests can all call the same typed oRPC procedures, under one set of validation rules, permissions, approvals, execution policies, and observability.
 
 > [!NOTE]
-> **v0.1 is published to npm** as five packages: [`@orpc-agent/core`](https://www.npmjs.com/package/@orpc-agent/core), [`@orpc-agent/ai-sdk`](https://www.npmjs.com/package/@orpc-agent/ai-sdk), [`@orpc-agent/mcp`](https://www.npmjs.com/package/@orpc-agent/mcp), [`@orpc-agent/opentelemetry`](https://www.npmjs.com/package/@orpc-agent/opentelemetry), [`@orpc-agent/testing`](https://www.npmjs.com/package/@orpc-agent/testing). The design documentation in [`docs/`](docs) is normative; CI runs the governance suite on every push (208 tests across 18 files). Progress lives in the [ROADMAP](ROADMAP.md).
+> **Published to npm** under `@orpc-agent/*`: [`core`](https://www.npmjs.com/package/@orpc-agent/core), [`ai-sdk`](https://www.npmjs.com/package/@orpc-agent/ai-sdk), [`mcp`](https://www.npmjs.com/package/@orpc-agent/mcp), [`postgres`](https://www.npmjs.com/package/@orpc-agent/postgres), [`opentelemetry`](https://www.npmjs.com/package/@orpc-agent/opentelemetry), [`testing`](https://www.npmjs.com/package/@orpc-agent/testing) (`postgres` is new in 0.2 and ships with its release). The design documentation in [`docs/`](docs) is normative; CI runs the governance suite on every push (263 tests across 22 files, plus a real-Postgres pass). Progress lives in the [ROADMAP](ROADMAP.md).
 
 ```bash
 pnpm add @orpc-agent/core @orpc/server
@@ -156,6 +156,7 @@ Your oRPC middleware stays the authoritative authorization layer on every call. 
 | `@orpc-agent/core` | Capability model, registry, runtime, policies, approvals, errors, events. No provider or protocol dependencies |
 | `@orpc-agent/ai-sdk` | Vercel AI SDK v5 tools over the runtime |
 | `@orpc-agent/mcp` | MCP server adapter with per-session identity |
+| `@orpc-agent/postgres` | Reference Postgres approval coordinator + audit sink (driver-agnostic) |
 | `@orpc-agent/opentelemetry` | Tracing adapter (spans and conventions) |
 | `@orpc-agent/testing` | Deterministic governance testing |
 
@@ -173,7 +174,7 @@ No agent loop, planner, prompts, or memory. No workflow engine, though durable e
 
 ## Roadmap
 
-v0.1 "Governed core" is the five packages and the reference example, per the [implementation brief](docs/implementation/brief.md). v0.2 "Durability seams" adds persistent approval coordination, the first workflow-engine adapter, and MCP dynamic listings. After that: streaming capabilities, quotas, and more adapters. Details and open questions in [ROADMAP.md](ROADMAP.md) and [docs/open-questions.md](docs/open-questions.md).
+v0.1 "Governed core" is the governed runtime, four adapters, and the reference example, per the [implementation brief](docs/implementation/brief.md). v0.2 "Durability seams" adds `@orpc-agent/postgres` (persistent approvals + audit), production-footgun warnings, and the headless/workflow/MCP-auth recipes; the workflow-engine adapter and MCP dynamic listings remain on the 0.2 line by demand. After that: streaming capabilities, quotas, and more adapters. Details and open questions in [ROADMAP.md](ROADMAP.md) and [docs/open-questions.md](docs/open-questions.md).
 
 ## Contributing
 

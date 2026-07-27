@@ -199,3 +199,44 @@ Format per record: context → decision → alternatives → consequences → un
 **Consequences.** Reference pages note items 1–3 and 6–8 inline; the brief's "no other public surface" rule now reads against this ADR. Nothing here weakens an SI-* invariant.
 
 **Unresolved.** None.
+
+---
+
+## ADR-013: Postgres reference persistence package
+
+**Context.** ADR-006 and ADR-010 made approval storage and audit persistence application adapters behind storage-neutral interfaces; [Q8](../open-questions.md#q8) left open whether maintained reference implementations ship. The first production consumer (an ~85-capability internal finance application on Postgres) needs restart-surviving approvals and a durable audit trail — the demand signal Q8 was waiting for. The roadmap's "bundled databases" non-goal bans *owning* storage (schema migrations, retention, residency), not implementing the interfaces over storage the application owns.
+
+**Decision.** Ship one reference package, `@orpc-agent/postgres`, exporting `createPgApprovalCoordinator` + `APPROVALS_DDL` and `createPgAuditSink` + `AUDIT_DDL`, bounded as follows:
+
+1. **Driver-agnostic.** The package's only runtime dependency is `@orpc-agent/core`. It never imports `pg`; the seam is a minimal `PgQuery` function `(sql, params) => Promise<{ rows }>`, and a `pg.Pool` (or pglite, or a serverless driver) adapts with a one-line wrapper. The boundary check enforces the import ban on `src/`.
+2. **DDL as exported strings; no migrations framework.** The application owns its schema lifecycle; the package exports canonical DDL and the docs show how to apply it.
+3. **The coordinator's clock is JS.** Every time comparison passes `options.now()` as a SQL parameter — never the database's `now()` — preserving the documented "expiry is evaluated against the coordinator's clock" contract and test-clock injection.
+4. **Compare-and-set, not locks.** `decide` and `markConsumed` are single-statement conditional `UPDATE`s (the [T8](../security/threat-model.md) obligation); no transactions, no `SELECT … FOR UPDATE`.
+5. **Batching never voids strict audit.** The sink writes `capability.started` through synchronously in every configuration; only terminal events may buffer, and buffered events' sink promises settle at flush so per-event error routing (`onSinkError`) survives.
+
+**Alternatives.**
+- Recipes-only (the 0.1 status quo) — rejected: every production deployment re-implements the same ~200 lines with the same subtle obligations (CAS atomicity, lazy expiry, strict-mode interplay); a maintained reference is the cheapest way to make those obligations real.
+- Two packages (`approvals-postgres` / `audit-postgres`, Q8's placeholders) — rejected: both are dependency-free SQL glue over the same query seam; ADR-009's "smallest coherent architecture" argument applies.
+- Depending on `pg` directly — rejected: couples the package to one driver's release cadence and connection model; the query seam serves `pg`, pglite, and serverless drivers unchanged, and doubles as the test seam.
+
+**Consequences.** The guides keep the hand-rolled recipes as the custom-store path; the package page is the recommended default. One behavior becomes documented rather than fixed: persisted inputs round-trip through JSON, so a `Date` inside an approval-gated input revives as an ISO string — resume re-validation fails safe (ADR-001 addendum), and approval-gated capabilities should prefer string/ISO datetime input schemas.
+
+**Unresolved.** None.
+
+---
+
+## ADR-014: As-built API deltas for v0.2
+
+**Context.** Implementing the 0.2 plan surfaced a small set of API details beyond ADR-013's scope. Per the review protocol, each is recorded here and reflected in the reference pages; none changes a documented behavior's contract, and every security-invariant test passes unweakened.
+
+**Decision.** The following are part of the v0.2 as-built surface:
+
+1. **Startup footgun warnings.** `createAgentRuntime` accepts `warnings?: boolean` (default `true`) and emits `console.warn` at construction for two statically detectable production footguns: (a) capabilities with `meta.approval.required` while the coordinator is the in-memory default *and* no inline handler is configured (pure inline confirmation is an explicit choice that legitimately never persists); (b) write/destructive/external capabilities exposed to `aiSdk`/`mcp` with zero audit sinks. Never fatal; static knowledge only (policy-driven gates are opaque at construction).
+2. **Schema-conversion cache invalidation.** `toJsonSchema` has memoized per schema object since 0.1; `registerSchemaConverter` now resets that cache, so a re-registered vendor's converter takes effect for already-converted schemas.
+3. **Descriptor isolation from the conversion cache.** `describe` clones the cached conversion into each `CapabilityDescriptor.inputSchema` — callers mutating a descriptor can no longer poison every later describe/tool build.
+4. **MCP `authInfo` is typed.** `MCPSession.authInfo` is the MCP SDK's `AuthInfo` (was `unknown`) — a type-level narrowing with no runtime change; `createContext` implementations gain real fields (`token`, `clientId`, `scopes`, …) instead of casting.
+5. **The coordinator behavioral contract is shared test infrastructure.** The in-memory coordinator's store-level tests moved to `test-fixtures/approval-coordinator-contract.ts` (same in-repo pattern as the adapter conformance checklist, ADR-012 item 10); `@orpc-agent/postgres` runs the identical suite.
+
+**Consequences.** Reference pages note items 1 and 4 inline ([configuration](../reference/configuration.md), [adapters/mcp](../adapters/mcp.md)); the API-surface check gains the `@orpc-agent/postgres` entry. Nothing here weakens an SI-* invariant.
+
+**Unresolved.** None.

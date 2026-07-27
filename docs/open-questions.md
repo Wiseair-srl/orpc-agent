@@ -1,6 +1,6 @@
 # Open design questions
 
-> **Status:** Living document. Every unresolved decision lives here — not scattered through the docs. Each entry states the decision needed, options, a recommendation, implications, and whether v0.1 implementation is blocked. With v0.1 implemented and published, **Q1 and Q2 are resolved** (see their entries); none of the rest blocked the build.
+> **Status:** Living document. Every unresolved decision lives here — not scattered through the docs. Each entry states the decision needed, options, a recommendation, implications, and whether v0.1 implementation is blocked. With v0.1 implemented and published, **Q1 and Q2 are resolved**; v0.2 resolved **Q8** (see the entries); none of the rest blocked either build.
 
 ## Q1 — Final npm scope <a id="q1"></a>
 **Status: RESOLVED (2026-07-27).** Option (a) confirmed: npm org `orpc-agent` registered (owner: pbwise), all five packages published at 0.1.0 under `@orpc-agent/*` with the independence disclaimer in every description and README. Release flow: changesets (linked lockstep across `@orpc-agent/*`), `pnpm release` locally or the CI release job on main (needs `NPM_TOKEN` + `RELEASE_TOKEN` secrets). Courtesy note to oRPC maintainers still pending.
@@ -37,12 +37,11 @@
 ## Q7 — First workflow adapter target <a id="q7"></a>
 **Decision.** Which engine gets the reference `workflow`-surface adapter (post-0.1): Temporal, Inngest, or Trigger.dev?
 **Recommendation.** Decide by user demand at 0.2 planning; design the adapter against the conformance contract so the choice isn't architectural.
+**Update (0.2).** [Mastra](https://mastra.ai) joined the candidate list and currently leads it: first-production-consumer demand, and its app-process suspend/resume workflow model is the cheapest conformant target — the integration may reduce to the [workflow-steps recipe](guides/workflow-steps.md) plus a thin step wrapper. Decision still deferred until the pattern is proven in a real application; the recipe is engine-agnostic on purpose.
 **Blocking?** No (Deferred scope).
 
 ## Q8 — Reference persistent stores <a id="q8"></a>
-**Decision.** Ship maintained `@orpc-agent/approvals-postgres` / `audit-postgres` reference implementations, or keep interfaces-only + documented recipes?
-**Recommendation.** Recipes in guides for 0.1 (already drafted in [human-approval](guides/human-approval.md#production-coordinator) and [auditing](guides/auditing.md#minimal-wiring)); decide on packages at 0.2 based on issue traffic.
-**Blocking?** No.
+**Status: RESOLVED (0.2).** Ship **one** reference package, `@orpc-agent/postgres`, exporting both `createPgApprovalCoordinator` and `createPgAuditSink` — superseding the earlier two-package placeholder names: both are dependency-free SQL glue over the same query seam, and the "smallest coherent architecture" argument of [ADR-009](architecture/decisions.md#adr-009-standard-schema-interoperability-lives-in-core) applies. The demand signal the 0.1 recommendation waited for arrived with the first production consumer. Bounds pinned in [ADR-013](architecture/decisions.md#adr-013-postgres-reference-persistence-package): driver-agnostic query seam, DDL as exported strings (no migrations framework), JS-injected clock, batching never voids strict audit. The hand-rolled recipes in [human-approval](guides/human-approval.md#production-coordinator) and [auditing](guides/auditing.md#minimal-wiring) remain the custom-store path.
 
 ## Q9 — Rate limiting / quotas <a id="q9"></a>
 **Decision.** Does the framework grow first-class per-actor/per-capability rate limits (threat T5), or stay app-level (middleware) forever?

@@ -10,16 +10,17 @@ Single page for every knob, its default, and where it applies. Precedence for ov
 |---|---|---|---|
 | `registry` | `CapabilityRegistry` | — (required) | |
 | `policies` | `AgentPolicy[]` | `[]` | Evaluated in order, before per-capability `meta.policies` |
-| `approvals.coordinator` | `ApprovalCoordinator` | in-memory | Dev/test default; production supplies persistent impl |
+| `approvals.coordinator` | `ApprovalCoordinator` | in-memory | Dev/test default; production supplies a persistent impl (`@orpc-agent/postgres` provides the reference) |
 | `approvals.handler` | `(req) => Promise<ApprovalDecision \| undefined>` | — | Inline mode; deciding requests never suspend; returning `undefined` defers that request to the coordinator flow (ADR-006 addendum) |
 | `approvals.rejectSelfApproval` | `boolean` | `true` | SI-4; disable only with a documented reason |
-| `audit` | sink \| sink[] \| `{ sinks, strict, onSinkError }` | none | No sink = no audit persistence; docs warn loudly |
+| `audit` | sink \| sink[] \| `{ sinks, strict, onSinkError }` | none | No sink = no audit persistence (`@orpc-agent/postgres` provides the reference sink) |
 | `audit.strict` | `boolean` | `false` | Await `capability.started` before execution; fail with `AUDIT_UNAVAILABLE` |
 | `tracing` | `TracingAdapter` | no-op | `@orpc-agent/opentelemetry` provides one |
 | `defaults.timeoutMs` | `number` | `30_000` | Per-execution ceiling; capability `timeoutMs` overrides |
 | `defaults.policyTimeoutMs` | `number` | `5_000` | Per policy-evaluation batch; exceeding ⇒ `POLICY_FAILED` (deny) |
-| `defaults.approvalExpiresInMs` | `number` | `900_000` | Overridable per capability (`meta.approval.expiresInMs`) and per decision (`requireApproval({ expiresInMs })`) |
+| `defaults.approvalExpiresInMs` | `number` | `900_000` | Overridable per capability (`meta.approval.expiresInMs`) and per decision (`requireApproval({ expiresInMs })`). 15 min suits present-human confirmation; raise it for dashboard-latency approvals or requests expire before anyone sees them |
 | `now` | `() => Date` | system clock | Injected for deterministic tests |
+| `warnings` | `boolean` | `true` | Startup footgun warnings (never fatal): approval-gated capabilities on the default in-memory coordinator (unless an inline handler is configured), and write-capable capabilities exposed to `aiSdk`/`mcp` with no audit sink |
 
 ## Capability meta (summary; full page: [metadata.md](metadata.md))
 
@@ -72,6 +73,15 @@ Single page for every knob, its default, and where it applies. Precedence for ov
 |---|---|---|
 | `tracer` | `trace.getTracer("orpc-agent")` | |
 | `actorIdAttribute` | `false` | Off by default (SI-10-adjacent) |
+
+**`createPgApprovalCoordinator(options)` / `createPgAuditSink(options)`** — [adapters/postgres.md](../adapters/postgres.md)
+
+| Option | Default | |
+|---|---|---|
+| `query` | — (required) | `(sql, params) => Promise<{ rows }>` — the driver seam (ADR-013) |
+| `table` | `orpc_agent_approvals` / `orpc_agent_audit_events` | Validated identifier, optionally schema-qualified |
+| `now` (coordinator) | system clock | Drives every expiry comparison |
+| `batch` (sink) | none | `{ size?: 50, flushMs?: 250 }`; `capability.started` always writes through awaited |
 
 **`createAgentTestRuntime(options)`** — [adapters/testing.md](../adapters/testing.md)
 
