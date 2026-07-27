@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import Markdown from "react-markdown";
 import { ShieldAlert, Sparkles } from "lucide-react";
 import {
   api,
@@ -189,7 +190,15 @@ function Entry({ entry }: { entry: Entry }) {
     return (
       <div className={`msg ${entry.role}`}>
         <div className="from">{entry.role === "user" ? "you" : "assistant"}</div>
-        <div className="bubble">{entry.content}</div>
+        {entry.role === "assistant" ? (
+          // Model output is markdown; react-markdown escapes raw HTML by
+          // default, so untrusted model text cannot inject markup.
+          <div className="bubble md">
+            <Markdown>{entry.content}</Markdown>
+          </div>
+        ) : (
+          <div className="bubble">{entry.content}</div>
+        )}
       </div>
     );
   }
