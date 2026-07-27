@@ -50,9 +50,12 @@ export async function describePipeline(
       if (outcome.requireApprovals.length > 0) requiresApproval = true;
     }
 
+    // Conversion is memoized per schema object; each descriptor gets its own
+    // clone so a caller mutating descriptor.inputSchema cannot poison the
+    // cache for every later describe/tool build.
     let inputSchema: JsonSchemaObject;
     if (capability.inputSchema) {
-      inputSchema = toJsonSchema(capability.inputSchema);
+      inputSchema = structuredClone(toJsonSchema(capability.inputSchema));
     } else {
       inputSchema = { type: "object" };
     }

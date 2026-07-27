@@ -12,7 +12,7 @@ export type JsonSchemaObject = { [key: string]: unknown };
 type SchemaConverter = (schema: StandardSchemaV1) => JsonSchemaObject;
 
 const converters = new Map<string, SchemaConverter>();
-const cache = new WeakMap<StandardSchemaV1, JsonSchemaObject>();
+let cache = new WeakMap<StandardSchemaV1, JsonSchemaObject>();
 
 export function registerSchemaConverter(
   vendor: string,
@@ -25,6 +25,9 @@ export function registerSchemaConverter(
     throw new TypeError("registerSchemaConverter: convert must be a function");
   }
   converters.set(vendor, convert);
+  // A re-registered vendor may convert differently; cached results from the
+  // previous converter must not outlive it.
+  cache = new WeakMap();
 }
 
 export function toJsonSchema(schema: StandardSchemaV1): JsonSchemaObject {

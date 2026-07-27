@@ -53,6 +53,10 @@ export function createAgentRuntime<TContext = unknown>(
     }
   }
 
+  if (options.warnings !== false) {
+    emitStartupWarnings(options, audit.hasSinks);
+  }
+
   const deps: PipelineDeps = {
     registry: options.registry,
     policies: options.policies ?? [],
@@ -121,6 +125,63 @@ export function createAgentRuntime<TContext = unknown>(
 
     approvals: wrapCoordinator(coordinator, deps),
   };
+}
+
+const MODEL_SURFACES: readonly ExposureSurface[] = ["aiSdk", "mcp"];
+const WRITE_SIDE_EFFECTS = new Set(["write", "destructive", "external"]);
+
+/**
+ * Production footgun warnings (never fatal; `warnings: false` silences).
+ * Static knowledge only: policy-driven approval gates are opaque here, so
+ * condition 1 keys on meta.approval.required.
+ */
+function emitStartupWarnings<TContext>(
+  options: AgentRuntimeOptions<TContext>,
+  hasSinks: boolean,
+): void {
+  const capabilities = options.registry.capabilities();
+
+  // 1. Approval-gated capabilities on the (restart-amnesiac) default
+  //    coordinator. An inline handler counts as an explicit choice: pure
+  //    inline confirmation legitimately never persists.
+  if (!options.approvals?.coordinator && !options.approvals?.handler) {
+    const gated = capabilities
+      .filter((c) => c.meta.approval?.required === true)
+      .map((c) => c.id);
+    if (gated.length > 0) {
+      console.warn(
+        `[orpc-agent] ${sampleIds(gated)} require approval but the runtime is using the ` +
+          "default in-memory coordinator: approval records will not survive restarts. " +
+          "Pass approvals.coordinator (e.g. @orpc-agent/postgres), or set warnings: false.",
+      );
+    }
+  }
+
+  // 2. Write-capable capabilities reachable by models with nothing recording.
+  if (!hasSinks) {
+    const exposedWrites = capabilities
+      .filter(
+        (c) =>
+          WRITE_SIDE_EFFECTS.has(c.meta.sideEffect) &&
+          MODEL_SURFACES.some((s) => c.meta.expose[s] === true),
+      )
+      .map((c) => c.id);
+    if (exposedWrites.length > 0) {
+      console.warn(
+        `[orpc-agent] ${sampleIds(exposedWrites)} are write-capable and exposed to model ` +
+          "surfaces with no audit sink configured: no audit trail will be stored. " +
+          "Configure audit sinks (e.g. @orpc-agent/postgres), or set warnings: false.",
+      );
+    }
+  }
+}
+
+function sampleIds(ids: string[]): string {
+  const sample = ids
+    .slice(0, 3)
+    .map((id) => `"${id}"`)
+    .join(", ");
+  return ids.length > 3 ? `${sample} (+${ids.length - 3} more)` : sample;
 }
 
 /**

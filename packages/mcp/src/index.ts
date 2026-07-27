@@ -7,6 +7,7 @@ import {
   type CallToolResult,
 } from "@modelcontextprotocol/sdk/types.js";
 import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
+import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
 import type {
   Actor,
   AgentRuntime,
@@ -24,7 +25,7 @@ import type {
 export type MCPSession = {
   sessionId?: string | undefined;
   /** Transport-verified auth info (e.g. from Streamable HTTP OAuth). */
-  authInfo?: unknown;
+  authInfo?: AuthInfo | undefined;
 };
 
 export type MCPServerOptions<TContext = unknown> = {
@@ -90,7 +91,7 @@ export function createMCPServer<TContext = unknown>(
   const identities = new Map<string, Promise<{ actor: Actor; context: TContext }>>();
   const identityFor = (extra: {
     sessionId?: string;
-    authInfo?: unknown;
+    authInfo?: AuthInfo;
   }): Promise<{ actor: Actor; context: TContext }> => {
     const key = extra.sessionId ?? "__single_session__";
     let identity = identities.get(key);

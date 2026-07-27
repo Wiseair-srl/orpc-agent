@@ -54,6 +54,12 @@ export type AgentRuntimeOptions<TContext> = {
   };
   /** Clock injection; default system clock. */
   now?: () => Date;
+  /**
+   * Startup footgun warnings (default true): approval-gated capabilities on
+   * the default in-memory coordinator, and write-capable capabilities exposed
+   * to model surfaces with no audit sink. Never fatal; `false` silences.
+   */
+  warnings?: boolean;
 };
 
 export type ExecutionOptions<TContext> = {
