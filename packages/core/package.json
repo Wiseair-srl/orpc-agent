@@ -3,12 +3,16 @@
   "version": "0.1.0",
   "description": "Neutral capability model and governed agent runtime for oRPC procedures. Independent community project, not affiliated with or endorsed by the oRPC maintainers.",
   "license": "MIT",
+  "author": "Paolo Barbato",
   "type": "module",
   "engines": {
     "node": ">=20.19.0"
   },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "files": [
-    "dist"
+    "dist",
+    "LICENSE"
   ],
   "exports": {
     ".": {
@@ -22,7 +26,8 @@
   },
   "scripts": {
     "build": "tsup",
-    "typecheck": "tsc -p tsconfig.json"
+    "typecheck": "tsc -p tsconfig.json",
+    "prepublishOnly": "node ../../scripts/copy-license.cjs"
   },
   "dependencies": {
     "@standard-schema/spec": "^1.1.0"
@@ -43,5 +48,26 @@
     "typescript": "^5.9.2",
     "vitest": "^4.1.10",
     "zod": "^4.4.3"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Wiseair-srl/orpc-agent.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/Wiseair-srl/orpc-agent/tree/main/packages/core",
+  "bugs": {
+    "url": "https://github.com/Wiseair-srl/orpc-agent/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "orpc",
+    "agent",
+    "ai",
+    "llm",
+    "capabilities",
+    "governance",
+    "typescript"
+  ]
 }

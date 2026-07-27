@@ -3,11 +3,17 @@
   "version": "0.1.0",
   "description": "Model Context Protocol server adapter for oRPC Agent runtimes. Independent community project, not affiliated with or endorsed by the oRPC maintainers.",
   "license": "MIT",
+  "author": "Paolo Barbato",
   "type": "module",
   "engines": {
     "node": ">=20.19.0"
   },
-  "files": ["dist"],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -16,10 +22,11 @@
   },
   "scripts": {
     "build": "tsup",
-    "typecheck": "tsc -p tsconfig.json"
+    "typecheck": "tsc -p tsconfig.json",
+    "prepublishOnly": "node ../../scripts/copy-license.cjs"
   },
   "dependencies": {
-    "@orpc-agent/core": "workspace:*"
+    "@orpc-agent/core": "workspace:^"
   },
   "peerDependencies": {
     "@modelcontextprotocol/sdk": "^1.17.0"
@@ -32,5 +39,25 @@
     "typescript": "^5.9.2",
     "vitest": "^4.1.10",
     "zod": "^4.4.3"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Wiseair-srl/orpc-agent.git",
+    "directory": "packages/mcp"
+  },
+  "homepage": "https://github.com/Wiseair-srl/orpc-agent/tree/main/packages/mcp",
+  "bugs": {
+    "url": "https://github.com/Wiseair-srl/orpc-agent/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "orpc",
+    "agent",
+    "mcp",
+    "model-context-protocol",
+    "llm",
+    "typescript"
+  ]
 }

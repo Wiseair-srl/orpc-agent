@@ -15,9 +15,13 @@
     "check:api": "node scripts/check-api-surface.mjs",
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
-    "docs:preview": "vitepress preview docs"
+    "docs:preview": "vitepress preview docs",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release": "pnpm build && changeset publish"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.30.0",
     "@orpc/server": "1.14.10",
     "@types/node": "^24.13.3",
     "typescript": "^5.9.2",

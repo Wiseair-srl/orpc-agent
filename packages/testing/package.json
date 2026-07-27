@@ -3,12 +3,16 @@
   "version": "0.1.0",
   "description": "Deterministic governance testing for oRPC Agent capabilities — no model, no network. Independent community project, not affiliated with or endorsed by the oRPC maintainers.",
   "license": "MIT",
+  "author": "Paolo Barbato",
   "type": "module",
   "engines": {
     "node": ">=20.19.0"
   },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "files": [
-    "dist"
+    "dist",
+    "LICENSE"
   ],
   "exports": {
     ".": {
@@ -18,10 +22,11 @@
   },
   "scripts": {
     "build": "tsup",
-    "typecheck": "tsc -p tsconfig.json"
+    "typecheck": "tsc -p tsconfig.json",
+    "prepublishOnly": "node ../../scripts/copy-license.cjs"
   },
   "dependencies": {
-    "@orpc-agent/core": "workspace:*"
+    "@orpc-agent/core": "workspace:^"
   },
   "peerDependencies": {
     "@orpc/server": "^1.14.10"
@@ -33,5 +38,25 @@
     "typescript": "^5.9.2",
     "vitest": "^4.1.10",
     "zod": "^4.4.3"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Wiseair-srl/orpc-agent.git",
+    "directory": "packages/testing"
+  },
+  "homepage": "https://github.com/Wiseair-srl/orpc-agent/tree/main/packages/testing",
+  "bugs": {
+    "url": "https://github.com/Wiseair-srl/orpc-agent/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "orpc",
+    "agent",
+    "testing",
+    "governance",
+    "llm",
+    "typescript"
+  ]
 }
