@@ -1,6 +1,6 @@
 {
   "name": "@orpc-agent/core",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Neutral capability model and governed agent runtime for oRPC procedures. Independent community project, not affiliated with or endorsed by the oRPC maintainers.",
   "license": "MIT",
   "author": "Paolo Barbato",
