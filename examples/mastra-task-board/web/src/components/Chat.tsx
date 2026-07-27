@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { ShieldAlert, Sparkles } from "lucide-react";
 import {
   api,
   type ApprovalCard,
@@ -95,10 +96,13 @@ export function Chat({
   return (
     <aside className="chat">
       <div className="chat-head">
-        <span className="who">Assistant</span>
-        <span className="via">
-          mastra · openrouter{health?.model ? ` · ${health.model}` : ""}
+        <span className="ai-chip">
+          <Sparkles size={16} />
         </span>
+        <div>
+          <div className="who">Assistant</div>
+          <div className="via">mastra · openrouter{health?.model ? ` · ${health.model}` : ""}</div>
+        </div>
       </div>
 
       <div className="chat-log" ref={logRef}>
@@ -116,28 +120,33 @@ export function Chat({
         ))}
         {approvals.map((approval) => (
           <div className="approval" key={approval.id}>
-            <div className="kicker">Approval required</div>
-            <div className="what">
-              <code>{approval.capabilityId}</code>
-              {approval.taskTitle ? <> — “{approval.taskTitle}”</> : null}
+            <div className="kicker">
+              <ShieldAlert size={12} />
+              Approval required
             </div>
-            <div className="reason">{approval.reasons.join("; ")}</div>
-            <pre>{JSON.stringify(approval.input, null, 2)}</pre>
-            <div className="buttons">
-              <button
-                className="approve-btn"
-                disabled={deciding !== null}
-                onClick={() => void decide(approval, true)}
-              >
-                Approve &amp; run
-              </button>
-              <button
-                className="reject-btn"
-                disabled={deciding !== null}
-                onClick={() => void decide(approval, false)}
-              >
-                Reject
-              </button>
+            <div className="body">
+              <div className="what">
+                {approval.capabilityId}
+                {approval.taskTitle ? <> — “{approval.taskTitle}”</> : null}
+              </div>
+              <div className="reason">{approval.reasons.join("; ")}</div>
+              <pre>{JSON.stringify(approval.input, null, 2)}</pre>
+              <div className="buttons">
+                <button
+                  className="approve-btn"
+                  disabled={deciding !== null}
+                  onClick={() => void decide(approval, true)}
+                >
+                  Approve &amp; run
+                </button>
+                <button
+                  className="reject-btn"
+                  disabled={deciding !== null}
+                  onClick={() => void decide(approval, false)}
+                >
+                  Reject
+                </button>
+              </div>
             </div>
           </div>
         ))}
@@ -163,7 +172,11 @@ export function Chat({
             }
           }}
         />
-        <button disabled={!aiEnabled || busy || input.trim().length === 0} onClick={() => void send()}>
+        <button
+          className="btn"
+          disabled={!aiEnabled || busy || input.trim().length === 0}
+          onClick={() => void send()}
+        >
           Send
         </button>
       </div>
@@ -233,18 +246,22 @@ function resolutionLine(approval: ApprovalCard, resolution: Resolution): string 
 function SetupCard() {
   return (
     <div className="setup">
-      <div className="kicker">AI disabled — bring a key</div>
+      <span className="ai-chip">
+        <Sparkles size={16} />
+      </span>
+      <div className="title">AI disabled — bring a key</div>
       <p>
-        The board works without it. To enable the assistant, give the example an{" "}
-        <strong>OpenRouter</strong> key (any model works — the integration is model-agnostic):
+        The board works without it. To enable the assistant, give the example an OpenRouter key
+        — any model works, the integration is model-agnostic.
       </p>
       <pre>{`# examples/mastra-task-board/.env
 OPENROUTER_API_KEY=sk-or-...
 # optional, defaults to anthropic/claude-sonnet-4.5
 OPENROUTER_MODEL=anthropic/claude-sonnet-4.5`}</pre>
       <p>
-        Then restart <code>pnpm dev</code>. Keys: <code>openrouter.ai/keys</code>.
+        Then restart <strong>pnpm dev</strong>.
       </p>
+      <span className="link">openrouter.ai/keys</span>
     </div>
   );
 }

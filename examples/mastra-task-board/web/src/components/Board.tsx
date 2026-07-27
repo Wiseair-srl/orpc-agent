@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ChevronLeft, ChevronRight, EyeOff, Plus, Sparkles, Trash2 } from "lucide-react";
 import { client, type Task } from "../api";
 
 const COLUMNS = [
@@ -56,7 +57,7 @@ export function Board({ tasks, onChanged }: { tasks: Task[]; onChanged: () => vo
   return (
     <>
       <form
-        className="add-task"
+        className="toolbar"
         onSubmit={(e) => {
           e.preventDefault();
           addTask();
@@ -78,38 +79,45 @@ export function Board({ tasks, onChanged }: { tasks: Task[]; onChanged: () => vo
           <option value="urgent">urgent</option>
         </select>
         <button className="btn" type="submit" disabled={busy || title.trim().length < 3}>
-          Add
+          <Plus size={14} />
+          Add task
         </button>
       </form>
 
-      <div className="columns">
-        {COLUMNS.map((column) => {
-          const items = tasks.filter((t) => t.status === column.key);
-          return (
-            <section className="column" key={column.key}>
-              <div className="column-head">
-                <span className="name">{column.label}</span>
-                <span className="count">{items.length}</span>
+      <section className="card-panel">
+        <div className="panel-head">
+          <span className="label">Board</span>
+          <span className="count-badge">{tasks.length}</span>
+        </div>
+        <div className="columns">
+          {COLUMNS.map((column) => {
+            const items = tasks.filter((t) => t.status === column.key);
+            return (
+              <div className="column" key={column.key}>
+                <div className="column-head">
+                  <span className="name">{column.label}</span>
+                  <span className="count-badge">{items.length}</span>
+                </div>
+                {items.map((task, i) => (
+                  <TaskRow
+                    key={task.id}
+                    task={task}
+                    index={i}
+                    status={column.key}
+                    onMove={(dir) => move(task, dir)}
+                    onDelete={() => remove(task)}
+                  />
+                ))}
               </div>
-              {items.map((task, i) => (
-                <TaskCard
-                  key={task.id}
-                  task={task}
-                  index={i}
-                  onMove={(dir) => move(task, dir)}
-                  onDelete={() => remove(task)}
-                  status={column.key}
-                />
-              ))}
-            </section>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      </section>
     </>
   );
 }
 
-function TaskCard({
+function TaskRow({
   task,
   index,
   status,
@@ -123,29 +131,43 @@ function TaskCard({
   onDelete: () => void;
 }) {
   return (
-    <article className="card" style={{ animationDelay: `${index * 40}ms` }}>
+    <article className="trow" style={{ animationDelay: `${index * 30}ms` }}>
       <div className="actions">
         {status !== "todo" && (
           <button className="icon-btn" title="Move left" onClick={() => onMove(-1)}>
-            ←
+            <ChevronLeft size={12} />
           </button>
         )}
         {status !== "done" && (
           <button className="icon-btn" title="Move right" onClick={() => onMove(1)}>
-            →
+            <ChevronRight size={12} />
           </button>
         )}
         <button className="icon-btn danger" title="Delete" onClick={onDelete}>
-          ✕
+          <Trash2 size={12} />
         </button>
       </div>
       <div className="title">{task.title}</div>
       <div className="meta">
-        {task.priority === "urgent" && <span className="tag urgent">urgent</span>}
-        {task.createdBy === "agent" && <span className="tag agent-made">by agent</span>}
+        {task.priority === "urgent" && (
+          <span className="pill warn">
+            <span className="dot" />
+            urgent
+          </span>
+        )}
+        {task.createdBy === "agent" && (
+          <span className="chip-meta ai">
+            <Sparkles size={11} />
+            by agent
+          </span>
+        )}
         {task.notes && (
-          <span className="tag notes" title={`${task.notes}\n\n(You can read this. The model cannot — tasks.list redacts notes before output reaches it.)`}>
-            ⌀ notes · hidden from model
+          <span
+            className="chip-meta dashed"
+            title={`${task.notes}\n\n(You can read this. The model cannot — tasks.list redacts notes before output reaches it.)`}
+          >
+            <EyeOff size={11} />
+            notes · hidden from model
           </span>
         )}
       </div>

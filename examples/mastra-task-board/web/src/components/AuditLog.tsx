@@ -16,16 +16,14 @@ const TONE: Record<string, "ok" | "warn" | "deny" | ""> = {
  */
 export function AuditLog({ rows }: { rows: AuditRow[] }) {
   return (
-    <footer className="ledger">
-      <div className="ledger-head">
+    <section className="card-panel">
+      <div className="panel-head">
         <span className="label">Audit ledger</span>
-        <span className="hint">
-          runtime events for agent calls — the board UI's plain oRPC traffic is not agent traffic
-        </span>
+        <span className="hint">agent runtime events — board UI traffic is plain oRPC, not listed</span>
       </div>
-      <div className="ledger-lines">
+      <div className="ledger-rows">
         {rows.length === 0 && (
-          <div className="ledger-empty">no agent activity yet — ask the assistant to do something</div>
+          <div className="ledger-empty">No agent activity yet — ask the assistant to do something.</div>
         )}
         {[...rows].reverse().map((row, i) => (
           <div className="ledger-line" key={`${row.at}-${i}`}>
@@ -36,7 +34,7 @@ export function AuditLog({ rows }: { rows: AuditRow[] }) {
           </div>
         ))}
       </div>
-    </footer>
+    </section>
   );
 }
 

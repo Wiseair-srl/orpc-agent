@@ -6,23 +6,42 @@ import type { CapabilityCard } from "../api";
  */
 export function Capabilities({ caps }: { caps: CapabilityCard[] }) {
   return (
-    <div className="caps">
-      <div className="caps-head">
+    <section className="card-panel">
+      <div className="panel-head">
         <span className="label">What the agent can do</span>
+        <span className="count-badge">{caps.length}</span>
       </div>
       <div className="caps-grid">
         {caps.map((cap) => (
-          <div className="cap" key={cap.id}>
+          <div className="cap-item" key={cap.id}>
             <div className="id">{cap.id}</div>
             <div className="desc">{cap.description}</div>
             <div className="badges">
-              <span className={`badge ${cap.sideEffect}`}>{cap.sideEffect}</span>
-              <span className={`badge risk-${cap.risk}`}>risk: {cap.risk}</span>
-              {cap.requiresApproval && <span className="badge approval">needs approval</span>}
+              {cap.sideEffect === "destructive" ? (
+                <span className="pill danger">
+                  <span className="dot" />
+                  destructive
+                </span>
+              ) : (
+                <span className="chip-meta">{cap.sideEffect}</span>
+              )}
+              {cap.risk === "high" || cap.risk === "critical" ? (
+                <span className="pill danger">risk: {cap.risk}</span>
+              ) : cap.risk === "medium" ? (
+                <span className="pill warn">risk: medium</span>
+              ) : (
+                <span className="chip-meta">risk: low</span>
+              )}
+              {cap.requiresApproval && (
+                <span className="pill warn">
+                  <span className="dot" />
+                  needs approval
+                </span>
+              )}
             </div>
           </div>
         ))}
       </div>
-    </div>
+    </section>
   );
 }

@@ -1,5 +1,16 @@
 import { useCallback, useEffect, useState } from "react";
 import {
+  Check,
+  ChevronRight,
+  CircleHelp,
+  ClipboardList,
+  History,
+  LayoutDashboard,
+  MessageSquare,
+  ShieldAlert,
+  Sparkles,
+} from "lucide-react";
+import {
   api,
   client,
   type ApprovalCard,
@@ -40,31 +51,105 @@ export function App() {
     return () => clearInterval(interval);
   }, [refresh]);
 
+  const open = tasks.filter((t) => t.status !== "done").length;
+  const done = tasks.filter((t) => t.status === "done").length;
+
   return (
     <div className="shell">
-      <header className="header">
-        <h1>
-          task/board <em>×</em> agent
-        </h1>
-        <span className="stack">orpc-agent governs · mastra runs the loop · openrouter serves the model</span>
-        <span className="spacer" />
-        <span className={`health ${health?.aiEnabled ? "" : "off"}`}>
-          <span className="dot" />
-          {health === null ? "server offline" : health.aiEnabled ? health.model : "AI disabled — board still works"}
-        </span>
-      </header>
+      <Rail />
 
-      <main className="board">
-        <div className="board-top">
-          <h2>Board</h2>
+      <main className="main">
+        <div className="page-head">
+          <div>
+            <div className="crumbs">
+              <span>orpc-agent</span>
+              <ChevronRight size={11} />
+              <span>examples</span>
+              <ChevronRight size={11} />
+              <span className="here">Task board</span>
+            </div>
+            <h1>Task board</h1>
+            <div className="sub">
+              Four governed capabilities, two clients — the board UI and a Mastra agent.
+            </div>
+          </div>
+          <HealthPill health={health} />
         </div>
+
+        <div className="stats">
+          <Stat icon={<ClipboardList size={16} />} value={open} label="Open tasks" />
+          <Stat icon={<Check size={16} />} value={done} label="Done" />
+          <Stat icon={<ShieldAlert size={16} />} value={approvals.length} label="Pending approvals" />
+          <Stat icon={<Sparkles size={16} />} value={audit.length} label="Agent runtime events" />
+        </div>
+
         <Board tasks={tasks} onChanged={() => void refresh()} />
         <Capabilities caps={caps} />
+        <AuditLog rows={audit} />
+        <div className="page-end" />
       </main>
 
       <Chat health={health} approvals={approvals} onActivity={() => void refresh()} />
-
-      <AuditLog rows={audit} />
     </div>
+  );
+}
+
+function Rail() {
+  return (
+    <nav className="rail">
+      <div className="logo">T</div>
+      <div className="items">
+        <span className="item active" title="Board">
+          <LayoutDashboard size={16} />
+        </span>
+        <span className="item" title="Assistant">
+          <MessageSquare size={16} />
+        </span>
+        <span className="item" title="Audit">
+          <History size={16} />
+        </span>
+      </div>
+      <div className="foot">
+        <CircleHelp size={16} />
+        <div className="avatar">YO</div>
+      </div>
+    </nav>
+  );
+}
+
+function Stat({ icon, value, label }: { icon: React.ReactNode; value: number; label: string }) {
+  return (
+    <div className="stat">
+      <div className="chip">{icon}</div>
+      <div>
+        <div className="value">{value}</div>
+        <div className="label">{label}</div>
+      </div>
+    </div>
+  );
+}
+
+function HealthPill({ health }: { health: Health | null }) {
+  if (health === null) {
+    return (
+      <span className="pill danger">
+        <span className="dot" />
+        server offline
+      </span>
+    );
+  }
+  if (!health.aiEnabled) {
+    return (
+      <span className="pill warn">
+        <span className="dot" />
+        AI disabled — board still works
+      </span>
+    );
+  }
+  return (
+    <span className="pill ok">
+      <span className="dot" />
+      {health.model}
+    </span>
   );
 }
