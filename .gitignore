@@ -6,3 +6,6 @@ coverage/
 docs/.vitepress/cache/
 docs/.vitepress/dist/
 .env
+.vercel/
+.vercel
+.env*

@@ -37,6 +37,8 @@ function rewriteRepoLinks(md: MarkdownIt): void {
   });
 }
 
+const SITE_URL = "https://orpc-agent.dev";
+
 export default defineConfig({
   title: "oRPC Agent",
   description:
@@ -45,10 +47,25 @@ export default defineConfig({
   cleanUrls: true,
   lastUpdated: true,
 
+  sitemap: { hostname: SITE_URL },
+
   head: [
     ["link", { rel: "icon", type: "image/svg+xml", href: "/logo.svg" }],
     ["meta", { name: "theme-color", content: "#0d9488" }],
+    ["meta", { property: "og:type", content: "website" }],
+    ["meta", { property: "og:site_name", content: "oRPC Agent" }],
   ],
+
+  transformPageData(pageData) {
+    const path = pageData.relativePath.replace(/((^|\/)index)?\.md$/, "$2");
+    const url = `${SITE_URL}/${path}`;
+    pageData.frontmatter.head ??= [];
+    pageData.frontmatter.head.push(
+      ["link", { rel: "canonical", href: url }],
+      ["meta", { property: "og:url", content: url }],
+      ["meta", { property: "og:title", content: pageData.title || "oRPC Agent" }],
+    );
+  },
 
   markdown: {
     config: rewriteRepoLinks,
