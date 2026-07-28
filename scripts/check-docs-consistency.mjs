@@ -60,6 +60,7 @@ for (const event of implEventTypes) {
 const requiredSymbols = [
   "agentProcedure",
   "createCapabilityRegistry",
+  "defaultToolName",
   "createAgentRuntime",
   "definePolicy",
   "composePolicies",

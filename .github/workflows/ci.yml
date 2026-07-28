@@ -40,6 +40,10 @@ jobs:
       - run: pnpm check:boundaries
       - run: pnpm build
       - run: pnpm check:api
+      # The examples' committed capability snapshots are the framework's own
+      # regression test on exposure semantics: a change to the registry or to
+      # metadata normalization that moves what reaches a surface fails here.
+      - run: pnpm check:capabilities
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm check:docs

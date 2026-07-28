@@ -8,6 +8,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
+import { defaultToolName } from "@orpc-agent/core";
 import type {
   Actor,
   AgentRuntime,
@@ -72,7 +73,7 @@ export function createMCPServer<TContext = unknown>(
     const name =
       capability.meta.adapters?.mcp?.toolName ??
       options.toolNaming?.(capability.id) ??
-      capability.id.replace(/\./g, "_");
+      defaultToolName(capability.id);
     const existing = nameToId.get(name);
     if (existing !== undefined && existing !== capability.id) {
       throw new Error(
@@ -121,7 +122,7 @@ export function createMCPServer<TContext = unknown>(
       tools: filtered.map((descriptor) => {
         const annotations = runtime.registry.get(descriptor.id)?.meta.adapters?.mcp?.annotations;
         return {
-          name: idToName.get(descriptor.id) ?? descriptor.id.replace(/\./g, "_"),
+          name: idToName.get(descriptor.id) ?? defaultToolName(descriptor.id),
           description:
             descriptor.description + (descriptor.requiresApproval ? " Requires approval." : ""),
           inputSchema: descriptor.inputSchema as { type: "object"; [key: string]: unknown },

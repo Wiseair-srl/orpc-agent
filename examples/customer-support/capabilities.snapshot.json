@@ -1,0 +1,234 @@
+{
+  "version": 1,
+  "capabilities": [
+    {
+      "id": "cases.escalate",
+      "description": "Escalate a case to a human specialist queue.",
+      "sideEffect": "write",
+      "risk": "medium",
+      "expose": [
+        "aiSdk",
+        "direct",
+        "test"
+      ],
+      "toolNames": {
+        "aiSdk": "cases_escalate"
+      },
+      "idempotent": false,
+      "tags": [
+        "cases"
+      ],
+      "policies": [],
+      "inputSchemaHash": "sha256:cad996a45eb5fe4c9c7d7f035790e69d3f8d1c3cb0288d13d24a0feda5adb1c5"
+    },
+    {
+      "id": "customers.get",
+      "description": "Get a customer's profile by id.",
+      "sideEffect": "read",
+      "risk": "high",
+      "expose": [
+        "aiSdk",
+        "direct",
+        "mcp",
+        "test"
+      ],
+      "toolNames": {
+        "aiSdk": "customers_get",
+        "mcp": "customers_get"
+      },
+      "idempotent": false,
+      "tags": [
+        "customers",
+        "pii"
+      ],
+      "policies": [],
+      "redact": {
+        "output": true,
+        "approvalInput": false
+      },
+      "inputSchemaHash": "sha256:85d708fc6f8d200041c3fae9d193483067fc559850e1977bd6ff3f690f8fe2cd"
+    },
+    {
+      "id": "customers.search",
+      "description": "Search customers by name or email. Use before order lookups.",
+      "sideEffect": "read",
+      "risk": "medium",
+      "expose": [
+        "aiSdk",
+        "direct",
+        "mcp",
+        "test"
+      ],
+      "toolNames": {
+        "aiSdk": "customers_search",
+        "mcp": "customers_search"
+      },
+      "idempotent": false,
+      "tags": [
+        "customers"
+      ],
+      "policies": [],
+      "inputSchemaHash": "sha256:a4baa4e8268d75309570ab5fc8cd1ba38a3cfd38b0bbc6636cb7c6ef89e91885"
+    },
+    {
+      "id": "messages.draft",
+      "description": "Create a message draft for a case. Does not send anything.",
+      "sideEffect": "none",
+      "risk": "low",
+      "expose": [
+        "aiSdk",
+        "direct",
+        "test"
+      ],
+      "toolNames": {
+        "aiSdk": "messages_draft"
+      },
+      "idempotent": false,
+      "tags": [
+        "messages"
+      ],
+      "policies": [],
+      "inputSchemaHash": "sha256:8bd067193e6df7efb546b0df0fb45da06b038685acfb9f7e8fa045f241caaf8f"
+    },
+    {
+      "id": "messages.getCustomerThread",
+      "description": "Load the customer's message thread.",
+      "sideEffect": "read",
+      "risk": "medium",
+      "expose": [
+        "aiSdk",
+        "direct",
+        "test"
+      ],
+      "toolNames": {
+        "aiSdk": "messages_getCustomerThread"
+      },
+      "idempotent": false,
+      "tags": [
+        "messages"
+      ],
+      "policies": [],
+      "inputSchemaHash": "sha256:f8a924f113d4cf03b8a792b2e550a7297665aac02ff8beddbfeb95b9e368c9cb"
+    },
+    {
+      "id": "messages.send",
+      "description": "Send a drafted message to the customer. Requires explicit confirmation.",
+      "sideEffect": "external",
+      "risk": "high",
+      "expose": [
+        "aiSdk",
+        "direct",
+        "test"
+      ],
+      "toolNames": {
+        "aiSdk": "messages_send"
+      },
+      "approval": {
+        "required": true,
+        "type": "human-confirmation"
+      },
+      "idempotent": false,
+      "tags": [
+        "messages"
+      ],
+      "policies": [],
+      "inputSchemaHash": "sha256:637a84f68f6f5338c39bc1235a4e2a10e51562f05344c8fde71dd5594053ae7a"
+    },
+    {
+      "id": "orders.checkRefundEligibility",
+      "description": "Check whether an order can be refunded and up to what amount.",
+      "sideEffect": "read",
+      "risk": "low",
+      "expose": [
+        "aiSdk",
+        "direct",
+        "mcp",
+        "test"
+      ],
+      "toolNames": {
+        "aiSdk": "orders_checkRefundEligibility",
+        "mcp": "orders_checkRefundEligibility"
+      },
+      "idempotent": false,
+      "tags": [
+        "money",
+        "orders"
+      ],
+      "policies": [],
+      "inputSchemaHash": "sha256:6762a4819279b37ae3e56549abbc981b8f6902edf2f0175959ea637acde43905"
+    },
+    {
+      "id": "orders.get",
+      "description": "Get one order by id.",
+      "sideEffect": "read",
+      "risk": "medium",
+      "expose": [
+        "aiSdk",
+        "direct",
+        "mcp",
+        "test"
+      ],
+      "toolNames": {
+        "aiSdk": "orders_get",
+        "mcp": "orders_get"
+      },
+      "idempotent": false,
+      "tags": [
+        "orders"
+      ],
+      "policies": [],
+      "inputSchemaHash": "sha256:6762a4819279b37ae3e56549abbc981b8f6902edf2f0175959ea637acde43905"
+    },
+    {
+      "id": "orders.list",
+      "description": "List a customer's orders.",
+      "sideEffect": "read",
+      "risk": "low",
+      "expose": [
+        "aiSdk",
+        "direct",
+        "mcp",
+        "test"
+      ],
+      "toolNames": {
+        "aiSdk": "orders_list",
+        "mcp": "orders_list"
+      },
+      "idempotent": false,
+      "tags": [
+        "orders"
+      ],
+      "policies": [],
+      "inputSchemaHash": "sha256:5da5b5d27c6df16ae8d77d8e938314a4af88e1f1d733bf828825862b1477dbea"
+    },
+    {
+      "id": "orders.refund",
+      "description": "Refund an order, fully or partially. Check orders.checkRefundEligibility first.",
+      "sideEffect": "write",
+      "risk": "high",
+      "expose": [
+        "aiSdk",
+        "direct",
+        "test"
+      ],
+      "toolNames": {
+        "aiSdk": "orders_refund"
+      },
+      "idempotent": false,
+      "tags": [
+        "money",
+        "orders"
+      ],
+      "policies": [
+        "refund-limit"
+      ],
+      "redact": {
+        "output": true,
+        "approvalInput": true
+      },
+      "inputSchemaHash": "sha256:6d09874892cb91b3cdf7731aef330c7e491ab938c5746487d564859f2c29912e"
+    }
+  ],
+  "excluded": [],
+  "unexposed": []
+}

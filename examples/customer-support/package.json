@@ -8,7 +8,8 @@
   },
   "scripts": {
     "demo": "tsx src/demo.ts",
-    "typecheck": "tsc -p tsconfig.json"
+    "typecheck": "tsc -p tsconfig.json",
+    "check:capabilities": "orpc-agent check"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
@@ -26,9 +27,14 @@
     "@ai-sdk/provider": "^2.0.0",
     "@opentelemetry/context-async-hooks": "^2.0.0",
     "@opentelemetry/sdk-trace-base": "^2.0.0",
+    "@orpc-agent/cli": "workspace:*",
     "@types/node": "^24.13.3",
     "tsx": "^4.20.0",
     "typescript": "^5.9.2",
     "vitest": "^4.1.10"
+  },
+  "orpcAgent": {
+    "entry": "src/app.ts",
+    "export": "capabilities"
   }
 }

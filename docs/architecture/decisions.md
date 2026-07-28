@@ -240,3 +240,25 @@ Format per record: context → decision → alternatives → consequences → un
 **Consequences.** Reference pages note items 1 and 4 inline ([configuration](../reference/configuration.md), [adapters/mcp](../adapters/mcp.md)); the API-surface check gains the `@orpc-agent/postgres` entry. Nothing here weakens an SI-* invariant.
 
 **Unresolved.** None.
+
+## ADR-015: A developer CLI, with capability inventory as its first command
+
+**Context.** Two questions come up on every review of an agent-facing codebase: *what can an agent reach from here*, and *did that change in this pull request*. Both are answerable from data the registry already holds — `inspect()` reports what is in, what is out, and what is staged — but nothing packaged that answer, so each consumer re-derived it by hand or not at all. The 0.2 plan explicitly excluded "any CLI"; this ADR is the deliberate reversal, not an oversight.
+
+The alternative shape considered was a single-purpose `@orpc-agent/inspect`. It was rejected because the expensive and risky part is not the inventory: it is the substrate for loading a user's application (child-process isolation, TypeScript loading, export resolution, side-effect containment), which any later developer command needs identically. Extracting it after publishing a single-purpose package would mean deprecating a package name, moving a binary, and rewriting third-party CI. A second command family is also already promised in the docs — [approvals](../concepts/approvals.md) and [human approval](../guides/human-approval.md) both name a CLI as a legitimate place to surface pending requests.
+
+**Decision.**
+
+1. **`@orpc-agent/cli`, binary `orpc-agent`.** A developer tool, not an adapter: it exposes nothing to an agent and hardcodes no surface value. Its first command family is `inspect` / `snapshot` / `check`.
+2. **`shell`, not `cli`, is reserved for a future exposure surface.** `ExposureSurface` has no `cli` member today, so this costs nothing now and prevents a published-name collision if the [exploratory CLI adapter](../../ROADMAP.md) ever lands.
+3. **The snapshot is a deterministic governance contract.** No timestamps, generator version, or absolute paths; JSON Schema is canonicalized before hashing; functions (`redact`, `retryOn`, policy bodies) reduce to presence flags; policy names keep declaration order, since evaluation order decides which policy is recorded as the denier.
+4. **Drift is classified, not merely detected.** `check` fails on any diff by default, but labels each change *widening* (the agent gained reach or a control weakened), *narrowing*, or *neutral*, and `--fail-on widening` makes only the first fatal. Two classifications are counter-intuitive and deliberate: a `sideEffect` change is widening **in both directions**, because declaring less than before stops every policy keyed on the old value from matching; and `idempotent: false → true` is widening, because it is what permits retrying a write (SI-11).
+5. **Exit codes are contractual:** 0 clean, 1 drift, 2 could not run. A gate that cannot tell "changed" from "never loaded the app" rots silently.
+6. **The application is loaded, never invoked.** The entry module is imported in a child process with `ORPC_AGENT_INSPECT=1` set and a timeout; a function export is refused rather than called.
+7. **The CI path carries no rendering framework.** This runs on every pull request, so its install surface stays the package plus core. `tsx`/`jiti` are used only when the project already has them, and are spawned, never imported.
+8. **The tool states what it cannot see.** It does not evaluate policies — discovery decisions need a real actor and context (ADR-005) — so it reports declarations, not reachability. Adapter-level `toolNaming` overrides are outside its view. Both are documented at the top of the reference page, not in a footnote: a governance tool that overstates its coverage is worse than none.
+9. **`defaultToolName` becomes public core API.** It had three copies (registry, MCP adapter, AI SDK adapter); the CLI would have been the fourth. Naming is now one implementation, and the CLI's reported wire names are the adapters' actual mapping.
+
+**Consequences.** The examples carry committed snapshots and `pnpm check:capabilities` runs in CI, which makes exposure semantics a regression test of the framework itself: a change to registry construction or metadata normalization that moves what reaches a surface fails the build. A rules engine for code that is wrong from the start (rather than newly wrong) is a different mechanism and is not in this version.
+
+**Unresolved.** Whether `approvals` becomes the second command family, and on what schedule. If it does, the decision path must go through the application's configured coordinator: a CLI that records approval decisions is an approval authority, and who may approve stays the application's authorization question ([human approval](../guides/human-approval.md)).

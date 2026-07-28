@@ -13,6 +13,7 @@
     "check:boundaries": "node scripts/check-boundaries.mjs",
     "check:docs": "node scripts/check-docs-consistency.mjs",
     "check:api": "node scripts/check-api-surface.mjs",
+    "check:capabilities": "pnpm -r --filter './examples/*' check:capabilities",
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs",

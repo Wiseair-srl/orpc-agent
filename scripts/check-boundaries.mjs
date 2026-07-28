@@ -24,6 +24,17 @@ const FORBIDDEN_IMPORTS = {
     /^@opentelemetry\//,
     /^@orpc-agent\/(?!core)/,
   ],
+  // The CLI is a governance gate that runs on every PR: it imports core and
+  // nothing else, so its install surface stays the package itself. tsx/jiti
+  // are spawned as loaders when the project already has them, never imported.
+  cli: [
+    /^ai($|\/)/,
+    /^@modelcontextprotocol\//,
+    /^@opentelemetry\//,
+    /^@orpc-agent\/(?!core)/,
+    /^tsx($|\/)/,
+    /^jiti($|\/)/,
+  ],
   // Driver-agnosticism is an ADR-013 bound: src never imports a database
   // driver (tests may — pglite and pg are devDependencies only).
   postgres: [

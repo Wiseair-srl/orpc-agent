@@ -1,4 +1,5 @@
 import { jsonSchema, tool, type Tool, type ToolSet } from "ai";
+import { defaultToolName } from "@orpc-agent/core";
 import type {
   Actor,
   AgentRuntime,
@@ -95,10 +96,6 @@ export async function toAISDKTools<TContext = unknown>(
   }
 
   return tools;
-}
-
-function defaultToolName(capabilityId: string): string {
-  return capabilityId.replace(/\./g, "_");
 }
 
 function composeSignals(

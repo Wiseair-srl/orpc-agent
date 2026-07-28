@@ -18,6 +18,7 @@ const REQUIRED = {
     values: [
       "agentProcedure",
       "createCapabilityRegistry",
+      "defaultToolName",
       "createAgentRuntime",
       "definePolicy",
       "composePolicies",
@@ -88,6 +89,22 @@ const REQUIRED = {
     dts: "packages/testing/dist/index.d.ts",
     values: ["createAgentTestRuntime", "fakeActor", "testClock", "approvalProbe", "capturedAudit"],
     types: [],
+  },
+  cli: {
+    entry: "packages/cli/dist/index.js",
+    dts: "packages/cli/dist/index.d.ts",
+    values: [
+      "buildSnapshot",
+      "diffSnapshots",
+      "loadSnapshot",
+      "snapshotJson",
+      "renderInventory",
+      "renderChanges",
+      "renderGithub",
+      "renderMarkdown",
+      "LoadError",
+    ],
+    types: ["CapabilitySnapshot", "CapabilityEntry", "Change", "ChangeKind", "LoadOptions"],
   },
   postgres: {
     entry: "packages/postgres/dist/index.js",

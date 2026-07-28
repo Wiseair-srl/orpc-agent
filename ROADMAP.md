@@ -11,6 +11,11 @@ Driven by the first production consumer (an ~85-capability finance app):
 - MCP: `session.authInfo` typed as the SDK's `AuthInfo`
 - Guides: [headless invocations](docs/guides/headless-invocations.md), [workflow steps](docs/guides/workflow-steps.md), [MCP authentication](docs/guides/mcp-authentication.md) (Better Auth worked example), host-loop approval interop ([ai-sdk adapter](docs/adapters/ai-sdk.md))
 
+## Next — v0.3
+
+- `@orpc-agent/cli` — capability inventory and CI drift gate (`orpc-agent inspect | snapshot | check`), with committed snapshots dogfooded on both examples ([ADR-015](docs/architecture/decisions.md#adr-015-a-developer-cli-with-capability-inventory-as-its-first-command)). Core: `defaultToolName` becomes public, collapsing three copies into one
+- Reverses the 0.2 plan's "no CLI" exclusion deliberately; the surface name `cli` stays reserved for nothing — a future CLI *adapter* would take the surface `shell`
+
 Still on the 0.2 line, order by demand:
 
 - First workflow-engine adapter for the `workflow` surface ([Q7](docs/open-questions.md#q7) — Mastra currently leads the candidate list)
@@ -36,8 +41,9 @@ Definition of done: the [acceptance criteria](docs/implementation/brief.md#accep
 - Streaming (event-iterator) capabilities with per-chunk governance semantics ([Q11](docs/open-questions.md#q11))
 - Framework-level rate limits/quotas ([Q9](docs/open-questions.md#q9))
 - Declarative policy input constraints ([Q6](docs/open-questions.md#q6))
-- Capability inventory/report tooling (CI surface-diff action)
-- Metrics emission; additional adapters (CLI, A2A) — each begins as a design doc against the [adapter contract](docs/architecture/adapter-model.md)
+- `orpc-agent approvals` — a second CLI command family for pending-approval review, if demand appears ([ADR-015](docs/architecture/decisions.md#adr-015-a-developer-cli-with-capability-inventory-as-its-first-command) leaves this open; the decision path must go through the app's coordinator)
+- Rules engine for the CLI: assertions over new capabilities that have no snapshot baseline to drift from
+- Metrics emission; additional adapters (`shell`, A2A) — each begins as a design doc against the [adapter contract](docs/architecture/adapter-model.md). The surface is named `shell`, not `cli`: `@orpc-agent/cli` is the developer tool
 
 ## Non-goals (permanent)
 

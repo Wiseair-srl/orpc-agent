@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "paths": {
+      "@orpc-agent/core": ["../core/src/index.ts"],
+      "@orpc-agent/core/schema": ["../core/src/schema/index.ts"]
+    }
+  },
+  "include": ["src", "test"]
+}

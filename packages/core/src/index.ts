@@ -1,6 +1,6 @@
 // ---- Capability model ----
 export { agentProcedure } from "./procedure";
-export { createCapabilityRegistry } from "./registry";
+export { createCapabilityRegistry, defaultToolName } from "./registry";
 export type {
   AgentCapability,
   CapabilityDefs,

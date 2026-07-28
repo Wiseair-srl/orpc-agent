@@ -119,6 +119,18 @@ subpath @orpc-agent/core/schema: toJsonSchema, registerSchemaConverter
 
 **Maturity target.** v0.2 experimental.
 
+## @orpc-agent/cli
+
+**Purpose.** Developer tooling, not an adapter: it exposes nothing to an agent and hardcodes no surface value. Binary `orpc-agent`, first command family `inspect` / `snapshot` / `check` — the capability inventory and the CI drift gate. Bounds: [ADR-015](decisions.md#adr-015-a-developer-cli-with-capability-inventory-as-its-first-command).
+
+**Public exports.** `buildSnapshot`, `diffSnapshots`, `loadSnapshot`, `snapshotJson`, `renderInventory`, `renderChanges`, `renderGithub`, `renderMarkdown`, `LoadError`; types `CapabilitySnapshot`, `CapabilityEntry`, `Change`, `ChangeKind`, `LoadOptions`.
+
+**Dependencies.** `@orpc-agent/core` only. It runs on every pull request, so its install surface stays that: no rendering framework, no transpiler. `tsx`/`jiti` are *spawned* as loaders when the project already has them — the boundary check bans importing either from `src/`.
+
+**Non-responsibilities.** Does not evaluate policies (declarations, not reachability — see ADR-005), does not invoke application code (a function export is refused, never called), does not judge new capabilities that have no snapshot baseline.
+
+**Maturity target.** v0.3 experimental.
+
 ## @orpc-agent/testing
 
 **Purpose.** Deterministic verification of governance without a model: direct invocation with fake actors, policy decision assertions, approval probes (auto-approve / auto-reject / manual), captured audit events, fake clock, handler overrides.

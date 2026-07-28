@@ -16,7 +16,7 @@
 Your application UI, an AI runtime, an MCP client, a workflow, and your tests can all call the same typed oRPC procedures, under one set of validation rules, permissions, approvals, execution policies, and observability.
 
 > [!NOTE]
-> **Published to npm** under `@orpc-agent/*`: [`core`](https://www.npmjs.com/package/@orpc-agent/core), [`ai-sdk`](https://www.npmjs.com/package/@orpc-agent/ai-sdk), [`mcp`](https://www.npmjs.com/package/@orpc-agent/mcp), [`postgres`](https://www.npmjs.com/package/@orpc-agent/postgres), [`opentelemetry`](https://www.npmjs.com/package/@orpc-agent/opentelemetry), [`testing`](https://www.npmjs.com/package/@orpc-agent/testing) (`postgres` is new in 0.2 and ships with its release). The design documentation in [`docs/`](docs) is normative; CI runs the governance suite on every push (263 tests across 22 files, plus a real-Postgres pass). Progress lives in the [ROADMAP](ROADMAP.md).
+> **Published to npm** under `@orpc-agent/*`: [`core`](https://www.npmjs.com/package/@orpc-agent/core), [`ai-sdk`](https://www.npmjs.com/package/@orpc-agent/ai-sdk), [`mcp`](https://www.npmjs.com/package/@orpc-agent/mcp), [`postgres`](https://www.npmjs.com/package/@orpc-agent/postgres), [`opentelemetry`](https://www.npmjs.com/package/@orpc-agent/opentelemetry), [`testing`](https://www.npmjs.com/package/@orpc-agent/testing) (`postgres` is new in 0.2, `cli` in 0.3; each ships with its release). The design documentation in [`docs/`](docs) is normative; CI runs the governance suite on every push (303 tests across 25 files, plus a real-Postgres pass) and gates the examples' committed capability snapshots. Progress lives in the [ROADMAP](ROADMAP.md).
 
 ```bash
 pnpm add @orpc-agent/core @orpc/server
@@ -159,8 +159,30 @@ Your oRPC middleware stays the authoritative authorization layer on every call. 
 | `@orpc-agent/postgres` | Reference Postgres approval coordinator + audit sink (driver-agnostic) |
 | `@orpc-agent/opentelemetry` | Tracing adapter (spans and conventions) |
 | `@orpc-agent/testing` | Deterministic governance testing |
+| `@orpc-agent/cli` | `orpc-agent` — capability inventory and CI drift gate ([reference](docs/reference/cli.md)) |
 
 Boundaries and rules: [package-boundaries](docs/architecture/package-boundaries.md). The scope name is a placeholder pending registration ([ADR-011](docs/architecture/decisions.md#adr-011-npm-scope-and-project-independence)).
+
+## Catching exposure changes in review
+
+Commit a capability snapshot and let CI fail when the reachable surface moves:
+
+```bash
+npx orpc-agent snapshot        # writes capabilities.snapshot.json
+npx orpc-agent check           # exit 1 if the app no longer matches it
+```
+
+The snapshot is deterministic, so every diff is a real change — and `check` says what each one *means*, not just that it happened:
+
+```
+Capability drift — 3 changes, 2 widening
+
+WIDENING — the agent gained reach, or a control weakened
+  orders.refund   expose    now exposed on mcp
+  billing.charge  approval  approval no longer required
+```
+
+Two classifications are deliberately counter-intuitive. A `sideEffect` change counts as widening **in both directions**, because declaring less than before silently stops every policy keyed on the old value from matching. And `idempotent: false → true` is widening, because it is the flag that lets the runtime retry a write. Full rules, and an explicit list of what the tool cannot see: [reference/cli](docs/reference/cli.md).
 
 ## Examples
 

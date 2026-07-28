@@ -154,6 +154,7 @@ export default defineConfig({
           { text: "Errors", link: "/reference/errors" },
           { text: "Events and tracing", link: "/reference/events" },
           { text: "Configuration", link: "/reference/configuration" },
+          { text: "CLI", link: "/reference/cli" },
         ],
       },
       {

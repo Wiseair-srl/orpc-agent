@@ -1,0 +1,63 @@
+{
+  "name": "@orpc-agent/cli",
+  "version": "0.2.0",
+  "description": "Capability inventory and CI drift gate for oRPC Agent applications. Independent community project, not affiliated with or endorsed by the oRPC maintainers.",
+  "license": "MIT",
+  "author": "Paolo Barbato",
+  "type": "module",
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "bin": {
+    "orpc-agent": "./dist/cli.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc -p tsconfig.json",
+    "prepublishOnly": "node ../../scripts/copy-license.cjs"
+  },
+  "dependencies": {
+    "@orpc-agent/core": "workspace:^"
+  },
+  "devDependencies": {
+    "@orpc/server": "^1.14.10",
+    "@types/node": "^24.13.3",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.2",
+    "vitest": "^4.1.10",
+    "zod": "^4.4.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Wiseair-srl/orpc-agent.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/Wiseair-srl/orpc-agent/tree/main/packages/cli",
+  "bugs": {
+    "url": "https://github.com/Wiseair-srl/orpc-agent/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "orpc",
+    "agent",
+    "cli",
+    "governance",
+    "capabilities",
+    "ci",
+    "typescript"
+  ]
+}

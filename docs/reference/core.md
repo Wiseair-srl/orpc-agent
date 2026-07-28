@@ -78,6 +78,24 @@ interface AgentCapability {
 
 `filter` returns a new registry (registries are immutable); use it to build narrowed runtimes for special deployments. Filtering is composition, not authorization (SI-2).
 
+---
+
+## `defaultToolName`
+
+```ts
+function defaultToolName(capabilityId: string): string;   // "orders.refund" → "orders_refund"
+```
+
+**Purpose.** The default capability-id → protocol-tool-name mapping (`.` → `_`), shared by every adapter that names tools on the wire. Exported so adapters and tooling agree on one implementation instead of each keeping a copy.
+
+**Precedence when an adapter names a tool** — highest first:
+
+1. `meta.adapters.<surface>.toolName` (per capability)
+2. the adapter's `toolNaming` option (per server/tool set)
+3. `defaultToolName(id)`
+
+Naming never affects governance: the runtime resolves capabilities by id, and a rename is a wire-contract change, not an authorization change. Collisions are a startup error on both schema-consuming surfaces, never a silent rename.
+
 **Example.**
 
 ```ts

@@ -1,0 +1,93 @@
+{
+  "version": 1,
+  "capabilities": [
+    {
+      "id": "tasks.create",
+      "description": "Create a task on the board (status starts at \"todo\"). Priority \"urgent\" pages the on-call rotation and needs human sign-off.",
+      "sideEffect": "write",
+      "risk": "medium",
+      "expose": [
+        "aiSdk",
+        "test"
+      ],
+      "toolNames": {
+        "aiSdk": "tasks_create"
+      },
+      "idempotent": false,
+      "tags": [
+        "tasks"
+      ],
+      "policies": [
+        "urgent-needs-approval"
+      ],
+      "inputSchemaHash": "sha256:031c8936a39dca5f1c72b26e1045f5606f7c068eee4859ad0cb5f4344cc22bcf"
+    },
+    {
+      "id": "tasks.delete",
+      "description": "Delete a task from the board permanently.",
+      "sideEffect": "destructive",
+      "risk": "high",
+      "expose": [
+        "aiSdk",
+        "test"
+      ],
+      "toolNames": {
+        "aiSdk": "tasks_delete"
+      },
+      "approval": {
+        "required": true,
+        "type": "human-confirmation"
+      },
+      "idempotent": false,
+      "tags": [
+        "tasks"
+      ],
+      "policies": [],
+      "inputSchemaHash": "sha256:85d708fc6f8d200041c3fae9d193483067fc559850e1977bd6ff3f690f8fe2cd"
+    },
+    {
+      "id": "tasks.list",
+      "description": "List every task on the board with its id, title, status (todo/doing/done), and priority. Use this first to find task ids.",
+      "sideEffect": "read",
+      "risk": "low",
+      "expose": [
+        "aiSdk",
+        "test"
+      ],
+      "toolNames": {
+        "aiSdk": "tasks_list"
+      },
+      "idempotent": false,
+      "tags": [
+        "tasks"
+      ],
+      "policies": [],
+      "redact": {
+        "output": true,
+        "approvalInput": false
+      },
+      "inputSchemaHash": "sha256:71fc596a20f27da3dec80050e5d1f553eba34aea24c2853b853488a811e6b892"
+    },
+    {
+      "id": "tasks.move",
+      "description": "Move a task to another column: todo, doing, or done.",
+      "sideEffect": "write",
+      "risk": "low",
+      "expose": [
+        "aiSdk",
+        "test"
+      ],
+      "toolNames": {
+        "aiSdk": "tasks_move"
+      },
+      "idempotent": false,
+      "tags": [
+        "tasks"
+      ],
+      "policies": [],
+      "inputSchemaHash": "sha256:32b3a6f4ff468dab401a325089a0252dbd06c3861b0b10678e30c1d2cacbe46e"
+    }
+  ],
+  "excluded": [],
+  "unexposed": []
+}
