@@ -1,5 +1,12 @@
 # @orpc-agent/testing
 
+## 0.3.0
+
+### Patch Changes
+
+- Updated dependencies [e3469e7]
+  - @orpc-agent/core@0.3.0
+
 ## 0.2.0
 
 ### Minor Changes
