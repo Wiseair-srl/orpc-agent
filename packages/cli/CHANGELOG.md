@@ -1,8 +1,8 @@
-# @orpc-agent/mcp
+# @orpc-agent/cli
 
 ## 0.3.0
 
-### Patch Changes
+### Minor Changes
 
 - e3469e7: New package `@orpc-agent/cli` — capability inventory and CI drift gate (ADR-015).
 
@@ -16,16 +16,7 @@
 
   Core: `defaultToolName` is now a public export. It had three copies (registry, MCP adapter, AI SDK adapter); both adapters now import it, so protocol naming has one implementation and tooling reports the adapters' actual mapping.
 
-- Updated dependencies [e3469e7]
-  - @orpc-agent/core@0.3.0
-
-## 0.2.0
-
-### Minor Changes
-
-- 53b20a9: `MCPSession.authInfo` is now typed as the MCP SDK's `AuthInfo` (was `unknown`) — `createContext` implementations get real `token`/`clientId`/`scopes` fields. Type-level only; no runtime change.
-
 ### Patch Changes
 
-- Updated dependencies [53b20a9]
-  - @orpc-agent/core@0.2.0
+- Updated dependencies [e3469e7]
+  - @orpc-agent/core@0.3.0
