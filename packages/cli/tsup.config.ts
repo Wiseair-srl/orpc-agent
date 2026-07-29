@@ -9,5 +9,7 @@ export default defineConfig({
   sourcemap: true,
   clean: true,
   target: "es2022",
-  external: ["@orpc-agent/core"],
+  // ink and react are optional and dynamically imported (src/ui): they must
+  // stay external so a missing install fails the `import()`, not the build.
+  external: ["@orpc-agent/core", "ink", "react", "react/jsx-runtime"],
 });
