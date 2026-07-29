@@ -193,7 +193,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^4.1.10
-        version: 4.1.10(@opentelemetry/api@1.9.0)(@types/node@24.13.3)(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(tsx@4.23.1))
+        version: 4.1.10(@opentelemetry/api@1.9.0)(@types/node@24.13.3)(vite@8.1.5(@types/node@24.13.3)(esbuild@0.27.7)(tsx@4.23.1))
       zod:
         specifier: ^4.4.3
         version: 4.4.3
@@ -212,12 +212,6 @@ importers:
       '@types/react':
         specifier: ^19.2.17
         version: 19.2.17
-      ink:
-        specifier: ^7.1.1
-        version: 7.1.1(@types/react@19.2.17)(react@19.2.8)
-      react:
-        specifier: ^19.2.8
-        version: 19.2.8
       tsup:
         specifier: ^8.5.1
         version: 8.5.1(postcss@8.5.23)(tsx@4.23.1)(typescript@5.9.3)
@@ -226,10 +220,17 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^4.1.10
-        version: 4.1.10(@opentelemetry/api@1.9.0)(@types/node@24.13.3)(vite@8.1.5(@types/node@24.13.3)(esbuild@0.27.7)(tsx@4.23.1))
+        version: 4.1.10(@opentelemetry/api@1.9.0)(@types/node@24.13.3)(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(tsx@4.23.1))
       zod:
         specifier: ^4.4.3
         version: 4.4.3
+    optionalDependencies:
+      ink:
+        specifier: ^7.1.1
+        version: 7.1.1(@types/react@19.2.17)(react@19.2.8)
+      react:
+        specifier: ^19.2.8
+        version: 19.2.8
 
   packages/core:
     dependencies:
@@ -3739,6 +3740,7 @@ snapshots:
     dependencies:
       ansi-styles: 6.2.3
       is-fullwidth-code-point: 5.1.0
+    optional: true
 
   '@algolia/abtesting@1.22.0':
     dependencies:
@@ -5028,6 +5030,7 @@ snapshots:
   ansi-escapes@7.3.0:
     dependencies:
       environment: 1.1.0
+    optional: true
 
   ansi-regex@5.0.1: {}
 
@@ -5047,7 +5050,8 @@ snapshots:
 
   assertion-error@2.0.1: {}
 
-  auto-bind@5.0.1: {}
+  auto-bind@5.0.1:
+    optional: true
 
   bail@2.0.2: {}
 
@@ -5129,16 +5133,19 @@ snapshots:
     dependencies:
       readdirp: 4.1.2
 
-  cli-boxes@4.0.1: {}
+  cli-boxes@4.0.1:
+    optional: true
 
   cli-cursor@4.0.0:
     dependencies:
       restore-cursor: 4.0.0
+    optional: true
 
   cli-truncate@6.1.1:
     dependencies:
       slice-ansi: 9.0.0
       string-width: 8.2.2
+    optional: true
 
   cliui@9.0.1:
     dependencies:
@@ -5149,6 +5156,7 @@ snapshots:
   code-excerpt@4.0.0:
     dependencies:
       convert-to-spaces: 2.0.1
+    optional: true
 
   comma-separated-tokens@2.0.3: {}
 
@@ -5175,7 +5183,8 @@ snapshots:
 
   convert-source-map@2.0.0: {}
 
-  convert-to-spaces@2.0.1: {}
+  convert-to-spaces@2.0.1:
+    optional: true
 
   cookie-signature@1.2.2: {}
 
@@ -5249,7 +5258,8 @@ snapshots:
 
   entities@7.0.1: {}
 
-  environment@1.1.0: {}
+  environment@1.1.0:
+    optional: true
 
   es-define-property@1.0.1: {}
 
@@ -5261,7 +5271,8 @@ snapshots:
     dependencies:
       es-errors: 1.3.0
 
-  es-toolkit@1.50.0: {}
+  es-toolkit@1.50.0:
+    optional: true
 
   esbuild@0.21.5:
     optionalDependencies:
@@ -5351,7 +5362,8 @@ snapshots:
 
   escape-html@1.0.3: {}
 
-  escape-string-regexp@2.0.0: {}
+  escape-string-regexp@2.0.0:
+    optional: true
 
   escape-string-regexp@5.0.0: {}
 
@@ -5637,7 +5649,8 @@ snapshots:
 
   ignore@7.0.6: {}
 
-  indent-string@5.0.0: {}
+  indent-string@5.0.0:
+    optional: true
 
   inherits@2.0.4: {}
 
@@ -5674,6 +5687,7 @@ snapshots:
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
+    optional: true
 
   inline-style-parser@0.2.7: {}
 
@@ -5697,6 +5711,7 @@ snapshots:
   is-fullwidth-code-point@5.1.0:
     dependencies:
       get-east-asian-width: 1.6.0
+    optional: true
 
   is-glob@4.0.3:
     dependencies:
@@ -5704,7 +5719,8 @@ snapshots:
 
   is-hexadecimal@2.0.1: {}
 
-  is-in-ci@2.0.0: {}
+  is-in-ci@2.0.0:
+    optional: true
 
   is-network-error@1.3.2: {}
 
@@ -6197,7 +6213,8 @@ snapshots:
     dependencies:
       mime-db: 1.54.0
 
-  mimic-fn@2.1.0: {}
+  mimic-fn@2.1.0:
+    optional: true
 
   minisearch@7.2.0: {}
 
@@ -6246,6 +6263,7 @@ snapshots:
   onetime@5.1.2:
     dependencies:
       mimic-fn: 2.1.0
+    optional: true
 
   oniguruma-to-es@3.1.1:
     dependencies:
@@ -6297,7 +6315,8 @@ snapshots:
 
   parseurl@1.3.3: {}
 
-  patch-console@2.0.0: {}
+  patch-console@2.0.0:
+    optional: true
 
   path-exists@4.0.0: {}
 
@@ -6457,6 +6476,7 @@ snapshots:
     dependencies:
       react: 19.2.8
       scheduler: 0.27.0
+    optional: true
 
   react@19.2.8: {}
 
@@ -6523,6 +6543,7 @@ snapshots:
     dependencies:
       onetime: 5.1.2
       signal-exit: 3.0.7
+    optional: true
 
   reusify@1.1.0: {}
 
@@ -6689,7 +6710,8 @@ snapshots:
 
   siginfo@2.0.0: {}
 
-  signal-exit@3.0.7: {}
+  signal-exit@3.0.7:
+    optional: true
 
   signal-exit@4.1.0: {}
 
@@ -6699,6 +6721,7 @@ snapshots:
     dependencies:
       ansi-styles: 6.2.3
       is-fullwidth-code-point: 5.1.0
+    optional: true
 
   source-map-js@1.2.1: {}
 
@@ -6720,6 +6743,7 @@ snapshots:
   stack-utils@2.0.6:
     dependencies:
       escape-string-regexp: 2.0.0
+    optional: true
 
   stackback@0.0.2: {}
 
@@ -6737,6 +6761,7 @@ snapshots:
     dependencies:
       get-east-asian-width: 1.6.0
       strip-ansi: 7.2.0
+    optional: true
 
   stringify-entities@4.0.4:
     dependencies:
@@ -6787,7 +6812,8 @@ snapshots:
 
   term-size@2.2.1: {}
 
-  terminal-size@4.0.1: {}
+  terminal-size@4.0.1:
+    optional: true
 
   thenify-all@1.6.0:
     dependencies:
@@ -7095,12 +7121,14 @@ snapshots:
   widest-line@6.0.0:
     dependencies:
       string-width: 8.2.2
+    optional: true
 
   wrap-ansi@10.0.0:
     dependencies:
       ansi-styles: 6.2.3
       string-width: 8.2.2
       strip-ansi: 7.2.0
+    optional: true
 
   wrap-ansi@9.0.2:
     dependencies:
@@ -7131,7 +7159,8 @@ snapshots:
 
   yoctocolors@2.2.0: {}
 
-  yoga-layout@3.2.1: {}
+  yoga-layout@3.2.1:
+    optional: true
 
   zod-from-json-schema@0.0.5:
     dependencies:
