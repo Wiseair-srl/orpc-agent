@@ -5,7 +5,7 @@ import { readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import type { CapabilitySnapshot } from "./types";
+import type { CapabilitySnapshot, EntrySource } from "./types";
 
 export type LoadOptions = {
   entry: string;
@@ -39,7 +39,11 @@ const EXIT_MODULE_LOAD_FAILED = 10;
  */
 export async function loadSnapshot(
   options: LoadOptions,
-): Promise<{ snapshot: CapabilitySnapshot; usedImport: string | undefined }> {
+): Promise<{
+  snapshot: CapabilitySnapshot;
+  usedImport: string | undefined;
+  entrySource: EntrySource;
+}> {
   const cwd = options.cwd ?? process.cwd();
   const entry = isAbsolute(options.entry) ? options.entry : resolve(cwd, options.entry);
   const timeoutMs = options.timeoutMs ?? 30_000;
@@ -59,7 +63,13 @@ export async function loadSnapshot(
   }
 
   const first = await runChild(entry, cwd, timeoutMs, explicit ?? detected, options);
-  if (first.ok) return { snapshot: first.snapshot, usedImport: explicit ?? detected };
+  if (first.ok) {
+    return {
+      snapshot: first.snapshot,
+      usedImport: explicit ?? detected,
+      entrySource: first.entrySource,
+    };
+  }
 
   // Native stripping handles type annotations but not TypeScript that needs
   // real transformation (enums, namespaces, decorators). One retry through an
@@ -67,7 +77,9 @@ export async function loadSnapshot(
   const fallback = explicit ? undefined : findLoader(cwd);
   if (first.code === EXIT_MODULE_LOAD_FAILED && fallback && fallback !== detected) {
     const second = await runChild(entry, cwd, timeoutMs, fallback, options);
-    if (second.ok) return { snapshot: second.snapshot, usedImport: fallback };
+    if (second.ok) {
+      return { snapshot: second.snapshot, usedImport: fallback, entrySource: second.entrySource };
+    }
     // A retry that died before reporting anything (a broken loader, say) has
     // nothing to say about the user's code. Keep the original diagnosis.
     if (second.reported) throw new LoadError(second.message, second.detail);
@@ -77,7 +89,7 @@ export async function loadSnapshot(
 }
 
 type ChildOutcome =
-  | { ok: true; snapshot: CapabilitySnapshot }
+  | { ok: true; snapshot: CapabilitySnapshot; entrySource: EntrySource }
   | {
       ok: false;
       code: number;
@@ -158,7 +170,13 @@ function runChild(
 
     child.on("close", (code) => {
       if (settled) return;
-      let payload: { ok: boolean; snapshot?: CapabilitySnapshot; message?: string; detail?: string };
+      let payload: {
+        ok: boolean;
+        snapshot?: CapabilitySnapshot;
+        entrySource?: EntrySource;
+        message?: string;
+        detail?: string;
+      };
       try {
         payload = JSON.parse(readFileSync(outFile, "utf8"));
       } catch {
@@ -172,7 +190,11 @@ function runChild(
         return;
       }
       if (payload.ok && payload.snapshot) {
-        settle({ ok: true, snapshot: payload.snapshot });
+        settle({
+          ok: true,
+          snapshot: payload.snapshot,
+          entrySource: payload.entrySource ?? "registry",
+        });
         return;
       }
       settle({

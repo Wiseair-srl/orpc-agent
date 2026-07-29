@@ -3,6 +3,8 @@ import type { ApprovalCoordinator } from "../approvals/types";
 import { createInMemoryApprovalCoordinator } from "../approvals/in-memory";
 import { NOOP_TRACING } from "../tracing";
 import { toJsonSchema } from "../schema/index";
+import { flattenPolicy } from "../policy/define";
+import type { AgentPolicy, PolicyManifestEntry } from "../policy/types";
 import { createAuditEmitter, type AuditEmitter } from "./audit";
 import { invokePipeline, resumePipeline, type PipelineDeps } from "./pipeline";
 import { describePipeline } from "./describe";
@@ -76,6 +78,7 @@ export function createAgentRuntime<TContext = unknown>(
 
   return {
     registry: options.registry,
+    policies: manifestOf(deps.policies),
 
     invoke<O = unknown>(
       capabilityId: string,
@@ -127,13 +130,27 @@ export function createAgentRuntime<TContext = unknown>(
   };
 }
 
+/**
+ * Composites are flattened so the reported names match the ones the pipeline
+ * evaluates and audit records (`collectPolicies` does the same). Frozen: this
+ * is a read of configuration, not a handle on it.
+ */
+function manifestOf(policies: AgentPolicy[]): readonly PolicyManifestEntry[] {
+  return Object.freeze(
+    policies
+      .flatMap(flattenPolicy)
+      .map((policy) => Object.freeze({ name: policy.name, phases: Object.freeze([...policy.phases]) })),
+  );
+}
+
 const MODEL_SURFACES: readonly ExposureSurface[] = ["aiSdk", "mcp"];
 const WRITE_SIDE_EFFECTS = new Set(["write", "destructive", "external"]);
 
 /**
  * Production footgun warnings (never fatal; `warnings: false` silences).
- * Static knowledge only: policy-driven approval gates are opaque here, so
- * condition 1 keys on meta.approval.required.
+ * Static knowledge only: what a policy decides needs a real invocation, so
+ * condition 1 keys on meta.approval.required and 1b on the shape that makes a
+ * policy-driven gate likely.
  */
 function emitStartupWarnings<TContext>(
   options: AgentRuntimeOptions<TContext>,
@@ -154,6 +171,28 @@ function emitStartupWarnings<TContext>(
           "default in-memory coordinator: approval records will not survive restarts. " +
           "Pass approvals.coordinator (e.g. @orpc-agent/postgres), or set warnings: false.",
       );
+    } else if ((options.policies ?? []).length > 0) {
+      // 1b. The same footgun reached the other way. A policy that returns
+      //     requireApproval suspends into the same amnesiac coordinator, and
+      //     nothing here can tell whether one does — so this keys on the shape
+      //     where a conditional gate is worth having: write-capable
+      //     capabilities a model can reach.
+      const gatable = capabilities
+        .filter(
+          (c) =>
+            WRITE_SIDE_EFFECTS.has(c.meta.sideEffect) &&
+            MODEL_SURFACES.some((s) => c.meta.expose[s] === true),
+        )
+        .map((c) => c.id);
+      if (gatable.length > 0) {
+        console.warn(
+          "[orpc-agent] runtime policies are configured and write-capable capabilities are " +
+            `reachable from model surfaces (${sampleIds(gatable)}). If any policy returns ` +
+            "requireApproval, those approvals go to the default in-memory coordinator and will " +
+            "not survive restarts. Pass approvals.coordinator (e.g. @orpc-agent/postgres), or " +
+            "set warnings: false.",
+        );
+      }
     }
   }
 

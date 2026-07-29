@@ -1,4 +1,4 @@
-import type { CapabilitySnapshot, Change, ChangeKind } from "./types";
+import type { CapabilitySnapshot, Change, ChangeKind, EntrySource } from "./types";
 
 /**
  * Plain writes, no rendering framework. This module is what `check` prints on
@@ -32,15 +32,22 @@ function paint(text: string, style: string, mode: ColorMode): string {
   return mode.color ? `${ANSI[style] ?? ""}${text}${ANSI.reset}` : text;
 }
 
-export function renderInventory(snapshot: CapabilitySnapshot, mode: ColorMode): string {
+export function renderInventory(
+  snapshot: CapabilitySnapshot,
+  mode: ColorMode,
+  entrySource: EntrySource = "registry",
+): string {
   const lines: string[] = [];
   const exposedCount = snapshot.capabilities.filter((c) => c.expose.length > 0).length;
   const approvalCount = snapshot.capabilities.filter((c) => c.approval?.required).length;
 
+  // The header is the line that gets pasted somewhere on its own, so it has to
+  // carry its own qualification: the count is of DECLARED gates, and whether
+  // runtime-level policies were even in scope is part of the headline fact.
   lines.push(
     paint(
       `${snapshot.capabilities.length} capabilities · ${exposedCount} exposed · ` +
-        `${approvalCount} approval-gated`,
+        `${approvalCount} approval-gated (declared) · ${runtimeHeadline(snapshot, entrySource)}`,
       "bold",
       mode,
     ),
@@ -56,6 +63,7 @@ export function renderInventory(snapshot: CapabilitySnapshot, mode: ColorMode): 
     capability.policies.join(", ") || "—",
   ]);
   lines.push(...table(["CAPABILITY", "SIDE EFFECT", "RISK", "EXPOSE", "APPROVAL", "POLICIES"], rows, mode));
+  lines.push("", ...renderRuntimeSection(snapshot, entrySource, mode));
 
   if (snapshot.unexposed.length > 0) {
     lines.push(
@@ -72,6 +80,57 @@ export function renderInventory(snapshot: CapabilitySnapshot, mode: ColorMode): 
     );
   }
   return lines.join("\n");
+}
+
+function runtimeHeadline(snapshot: CapabilitySnapshot, entrySource: EntrySource): string {
+  if (!snapshot.runtime) return "runtime policies not observed";
+  const count = snapshot.runtime.policies.length;
+  if (count === 0) return "no runtime policies";
+  return `${count} runtime ${count === 1 ? "policy" : "policies"}`;
+}
+
+/**
+ * The blind spot, stated in the output rather than only in the README. The
+ * columns above are declarations; a runtime policy can add approval, denial or
+ * hiding conditionally, and nothing static can say to which capabilities.
+ */
+function renderRuntimeSection(
+  snapshot: CapabilitySnapshot,
+  entrySource: EntrySource,
+  mode: ColorMode,
+): string[] {
+  if (!snapshot.runtime) {
+    const why =
+      entrySource === "runtime-unreported"
+        ? "the runtime came from a version of @orpc-agent/core that does not report its\n" +
+          "  policies. Upgrade core to record them."
+        : "--entry resolved a capability registry, so a runtime was never in scope. If this\n" +
+          "  application calls createAgentRuntime({ policies: … }), those gates are missing\n" +
+          "  from this inventory and from the snapshot. Point --entry at the module that\n" +
+          "  exports the runtime to record them.";
+    return [
+      paint("Runtime policies — NOT OBSERVED", "bold", mode),
+      `  ${why}`,
+    ];
+  }
+
+  if (snapshot.runtime.policies.length === 0) {
+    return [paint("Runtime policies — none configured", "bold", mode)];
+  }
+
+  return [
+    paint("Runtime policies — evaluated on every invocation, before capability policies", "bold", mode),
+    ...snapshot.runtime.policies.map((policy) => `  ${policy.name}  ${policy.phases.join(", ")}`),
+    "",
+    paint(
+      "  The APPROVAL and POLICIES columns above are per-capability declarations. A runtime\n" +
+        "  policy can require approval, deny, or hide conditionally — on surface, actor, input\n" +
+        "  or context. Which capabilities these affect, and when, is not knowable without\n" +
+        "  evaluating them against a real invocation, which this tool never does.",
+      "dim",
+      mode,
+    ),
+  ];
 }
 
 export function renderChanges(changes: Change[], mode: ColorMode): string {

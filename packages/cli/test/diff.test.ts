@@ -133,6 +133,56 @@ describe("diffSnapshots", () => {
     expect(changes[0]?.field).toBe("capability");
   });
 
+  describe("runtime policies", () => {
+    const gate = { name: "gate-model-writes", phases: ["invocation" as const] };
+    const withRuntime = (policies: { name: string; phases: ("invocation" | "discovery")[] }[]) =>
+      snapshot([entry()], { runtime: { policies } });
+
+    it("classifies a removed runtime policy as widening", () => {
+      const changes = diffSnapshots(withRuntime([gate]), withRuntime([]));
+
+      expect(on(changes, "runtime.policies")?.kind).toBe("widening");
+      expect(on(changes, "runtime.policies")?.message).toContain("gate-model-writes");
+    });
+
+    it("classifies an added runtime policy as narrowing", () => {
+      expect(on(diffSnapshots(withRuntime([]), withRuntime([gate])), "runtime.policies")?.kind).toBe(
+        "narrowing",
+      );
+    });
+
+    it("treats a policy that drops a phase as widening — it stops running there", () => {
+      const before = withRuntime([{ name: "p", phases: ["invocation", "discovery"] }]);
+      const after = withRuntime([{ name: "p", phases: ["discovery"] }]);
+
+      expect(on(diffSnapshots(before, after), "runtime.policies")?.kind).toBe("widening");
+      expect(on(diffSnapshots(after, before), "runtime.policies")?.kind).toBe("narrowing");
+    });
+
+    it("reports nothing when neither side observed a runtime", () => {
+      expect(diffSnapshots(snapshot([entry()]), snapshot([entry()]))).toEqual([]);
+    });
+
+    it("distinguishes 'not observed' from 'observed, none' in both directions", () => {
+      // Absent → present: the app did not change, the tool started looking.
+      const started = diffSnapshots(snapshot([entry()]), withRuntime([]));
+      expect(on(started, "runtime")?.kind).toBe("neutral");
+
+      // Present → absent: the snapshot lost the ability to detect a removal.
+      const stopped = diffSnapshots(withRuntime([]), snapshot([entry()]));
+      expect(on(stopped, "runtime")?.kind).toBe("widening");
+    });
+
+    it("reports a reordering as neutral, matching capability-scoped policies", () => {
+      const a = { name: "a", phases: ["invocation" as const] };
+      const b = { name: "b", phases: ["invocation" as const] };
+
+      expect(on(diffSnapshots(withRuntime([a, b]), withRuntime([b, a])), "runtime.policies")?.kind).toBe(
+        "neutral",
+      );
+    });
+  });
+
   it("does not diff unexposed, which is derived from the expose maps", () => {
     const changes = diffSnapshots(
       snapshot([entry({ expose: [] })], { unexposed: ["orders.refund"] }),

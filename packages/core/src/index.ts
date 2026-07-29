@@ -22,6 +22,7 @@ export { allow, deny, hide, requireApproval } from "./policy/helpers";
 export type {
   AgentPolicy,
   PolicyDecision,
+  PolicyManifestEntry,
   PolicyPhase,
   PolicyRequest,
 } from "./policy/types";

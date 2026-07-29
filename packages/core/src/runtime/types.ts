@@ -1,5 +1,5 @@
 import type { Actor, ExposureSurface, RiskLevel, SideEffect } from "../types";
-import type { AgentPolicy } from "../policy/types";
+import type { AgentPolicy, PolicyManifestEntry } from "../policy/types";
 import type {
   ApprovalCoordinator,
   ApprovalDecision,
@@ -104,6 +104,17 @@ export type CapabilityDescriptor = {
 export interface AgentRuntime<TContext = unknown> {
   /** The registry this runtime executes over (adapters read meta from it). */
   readonly registry: CapabilityRegistry;
+
+  /**
+   * Identity of the runtime-level policies, in evaluation order, composites
+   * flattened — exactly the names that appear in audit events. Frozen.
+   *
+   * This is the configuration, not its effect: a policy's decision depends on
+   * the actor, surface, input and context of a real invocation. Governance
+   * tooling may report that these policies exist; it may not conclude from
+   * them which capabilities are gated.
+   */
+  readonly policies: readonly PolicyManifestEntry[];
 
   /**
    * Runs pipeline stages 2–15. Never throws for governed failures — every

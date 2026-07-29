@@ -1,7 +1,8 @@
 import { writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
-import type { CapabilityRegistry } from "@orpc-agent/core";
-import { buildSnapshot } from "./snapshot";
+import type { AgentRuntime, CapabilityRegistry } from "@orpc-agent/core";
+import { buildSnapshot, runtimeReportsPolicies, type SnapshotSource } from "./snapshot";
+import type { EntrySource } from "./types";
 
 /**
  * The loader worker. Runs in its own process because importing an
@@ -55,19 +56,28 @@ function isRegistryLike(value: unknown): value is CapabilityRegistry {
   );
 }
 
-/** An AgentRuntime exposes its registry; accept it as a convenience. */
-function registryOf(value: unknown): CapabilityRegistry | undefined {
+function isRuntimeLike(value: unknown): value is AgentRuntime<unknown> {
+  if (typeof value !== "object" || value === null) return false;
+  const candidate = value as Record<string, unknown>;
+  return typeof candidate.invoke === "function" && isRegistryLike(candidate.registry);
+}
+
+/**
+ * A runtime is a strictly better source than the registry it wraps: same
+ * capabilities, plus the runtime-level policies. Prefer it wherever both are
+ * on offer.
+ */
+function sourceOf(value: unknown): SnapshotSource | undefined {
+  if (isRuntimeLike(value)) return value;
   if (isRegistryLike(value)) return value;
-  if (typeof value === "object" && value !== null) {
-    const candidate = value as Record<string, unknown>;
-    if (typeof candidate.invoke === "function" && isRegistryLike(candidate.registry)) {
-      return candidate.registry;
-    }
-  }
   return undefined;
 }
 
-let registry: CapabilityRegistry | undefined;
+function registryOf(source: SnapshotSource): CapabilityRegistry {
+  return isRuntimeLike(source) ? source.registry : (source as CapabilityRegistry);
+}
+
+let source: SnapshotSource | undefined;
 
 if (options.exportName) {
   const value = moduleExports[options.exportName];
@@ -87,14 +97,15 @@ if (options.exportName) {
       "point --export at a capability registry or runtime value, not at a factory",
     );
   }
-  registry = registryOf(value);
-  if (!registry) {
+  source = sourceOf(value);
+  if (!source) {
     fail(11, `export "${options.exportName}" is not a capability registry or an agent runtime`);
   }
 } else {
-  const matches: string[] = [];
+  const matches: { name: string; source: SnapshotSource }[] = [];
   for (const [name, value] of Object.entries(moduleExports)) {
-    if (registryOf(value)) matches.push(name);
+    const candidate = sourceOf(value);
+    if (candidate) matches.push({ name, source: candidate });
   }
   if (matches.length === 0) {
     fail(
@@ -105,19 +116,31 @@ if (options.exportName) {
         "or pass --export <name>.",
     );
   }
-  if (matches.length > 1) {
+
+  // Exporting both a registry and the runtime built over it is the ordinary
+  // shape of an application module, and it is not ambiguous: every candidate
+  // describes the same capabilities. Take the runtime — it carries the
+  // runtime-level policies too. Genuinely different registries still ask.
+  const distinct = new Set(matches.map((m) => registryOf(m.source)));
+  if (distinct.size > 1) {
     fail(
       11,
       `${entryPath} exports more than one capability registry`,
-      `candidates: ${matches.join(", ")}. Pass --export <name> to choose.`,
+      `candidates: ${matches.map((m) => m.name).join(", ")}. Pass --export <name> to choose.`,
     );
   }
-  registry = registryOf(moduleExports[matches[0]!]);
+  source = (matches.find((m) => isRuntimeLike(m.source)) ?? matches[0]!).source;
 }
 
+const entrySource: EntrySource = !isRuntimeLike(source!)
+  ? "registry"
+  : runtimeReportsPolicies(source)
+    ? "runtime"
+    : "runtime-unreported";
+
 try {
-  const snapshot = buildSnapshot(registry!, { descriptions: options.descriptions !== false });
-  writeFileSync(outFile, JSON.stringify({ ok: true, snapshot }));
+  const snapshot = buildSnapshot(source!, { descriptions: options.descriptions !== false });
+  writeFileSync(outFile, JSON.stringify({ ok: true, snapshot, entrySource }));
 } catch (error) {
   fail(
     12,

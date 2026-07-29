@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { existsSync, mkdtempSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { promisify } from "node:util";
@@ -55,7 +55,9 @@ describeBuilt("orpc-agent", () => {
     expect(first.stdout).toBe(second.stdout);
 
     const snapshot = JSON.parse(first.stdout) as CapabilitySnapshot;
-    expect(snapshot.version).toBe(1);
+    expect(snapshot.version).toBe(2);
+    // --entry resolved a bare registry: not observed, and not faked as empty.
+    expect(snapshot.runtime).toBeUndefined();
     expect(snapshot.capabilities.map((c) => c.id)).toEqual(["orders.list", "orders.refund"]);
     expect(snapshot.excluded).toEqual(["internal"]);
   });
@@ -210,6 +212,84 @@ describeBuilt("orpc-agent", () => {
 
     expect(code).toBe(0);
     expect(JSON.parse(stdout).capabilities[0].description).toBe("inspected");
+  });
+
+  it("records runtime-level policies and fails check when one is deleted", async () => {
+    const path = tempFile("capabilities.snapshot.json");
+    await run(["snapshot", "--entry", join(apps, "runtime-gated.ts"), "-o", path]);
+
+    const committed = JSON.parse(readFileSync(path, "utf8")) as CapabilitySnapshot;
+    expect(committed.runtime?.policies).toEqual([
+      { name: "gate-model-writes", phases: ["invocation"] },
+    ]);
+
+    // runtime-ungated.ts is the same app with `policies: [gateModelWrites]`
+    // deleted — every per-capability field is byte-identical.
+    const { code, stdout } = await run([
+      "check",
+      "--entry",
+      join(apps, "runtime-ungated.ts"),
+      "--snapshot",
+      path,
+      "--fail-on",
+      "widening",
+    ]);
+
+    expect(code).toBe(1);
+    expect(stdout).toContain("WIDENING");
+    expect(stdout).toContain("runtime policy removed: gate-model-writes");
+  });
+
+  it("says so in the output when no runtime was in scope", async () => {
+    const { stdout } = await run([
+      "inspect",
+      "--entry",
+      join(apps, "runtime-gated.ts"),
+      "--export",
+      "capabilities",
+    ]);
+
+    expect(stdout).toContain("runtime policies not observed");
+    expect(stdout).toContain("Runtime policies — NOT OBSERVED");
+    // The header count must never read as a bare claim about the application.
+    expect(stdout).toContain("0 approval-gated (declared)");
+  });
+
+  it("prefers the runtime when a module exports it alongside its own registry", async () => {
+    const { code, stdout } = await run(["inspect", "--entry", join(apps, "runtime-gated.ts")]);
+
+    expect(code).toBe(0);
+    expect(stdout).toContain("1 runtime policy");
+  });
+
+  it("still reads a committed v1 snapshot without failing widening-only CI", async () => {
+    const path = tempFile("capabilities.snapshot.json");
+    await run(["snapshot", "--entry", join(apps, "runtime-gated.ts"), "-o", path]);
+
+    const v2 = JSON.parse(readFileSync(path, "utf8")) as CapabilitySnapshot;
+    delete v2.runtime;
+    writeFileSync(path, `${JSON.stringify({ ...v2, version: 1 }, null, 2)}\n`);
+
+    const widening = await run([
+      "check",
+      "--entry",
+      join(apps, "runtime-gated.ts"),
+      "--snapshot",
+      path,
+      "--fail-on",
+      "widening",
+    ]);
+    const any = await run([
+      "check",
+      "--entry",
+      join(apps, "runtime-gated.ts"),
+      "--snapshot",
+      path,
+    ]);
+
+    expect(widening.code).toBe(0);
+    expect(any.code).toBe(1);
+    expect(any.stdout).toContain("now observed");
   });
 
   it("times out instead of hanging on an entry that never finishes importing", async () => {
