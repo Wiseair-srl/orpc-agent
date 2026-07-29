@@ -9,7 +9,26 @@ pnpm add -D @orpc-agent/cli
 ```
 
 ```bash
-npx orpc-agent inspect --entry src/app.ts
+npx orpc-agent init
+```
+
+`init` is interactive: it finds the module that assembles your application, loads it through the same child-process loader every other command uses, shows what it found — capabilities, exposure, and whether runtime-level policies are in scope — and writes the `orpcAgent` config, the baseline snapshot, and the CI script once you confirm. It writes nothing before the summary.
+
+```
+Found in src/app.ts
+
+  capabilities        2
+  exposed             2
+  approval-gated      0  declared in meta.approval
+  runtime policies    gate-model-writes
+
+Write this to package.json? (Y/n)
+```
+
+Then:
+
+```bash
+npx orpc-agent inspect
 ```
 
 ```
@@ -74,13 +93,26 @@ Losing sight of them is widening as well: if a snapshot recorded runtime policie
 
 | | |
 |---|---|
+| `orpc-agent init` | interactive setup: entry, export, baseline, CI script |
 | `orpc-agent inspect` | print the inventory (`--json` for the raw snapshot) |
 | `orpc-agent snapshot` | write the snapshot file — also how you update it |
 | `orpc-agent check` | compare the app against the snapshot file |
 
 Exit codes are part of the contract: **0** clean · **1** drift · **2** could not run. CI has to tell "the inventory changed" apart from "the tool never loaded the app", because the second one passing silently is how a gate rots.
 
-Useful flags: `--fail-on widening` (let narrowing changes through), `--format github` (annotations) or `--format md` (PR comment), `--export <name>` when a module exports several registries, `--no-descriptions`, `--timeout`, `--import <module>`.
+Useful flags: `--fail-on widening` (let narrowing changes through), `--format github` (annotations) or `--format md` (PR comment), `--export <name>` when a module exports several registries, `--no-descriptions`, `--timeout`, `--import <module>`, `--plain`.
+
+## Terminal output
+
+`inspect` renders a richer view — colour-coded side effects and risk, and the runtime-policy state as a panel rather than a trailing line — when it is attached to a terminal. It falls back to the plain renderer, byte for byte, whenever output is piped or redirected, `CI` is set, `NO_COLOR` is set, `--plain` is passed, or the optional UI dependencies are absent.
+
+`check` is **always** plain. Its output is a report that gets pasted into pull requests and read out of CI logs, so it stays stable text with no rendering framework in its path at all.
+
+The interactive layer is [Ink](https://github.com/vadimdemedes/ink), declared in `optionalDependencies` and loaded with a dynamic `import()`. An install that skips optional dependencies keeps the gate to this package plus core, and everything except `init` still works:
+
+```bash
+pnpm add -D @orpc-agent/cli --no-optional
+```
 
 Defaults can live in `package.json`, which makes the CI step just `orpc-agent check`:
 

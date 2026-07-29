@@ -36,6 +36,7 @@
     "@orpc-agent/core": "workspace:^",
     "@orpc/server": "^1.14.10",
     "@types/node": "^24.13.3",
+    "@types/react": "^19.2.17",
     "tsup": "^8.5.1",
     "typescript": "^5.9.2",
     "vitest": "^4.1.10",
@@ -61,5 +62,9 @@
     "capabilities",
     "ci",
     "typescript"
-  ]
+  ],
+  "optionalDependencies": {
+    "ink": "^7.1.1",
+    "react": "^19.2.8"
+  }
 }

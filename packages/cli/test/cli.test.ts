@@ -292,6 +292,40 @@ describeBuilt("orpc-agent", () => {
     expect(any.stdout).toContain("now observed");
   });
 
+  it("keeps check on plain output — the CI path never loads a rendering framework", async () => {
+    const path = tempFile("capabilities.snapshot.json");
+    await run(["snapshot", "--entry", join(apps, "runtime-gated.ts"), "-o", path]);
+
+    const { code, stdout } = await run([
+      "check",
+      "--entry",
+      join(apps, "runtime-gated.ts"),
+      "--snapshot",
+      path,
+    ]);
+
+    expect(code).toBe(0);
+    expect(stdout).toBe("No capability drift.\n");
+  });
+
+  it("renders inspect as plain text when not attached to a terminal", async () => {
+    const piped = await run(["inspect", "--entry", join(apps, "runtime-gated.ts")]);
+    const forced = await run(["inspect", "--entry", join(apps, "runtime-gated.ts"), "--plain"]);
+
+    expect(piped.stdout).toBe(forced.stdout);
+    expect(piped.stdout).toContain("1 runtime policy");
+    // Box-drawing characters would mean the Ink view leaked into a pipe.
+    expect(piped.stdout).not.toMatch(/[╭╰│]/);
+  });
+
+  it("refuses init without a terminal instead of writing a guessed config", async () => {
+    const { code, stderr } = await run(["init", "--entry", join(apps, "runtime-gated.ts")]);
+
+    expect(code).toBe(2);
+    expect(stderr).toContain("needs an interactive terminal");
+    expect(stderr).toContain("orpcAgent");
+  });
+
   it("times out instead of hanging on an entry that never finishes importing", async () => {
     const { code, stderr } = await run([
       "inspect",

@@ -3,7 +3,11 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { isAbsolute, resolve } from "node:path";
 import { snapshotJson } from "./canonical";
 import { diffSnapshots } from "./diff";
+import { discoverEntries, readAgentConfig } from "./discover";
 import { LoadError, loadSnapshot } from "./load";
+// Framework-free: this module only *dynamically* imports ink, so `check`
+// pulls in no rendering dependency by reaching it.
+import { interactive, renderInventoryInk, runInitUi } from "./ui/index";
 import {
   renderChanges,
   renderGithub,
@@ -27,18 +31,20 @@ const DEFAULT_SNAPSHOT = "capabilities.snapshot.json";
 const USAGE = `orpc-agent — capability inventory and drift gate
 
 USAGE
+  orpc-agent init      [options]      set up entry, export and the CI step
   orpc-agent inspect   [options]      print the capability inventory
   orpc-agent snapshot  [options]      write the snapshot file (also: update it)
   orpc-agent check     [options]      compare the app against the snapshot file
 
 OPTIONS
-  --entry <path>       application module exporting a capability registry
+  --entry <path>       application module exporting a registry or an AgentRuntime
   --export <name>      which export to read (required when several match)
   --snapshot <path>    snapshot file (default: ${DEFAULT_SNAPSHOT})
   -o, --out <path>     snapshot output path; "-" for stdout
   --fail-on <mode>     check: "any" (default) or "widening"
   --format <format>    check: human (default) | md | github
   --json               inspect: print the snapshot as JSON instead of a table
+  --plain              never use the interactive renderer (CI-safe output)
   --no-descriptions    omit capability descriptions from the snapshot
   --import <module>    preload a module in the loader process (e.g. tsx)
   --timeout <ms>       loader timeout (default: 30000)
@@ -60,6 +66,7 @@ type Flags = {
   failOn: "any" | "widening";
   format: "human" | "md" | "github";
   json: boolean;
+  plain: boolean;
   descriptions: boolean;
   import?: string;
   timeout: number;
@@ -74,6 +81,7 @@ function parseArgs(argv: string[]): Flags {
     failOn: "any",
     format: "human",
     json: false,
+    plain: false,
     descriptions: true,
     timeout: 30_000,
     cwd: process.cwd(),
@@ -133,6 +141,9 @@ function parseArgs(argv: string[]): Flags {
       }
       case "--json":
         flags.json = true;
+        break;
+      case "--plain":
+        flags.plain = true;
         break;
       case "--no-descriptions":
         flags.descriptions = false;
@@ -217,9 +228,15 @@ async function main(argv: string[]): Promise<number> {
   const exportName = flags.export ?? config.export;
   const snapshotPath = resolveFrom(flags.cwd, flags.snapshot ?? config.snapshot ?? DEFAULT_SNAPSHOT);
 
-  if (!["inspect", "snapshot", "check"].includes(flags.command)) {
+  if (!["init", "inspect", "snapshot", "check"].includes(flags.command)) {
     throw new UsageError(`unknown command "${flags.command}"`);
   }
+
+  // Before the entry check: init exists precisely to work out what the entry is.
+  if (flags.command === "init") {
+    return runInit(flags, entry, snapshotPath);
+  }
+
   if (!entry) {
     throw new UsageError(
       'no entry module — pass --entry <path> or set { "orpcAgent": { "entry": … } } in package.json',
@@ -245,10 +262,17 @@ async function main(argv: string[]): Promise<number> {
   }
 
   if (flags.command === "inspect") {
+    if (flags.json) {
+      process.stdout.write(snapshotJson(snapshot));
+      return EXIT_OK;
+    }
+    // Rich view for a human at a terminal; plain text everywhere else — piped,
+    // redirected, in CI, or with the optional UI dependencies absent.
+    if (!flags.plain && interactive(process.stdout)) {
+      if (await renderInventoryInk(snapshot, entrySource)) return EXIT_OK;
+    }
     process.stdout.write(
-      flags.json
-        ? snapshotJson(snapshot)
-        : `${renderInventory(snapshot, { color: supportsColor(process.stdout) }, entrySource)}\n`,
+      `${renderInventory(snapshot, { color: supportsColor(process.stdout) }, entrySource)}\n`,
     );
     return EXIT_OK;
   }
@@ -308,6 +332,57 @@ async function main(argv: string[]): Promise<number> {
     );
   }
   return EXIT_DRIFT;
+}
+
+/**
+ * The one interactive command. It refuses rather than degrades: a wizard with
+ * no keyboard is not a wizard, and silently writing a guessed config would be
+ * worse than saying what to pass.
+ */
+async function runInit(flags: Flags, entry: string | undefined, snapshotPath: string): Promise<number> {
+  const existing = readAgentConfig(flags.cwd);
+  const candidates = entry ? [entry] : discoverEntries(flags.cwd);
+
+  if (candidates.length === 0) {
+    process.stderr.write(
+      "orpc-agent init: found no candidate entry module.\n" +
+        "Pass --entry <path> pointing at the module that exports your registry or " +
+        "AgentRuntime.\n",
+    );
+    return EXIT_ERROR;
+  }
+
+  if (!interactive(process.stdin) || !interactive(process.stdout)) {
+    process.stderr.write(
+      "orpc-agent init needs an interactive terminal.\n" +
+        `Set it by hand instead: { "orpcAgent": { "entry": "${candidates[0]}" } } in ` +
+        "package.json.\n",
+    );
+    return EXIT_ERROR;
+  }
+
+  if (existing.entry) {
+    process.stderr.write(
+      `orpc-agent init: package.json already configures entry "${existing.entry}"` +
+        `${existing.export ? ` (export ${existing.export})` : ""}. Re-running will update it.\n\n`,
+    );
+  }
+
+  const result = await runInitUi({
+    cwd: flags.cwd,
+    candidates,
+    snapshotPath: flags.snapshot ?? existing.snapshot ?? DEFAULT_SNAPSHOT,
+  });
+
+  if (!result.ok) {
+    process.stderr.write(
+      "orpc-agent init: the interactive UI needs the optional dependencies.\n" +
+        "Install them with: pnpm add -D ink react\n" +
+        `Or set it by hand: { "orpcAgent": { "entry": "${candidates[0]}" } } in package.json.\n`,
+    );
+    return EXIT_ERROR;
+  }
+  return result.code;
 }
 
 function writeReport(changes: Change[], format: Flags["format"]): void {

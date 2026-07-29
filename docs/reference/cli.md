@@ -44,9 +44,29 @@ Stated first, because a governance tool that overstates its coverage is worse th
 
 | Command | Purpose |
 |---|---|
+| `orpc-agent init` | interactive setup: entry, export, baseline snapshot, CI script |
 | `orpc-agent inspect` | print the inventory; `--json` emits the snapshot |
 | `orpc-agent snapshot` | write the snapshot file — also how you update it |
 | `orpc-agent check` | compare the application against the snapshot file |
+
+### `init`
+
+Discovers the conventional entry modules that exist, loads the chosen one through the same child-process loader every other command uses — so what it reports is what `check` will see — and shows the findings before writing anything:
+
+```
+Found in src/app.ts
+
+  capabilities        2
+  exposed             2
+  approval-gated      0  declared in meta.approval
+  runtime policies    gate-model-writes
+
+Write this to package.json? (Y/n)
+```
+
+When the chosen export is a registry while the same module exports a runtime over it, `init` says so and offers the runtime instead, since recording less is the expensive default. On confirmation it writes `orpcAgent` into `package.json` (merging, so a hand-set `snapshot` path survives a re-run), optionally the baseline snapshot, and a `check:capabilities` script if none exists.
+
+It **refuses rather than degrades** without a terminal: a wizard with no keyboard is not a wizard, and writing a guessed config would be worse than printing what to set by hand.
 
 **Exit codes are part of the contract:** `0` clean · `1` drift · `2` could not run. CI must distinguish "the inventory changed" from "the tool never loaded the app"; the second one passing silently is how a gate rots.
 
@@ -61,6 +81,7 @@ Stated first, because a governance tool that overstates its coverage is worse th
 | `--fail-on <any\|widening>` | which drift fails `check` (default `any`) |
 | `--format <human\|md\|github>` | `check` report format |
 | `--json` | `inspect`: emit the snapshot instead of a table |
+| `--plain` | never use the interactive renderer |
 | `--no-descriptions` | omit descriptions from the snapshot |
 | `--import <module>` | preload a module in the loader process |
 | `--timeout <ms>` | loader timeout (default 30000) |
@@ -153,6 +174,14 @@ policies are configured and NOT covered by this gate yet. Run: orpc-agent snapsh
 **Narrowing** — capability or surface removed, approval added, risk raised, policy added, redaction added.
 
 **Neutral** — description, input schema, tool name, tags, timeout, approval type, policy reorder. Neutral is not "ignorable": a changed description is a changed prompt, and a renamed tool breaks host configs pinned to the old name.
+
+## Terminal output
+
+`inspect` renders a richer view when attached to a terminal — colour-coded side effect and risk, and the runtime-policy state as a panel rather than a trailing line, because that is the fact most easily skimmed past. It falls back to the plain renderer, byte for byte, when output is piped or redirected, `CI` or `NO_COLOR` is set, `--plain` is passed, or the optional UI dependencies are absent.
+
+`check` is **always** plain. Its output is a report pasted into pull requests and read out of CI logs; stable text is the feature. No module `check` reaches imports a rendering framework, even optionally.
+
+The interactive layer is [Ink](https://github.com/vadimdemedes/ink), in `optionalDependencies` and loaded through a dynamic `import()`. Installing with `--no-optional` keeps the gate to this package plus core; everything except `init` still works ([ADR-016](../architecture/decisions.md#adr-016-runtime-policies-are-part-of-the-governance-contract) §10, amending [ADR-015](../architecture/decisions.md#adr-015-a-developer-cli-with-capability-inventory-as-its-first-command) §7).
 
 ## How it loads your application
 
