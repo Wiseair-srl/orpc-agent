@@ -11,9 +11,12 @@ Package: `@orpc-agent/core`. The runtime is the governed execution engine; every
 ```ts
 function createAgentRuntime<TContext>(options: AgentRuntimeOptions<TContext>): AgentRuntime<TContext>;
 
-type AgentRuntimeOptions<TContext> = {
-  registry: CapabilityRegistry;
-  policies?: AgentPolicy[];                      // runtime-level, evaluated in order before meta.policies
+type AgentRuntimeOptions<TContext> = RuntimeWiring & (
+  | { governance: AgentGovernance }               // preferred — see core.md#definegovernance
+  | { registry: CapabilityRegistry; policies?: AgentPolicy[] }  // runtime-level, before meta.policies
+);
+
+type RuntimeWiring = {
   approvals?: ApprovalsConfig;
   audit?: AuditSink | AuditSink[] | { sinks: AuditSink[]; strict?: boolean; onSinkError?: (err: unknown, event: AgentAuditEvent) => void };
   tracing?: TracingAdapter;
@@ -36,9 +39,13 @@ type ApprovalsConfig = {
 
 **Construction behavior.** Pure and synchronous: wires configuration, verifies the registry's schemas are convertible for exposed schema-consuming surfaces, and returns. No I/O.
 
+**Governance or registry, not both.** Options take either a [`governance`](core.md#definegovernance) — preferred, and the only form tooling can read without a runtime instance — or `registry` and `policies` inline, which is normalized into the same shape. The forms are mutually exclusive by type: passing a governance leaves no `policies` key to append to, which is what stops one runtime from evaluating a list that differs from the one its application publishes.
+
+**`runtime.governance`.** The governed surface this runtime executes. Identical by reference across every runtime built from the same governance.
+
 **`runtime.registry`.** The runtime exposes its registry read-only. Adapters read capability meta from it for protocol concerns descriptors deliberately omit (tool-name overrides, MCP annotations) — see [ADR-012](../architecture/decisions.md#adr-012-as-built-api-deltas-for-v01).
 
-**`runtime.policies`.** The identity of the runtime-level policies, in evaluation order, composites flattened, frozen:
+**`runtime.policies`.** Shorthand for `runtime.governance.manifest` — the identity of the runtime-level policies, in evaluation order, composites flattened, frozen:
 
 ```ts
 readonly policies: readonly { name: string; phases: readonly PolicyPhase[] }[];
@@ -46,7 +53,7 @@ readonly policies: readonly { name: string; phases: readonly PolicyPhase[] }[];
 
 Name and phases only — never `evaluate`. A decision is meaningful only inside the pipeline (shared batch deadline, fail-closed on throw, audit record), so the closure is not handed out; a policy evaluated outside it would produce an answer that looks authoritative and is not. The names are the same ones audit events already record in `PolicyDecisionRecord.policy`.
 
-This is the configuration, not its effect. **Governance tooling may report that these policies exist; it may not conclude which capabilities they gate** — that depends on the actor, surface, input and context of a real invocation. [`@orpc-agent/cli`](cli.md) records this list so that removing a runtime policy registers as drift ([ADR-016](../architecture/decisions.md#adr-016-runtime-policies-are-part-of-the-governance-contract)).
+This is the configuration, not its effect. **Governance tooling may report that these policies exist; it may not conclude which capabilities they gate** — that depends on the actor, surface, input and context of a real invocation. [`@orpc-agent/cli`](cli.md) records this list so that removing a runtime policy registers as drift ([ADR-016](../architecture/decisions.md#adr-016-runtime-policies-are-part-of-the-governance-contract)) — though it normally reads the governance value directly, since that needs no runtime instance.
 
 ---
 

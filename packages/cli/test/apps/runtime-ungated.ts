@@ -1,12 +1,12 @@
 import { os } from "@orpc/server";
 import { z } from "zod";
-import { createAgentRuntime, createCapabilityRegistry } from "@orpc-agent/core";
+import { createAgentRuntime, createCapabilityRegistry, defineGovernance } from "@orpc-agent/core";
 
 /**
  * runtime-gated.ts with one line deleted: `policies: [gateModelWrites]` in
- * createAgentRuntime. Every capability declaration is unchanged, so every
+ * defineGovernance. Every capability declaration is unchanged, so every
  * per-capability snapshot field is byte-identical to the gated app — which is
- * the whole reason the snapshot has to record the runtime as well.
+ * the whole reason the snapshot has to record the governance as well.
  */
 const purge = os
   .meta({
@@ -35,7 +35,6 @@ export const capabilities = createCapabilityRegistry({
   customers: { purge, list },
 });
 
-export const runtime = createAgentRuntime({
-  registry: capabilities,
-  warnings: false,
-});
+export const governance = defineGovernance({ registry: capabilities });
+
+export const runtime = createAgentRuntime({ governance, warnings: false });

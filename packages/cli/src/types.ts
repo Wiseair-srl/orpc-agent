@@ -85,10 +85,12 @@ export type CapabilityEntry = {
  * for different reasons, and the output says which.
  */
 export type EntrySource =
-  | "registry"
-  /** An AgentRuntime that reports its policies. */
+  /** A value from `defineGovernance` — the declared contract itself. */
+  | "governance"
+  /** An AgentRuntime carrying the governance it was built from. */
   | "runtime"
-  /** An AgentRuntime from a core too old to report them. */
+  | "registry"
+  /** An AgentRuntime from a core too old to carry one. */
   | "runtime-unreported";
 
 export type ChangeKind = "widening" | "narrowing" | "neutral";

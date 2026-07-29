@@ -80,6 +80,42 @@ interface AgentCapability {
 
 ---
 
+## `defineGovernance`
+
+```ts
+function defineGovernance(config: {
+  registry: CapabilityRegistry;
+  policies?: AgentPolicy[];
+}): AgentGovernance;
+
+type AgentGovernance = {
+  readonly registry: CapabilityRegistry;
+  readonly policies: readonly AgentPolicy[];
+  readonly manifest: readonly { name: string; phases: readonly PolicyPhase[] }[];
+};
+```
+
+**Purpose.** Declares an application's governed surface — what an agent may reach, and what is evaluated before it does — as one value, separate from the per-instance wiring (`approvals`, `audit`, `tracing`, `now`) that [`createAgentRuntime`](runtime.md) also takes.
+
+**Why it is separate.** Two reasons, both structural rather than stylistic.
+
+1. **Runtimes cannot disagree about what is governed.** An application legitimately builds several over one surface — a coordinator-backed runtime for its dashboard, an inline-confirm one for chat. Passing a governance leaves no `policies` key to append to, so every runtime built from it evaluates exactly the published list.
+2. **Tooling can read it without a runtime instance.** Runtimes are usually built inside a factory, for per-request context or an injected clock, and [`@orpc-agent/cli`](cli.md) reads values rather than calling functions. A governance is safe at module scope: construction is pure and does no I/O.
+
+**`manifest`** is the statically knowable identity of the policies — name and phases, composites flattened to match what the pipeline evaluates and audit records. It is what governance tooling reads; `evaluate` is deliberately not reachable from it, since a decision is only meaningful inside the pipeline. Recording a removal from this list is how `orpc-agent check` catches a deleted gate ([ADR-016](../architecture/decisions.md#adr-016-runtime-policies-are-part-of-the-governance-contract)).
+
+```ts
+export const governance = defineGovernance({
+  registry: capabilities,
+  policies: [orgIsolation, mcpReadOnly],
+});
+
+const dashboard = createAgentRuntime({ governance, approvals: { coordinator } });
+const chat = createAgentRuntime({ governance, approvals: { coordinator, handler } });
+```
+
+Frozen on return. Passing `registry` and `policies` to `createAgentRuntime` directly remains supported and is normalized into the same shape, reachable as `runtime.governance`.
+
 ## `defaultToolName`
 
 ```ts

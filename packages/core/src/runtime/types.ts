@@ -1,5 +1,6 @@
 import type { Actor, ExposureSurface, RiskLevel, SideEffect } from "../types";
 import type { AgentPolicy, PolicyManifestEntry } from "../policy/types";
+import type { AgentGovernance } from "../governance";
 import type {
   ApprovalCoordinator,
   ApprovalDecision,
@@ -37,10 +38,12 @@ export type AuditConfig =
       onSinkError?: (err: unknown, event: AgentAuditEvent) => void;
     };
 
-export type AgentRuntimeOptions<TContext> = {
-  registry: CapabilityRegistry;
-  /** Runtime-level, evaluated in order before meta.policies. */
-  policies?: AgentPolicy[];
+/**
+ * Per-instance wiring: everything that is NOT the governed surface. An
+ * application may build several runtimes over one governance and vary all of
+ * this between them.
+ */
+type RuntimeWiring = {
   approvals?: ApprovalsConfig;
   audit?: AuditConfig;
   tracing?: TracingAdapter;
@@ -61,6 +64,24 @@ export type AgentRuntimeOptions<TContext> = {
    */
   warnings?: boolean;
 };
+
+/**
+ * Either a governance declared with `defineGovernance` — preferred, and the
+ * only form tooling can read without a runtime instance — or the registry and
+ * policies inline. The two are mutually exclusive: passing a governance means
+ * there is no `policies` key to append to, which is what stops a runtime from
+ * evaluating a list that differs from the one an application publishes.
+ */
+export type AgentRuntimeOptions<TContext = unknown> = RuntimeWiring &
+  (
+    | { governance: AgentGovernance; registry?: never; policies?: never }
+    | {
+        registry: CapabilityRegistry;
+        /** Runtime-level, evaluated in order before meta.policies. */
+        policies?: AgentPolicy[];
+        governance?: never;
+      }
+  );
 
 export type ExecutionOptions<TContext> = {
   actor: Actor;
@@ -102,6 +123,9 @@ export type CapabilityDescriptor = {
 };
 
 export interface AgentRuntime<TContext = unknown> {
+  /** The governed surface this runtime executes: registry plus policies. */
+  readonly governance: AgentGovernance;
+
   /** The registry this runtime executes over (adapters read meta from it). */
   readonly registry: CapabilityRegistry;
 

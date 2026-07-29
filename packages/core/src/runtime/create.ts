@@ -3,8 +3,7 @@ import type { ApprovalCoordinator } from "../approvals/types";
 import { createInMemoryApprovalCoordinator } from "../approvals/in-memory";
 import { NOOP_TRACING } from "../tracing";
 import { toJsonSchema } from "../schema/index";
-import { flattenPolicy } from "../policy/define";
-import type { AgentPolicy, PolicyManifestEntry } from "../policy/types";
+import { defineGovernance, type AgentGovernance } from "../governance";
 import { createAuditEmitter, type AuditEmitter } from "./audit";
 import { invokePipeline, resumePipeline, type PipelineDeps } from "./pipeline";
 import { describePipeline } from "./describe";
@@ -32,9 +31,21 @@ export function createAgentRuntime<TContext = unknown>(
   if (!options || typeof options !== "object") {
     throw new TypeError("createAgentRuntime: options are required");
   }
-  if (!options.registry || typeof options.registry.get !== "function") {
-    throw new TypeError("createAgentRuntime: a capability registry is required");
+  if (!options.governance && (!options.registry || typeof options.registry.get !== "function")) {
+    throw new TypeError(
+      "createAgentRuntime: a governance (defineGovernance) or a capability registry is required",
+    );
   }
+
+  // One internal shape from here on. Inline registry/policies stay supported
+  // and are normalized into a governance, so everything downstream — and
+  // `runtime.governance` — reads the same way whichever form was passed.
+  const governance =
+    options.governance ??
+    defineGovernance({
+      registry: options.registry!,
+      ...(options.policies ? { policies: options.policies } : {}),
+    });
 
   const now = options.now ?? (() => new Date());
   const audit: AuditEmitter = createAuditEmitter(options.audit);
@@ -42,7 +53,7 @@ export function createAgentRuntime<TContext = unknown>(
     options.approvals?.coordinator ?? createInMemoryApprovalCoordinator({ now });
 
   // Startup verification, not first-call failure.
-  for (const capability of options.registry.capabilities()) {
+  for (const capability of governance.registry.capabilities()) {
     const exposed = SCHEMA_CONSUMING_SURFACES.some((s) => capability.meta.expose[s] === true);
     if (!exposed || !capability.inputSchema) continue;
     try {
@@ -56,12 +67,12 @@ export function createAgentRuntime<TContext = unknown>(
   }
 
   if (options.warnings !== false) {
-    emitStartupWarnings(options, audit.hasSinks);
+    emitStartupWarnings(governance, options, audit.hasSinks);
   }
 
   const deps: PipelineDeps = {
-    registry: options.registry,
-    policies: options.policies ?? [],
+    registry: governance.registry,
+    policies: [...governance.policies],
     coordinator,
     ...(options.approvals?.handler ? { inlineHandler: options.approvals.handler } : {}),
     rejectSelfApproval: options.approvals?.rejectSelfApproval ?? true,
@@ -77,8 +88,9 @@ export function createAgentRuntime<TContext = unknown>(
   };
 
   return {
-    registry: options.registry,
-    policies: manifestOf(deps.policies),
+    governance,
+    registry: governance.registry,
+    policies: governance.manifest,
 
     invoke<O = unknown>(
       capabilityId: string,
@@ -130,19 +142,6 @@ export function createAgentRuntime<TContext = unknown>(
   };
 }
 
-/**
- * Composites are flattened so the reported names match the ones the pipeline
- * evaluates and audit records (`collectPolicies` does the same). Frozen: this
- * is a read of configuration, not a handle on it.
- */
-function manifestOf(policies: AgentPolicy[]): readonly PolicyManifestEntry[] {
-  return Object.freeze(
-    policies
-      .flatMap(flattenPolicy)
-      .map((policy) => Object.freeze({ name: policy.name, phases: Object.freeze([...policy.phases]) })),
-  );
-}
-
 const MODEL_SURFACES: readonly ExposureSurface[] = ["aiSdk", "mcp"];
 const WRITE_SIDE_EFFECTS = new Set(["write", "destructive", "external"]);
 /** Where losing a pending approval on restart is not recoverable by retrying. */
@@ -155,10 +154,11 @@ const IRREVERSIBLE_SIDE_EFFECTS = new Set(["destructive", "external"]);
  * policy-driven gate likely.
  */
 function emitStartupWarnings<TContext>(
+  governance: AgentGovernance,
   options: AgentRuntimeOptions<TContext>,
   hasSinks: boolean,
 ): void {
-  const capabilities = options.registry.capabilities();
+  const capabilities = governance.registry.capabilities();
 
   // 1. Approval-gated capabilities on the (restart-amnesiac) default
   //    coordinator. An inline handler counts as an explicit choice: pure
@@ -173,7 +173,7 @@ function emitStartupWarnings<TContext>(
           "default in-memory coordinator: approval records will not survive restarts. " +
           "Pass approvals.coordinator (e.g. @orpc-agent/postgres), or set warnings: false.",
       );
-    } else if ((options.policies ?? []).length > 0) {
+    } else if (governance.policies.length > 0) {
       // 1b. The same footgun reached the other way. A policy that returns
       //     requireApproval suspends into the same amnesiac coordinator, and
       //     nothing here can tell whether one does. Deliberately narrower than

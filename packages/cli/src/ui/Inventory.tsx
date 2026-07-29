@@ -127,16 +127,17 @@ function RuntimePanel({
       <Callout tone="warn" title="Runtime policies — NOT OBSERVED">
         {entrySource === "runtime-unreported" ? (
           <Text>
-            The runtime came from a version of @orpc-agent/core that does not report its
-            policies. Upgrade core to record them.
+            The runtime came from a version of @orpc-agent/core that does not carry its
+            governance. Upgrade core to record its policies.
           </Text>
         ) : (
           <Text>
-            <Text>--entry resolved a capability registry, so a runtime was never in scope. If</Text>
-            <Text> this application calls </Text>
-            <Text color="cyan">createAgentRuntime(&#123; policies: … &#125;)</Text>
-            <Text>, those gates are missing from this inventory and from the snapshot.</Text>
-            <Text bold> Point --entry at the module that exports the runtime.</Text>
+            <Text>--entry resolved a bare capability registry, which names no policies. If this</Text>
+            <Text> application registers runtime-level policies, those gates are missing from</Text>
+            <Text> this inventory and from the snapshot — deleting one will not fail the gate.</Text>
+            <Text bold> Declare them with </Text>
+            <Text bold color="cyan">defineGovernance(&#123; registry, policies &#125;)</Text>
+            <Text bold> and point --entry at that export.</Text>
           </Text>
         )}
       </Callout>

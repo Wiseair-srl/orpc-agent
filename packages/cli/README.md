@@ -44,7 +44,18 @@ Runtime policies — evaluated on every invocation, before capability policies
   gate-model-writes  invocation
 ```
 
-Point `--entry` at the module that exports your **`AgentRuntime`**, not just the registry. Both work, but only the runtime puts runtime-level policies in scope — and a conditional approval gate usually lives there. When one is not in scope the output says so, in place of the count:
+Point `--entry` at a [`defineGovernance`](https://orpc-agent.dev/reference/core#definegovernance) value — it names the registry **and** the runtime-level policies, and it is safe at module scope, so it does not matter that the runtimes serving traffic are built inside a factory the CLI will not call:
+
+```ts
+export const governance = defineGovernance({
+  registry: capabilities,
+  policies: [gateModelWrites],
+});
+
+const runtime = createAgentRuntime({ governance, approvals: { coordinator } });
+```
+
+An `AgentRuntime` works too — it carries the governance it was built from. A bare registry also works, and names no policies at all; when that is what the entry resolves, the output says so in place of the count:
 
 ```
 10 capabilities · 10 exposed · 1 approval-gated (declared) · runtime policies not observed
@@ -79,7 +90,7 @@ Two of those classifications are deliberately counter-intuitive:
 
 Also widening: a lowered `risk`, a removed policy, removed redaction, a new capability that arrives already exposed, and a procedure that gains `meta.agent`.
 
-**Removing a runtime-level policy is widening too**, and it is the reason the snapshot records the runtime at all. Deleting one entry from `createAgentRuntime({ policies: [...] })` can strip a conditional approval gate from every capability at once while leaving every per-capability field byte-identical — the largest possible change to what a model can reach, in one line, with nothing else to see:
+**Removing a runtime-level policy is widening too**, and it is the reason the snapshot records them at all. Deleting one entry from `defineGovernance({ policies: [...] })` can strip a conditional approval gate from every capability at once while leaving every per-capability field byte-identical — the largest possible change to what a model can reach, in one line, with nothing else to see:
 
 ```
 WIDENING — the agent gained reach, or a control weakened
@@ -117,7 +128,7 @@ pnpm add -D @orpc-agent/cli --no-optional
 Defaults can live in `package.json`, which makes the CI step just `orpc-agent check`:
 
 ```json
-{ "orpcAgent": { "entry": "src/app.ts", "export": "capabilities" } }
+{ "orpcAgent": { "entry": "src/app.ts", "export": "governance" } }
 ```
 
 ## GitHub Actions
@@ -137,7 +148,7 @@ if (process.env.ORPC_AGENT_INSPECT !== "1") await connect();
 
 TypeScript entries load natively on Node ≥ 22.18. On older Node the CLI uses `tsx` or `jiti` **if the project already has one** — neither is a dependency of this package — and otherwise says so instead of guessing. `--import <module>` overrides the choice; pointing `--entry` at compiled JavaScript needs nothing at all.
 
-Exports are found by shape: a value from `createCapabilityRegistry`, or an `AgentRuntime`. A module that exports **both** a registry and the runtime built over it is not ambiguous — the runtime wins, since it describes the same capabilities plus the runtime-level policies. Exports resolving to genuinely different registries still ask for `--export`. A **function** export is refused rather than called — calling it could connect, migrate, or charge a card. The inventory is read from a value, never produced by invoking your code.
+Exports are found by shape: a value from `defineGovernance`, an `AgentRuntime`, or a `createCapabilityRegistry` registry. A module exporting all three is not ambiguous — whichever carries the most governance wins, governance first. Exports resolving to genuinely different registries still ask for `--export`. A **function** export is refused rather than called — calling it could connect, migrate, or charge a card. The inventory is read from a value, never produced by invoking your code.
 
 ### Snapshot versions
 

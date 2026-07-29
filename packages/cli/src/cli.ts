@@ -255,8 +255,8 @@ async function main(argv: string[]): Promise<number> {
   // stderr, so it survives `--json`, `-o -`, and a piped report.
   if (runtimeAvailableAs) {
     process.stderr.write(
-      `orpc-agent: read the registry, but "${runtimeAvailableAs}" in the same module is an ` +
-        "agent runtime over it. Runtime-level policies are NOT recorded this way. " +
+      `orpc-agent: read the bare registry, but "${runtimeAvailableAs}" in the same module ` +
+        "carries the governance over it. Runtime-level policies are NOT recorded this way. " +
         `Use --export ${runtimeAvailableAs} to include them.\n`,
     );
   }

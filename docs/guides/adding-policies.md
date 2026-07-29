@@ -70,7 +70,18 @@ const runtime = createAgentRuntime({
 
 Ordering within a level is yours; across levels runtime-first. Since **all** policies evaluate and deny wins regardless of position (no short-circuit), order affects audit readability more than outcomes — group related rules and keep the list short enough to read aloud.
 
-**Put a runtime policy under the drift gate.** A conditional approval gate registered here is invisible to a snapshot taken over a bare registry: delete it and every capability field stays byte-identical while the gate is gone. [`orpc-agent`](../reference/cli.md) records `runtime.policies` when `--entry` resolves an [`AgentRuntime`](../reference/runtime.md), and classifies a removal as *widening*. If the serving runtime is built inside a factory, export a module-scope one spread from the same policy constant — construction is pure, so it costs nothing ([ADR-016](../architecture/decisions.md#adr-016-runtime-policies-are-part-of-the-governance-contract)).
+**Declare runtime-level policies with [`defineGovernance`](../reference/core.md#definegovernance), and put them under the drift gate.** A conditional approval gate registered here is invisible to a snapshot taken over a bare registry: delete it and every capability field stays byte-identical while the gate is gone.
+
+```ts
+export const governance = defineGovernance({
+  registry: capabilities,
+  policies: [orgIsolation, surfaceRules, destructiveNeedsApproval],
+});
+
+const runtime = createAgentRuntime({ governance, approvals: { coordinator } });
+```
+
+Point `--entry` at that export and [`orpc-agent`](../reference/cli.md) records the list, classifying a removal as *widening*. It works whether or not the serving runtime is reachable, which matters because runtimes are usually built inside a factory and the CLI reads values rather than calling functions ([ADR-016](../architecture/decisions.md#adr-016-runtime-policies-are-part-of-the-governance-contract)).
 
 The tool records that a policy exists, never what it decides. Which capabilities it gates depends on actor, surface, input and context, and is only knowable by evaluating it.
 

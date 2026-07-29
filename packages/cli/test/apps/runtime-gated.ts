@@ -4,6 +4,7 @@ import {
   allow,
   createAgentRuntime,
   createCapabilityRegistry,
+  defineGovernance,
   definePolicy,
   requireApproval,
 } from "@orpc-agent/core";
@@ -47,8 +48,10 @@ export const capabilities = createCapabilityRegistry({
   customers: { purge, list },
 });
 
-export const runtime = createAgentRuntime({
+export const governance = defineGovernance({
   registry: capabilities,
   policies: [gateModelWrites],
-  warnings: false,
 });
+
+/** Also exported, to cover the loader preferring the governance over it. */
+export const runtime = createAgentRuntime({ governance, warnings: false });

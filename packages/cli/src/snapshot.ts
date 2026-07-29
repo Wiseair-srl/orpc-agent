@@ -1,6 +1,7 @@
 import {
   defaultToolName,
   type AgentCapability,
+  type AgentGovernance,
   type AgentRuntime,
   type CapabilityRegistry,
   type PolicyPhase,
@@ -12,7 +13,7 @@ import { SNAPSHOT_VERSION, type CapabilityEntry, type CapabilitySnapshot, type R
 /** Surfaces that put a tool name and a JSON Schema on the wire. */
 const SCHEMA_SURFACES = ["aiSdk", "mcp"] as const;
 
-export type SnapshotSource = CapabilityRegistry | AgentRuntime<unknown>;
+export type SnapshotSource = CapabilityRegistry | AgentRuntime<unknown> | AgentGovernance;
 
 /** Fixed field order for every entry — see canonical.ts. */
 export function buildSnapshot(
@@ -20,8 +21,8 @@ export function buildSnapshot(
   options: { descriptions?: boolean } = {},
 ): CapabilitySnapshot {
   const withDescriptions = options.descriptions !== false;
-  const runtime = isRuntime(source) ? source : undefined;
-  const registry = runtime ? runtime.registry : (source as CapabilityRegistry);
+  const governance = governanceOf(source);
+  const registry = governance ? governance.registry : (source as CapabilityRegistry);
   const { capabilities, excluded, unexposed } = registry.inspect();
 
   return {
@@ -33,28 +34,31 @@ export function buildSnapshot(
     unexposed: [...unexposed].sort(),
     // Omitted, never defaulted to empty: "no runtime seen" and "a runtime with
     // no policies" are different facts and the diff acts on the difference.
-    ...(runtime && runtimeReportsPolicies(runtime)
-      ? { runtime: runtimeSnapshotOf(runtime) }
-      : {}),
+    ...(governance ? { runtime: runtimeSnapshotOf(governance) } : {}),
   };
 }
 
-function isRuntime(source: SnapshotSource): source is AgentRuntime<unknown> {
-  return typeof (source as AgentRuntime<unknown>).invoke === "function";
-}
-
 /**
- * A runtime from a core older than the one that added `policies` reports
- * nothing. That is "unknown", not "none", so the caller omits the whole
- * `runtime` key rather than recording a misleading empty list.
+ * A governance value, or the one a runtime carries. Duck-typed on purpose:
+ * two copies of core in a tree would defeat `instanceof`, and the whole point
+ * of reading a value is that its provenance does not matter.
+ *
+ * A runtime from a core older than `runtime.governance` yields nothing here,
+ * which reads as "unknown" rather than a misleading empty policy list.
  */
-export function runtimeReportsPolicies(runtime: AgentRuntime<unknown>): boolean {
-  return Array.isArray((runtime as { policies?: unknown }).policies);
+export function governanceOf(source: SnapshotSource): AgentGovernance | undefined {
+  const candidate = source as Partial<AgentGovernance> & Partial<AgentRuntime<unknown>>;
+  if (Array.isArray(candidate.manifest) && candidate.registry) {
+    return candidate as AgentGovernance;
+  }
+  const carried = candidate.governance as AgentGovernance | undefined;
+  if (carried && Array.isArray(carried.manifest)) return carried;
+  return undefined;
 }
 
-function runtimeSnapshotOf(runtime: AgentRuntime<unknown>): RuntimeSnapshot {
+function runtimeSnapshotOf(governance: AgentGovernance): RuntimeSnapshot {
   return {
-    policies: [...runtime.policies].map((policy) => ({
+    policies: [...governance.manifest].map((policy) => ({
       name: policy.name,
       phases: [...policy.phases].sort() as PolicyPhase[],
     })),

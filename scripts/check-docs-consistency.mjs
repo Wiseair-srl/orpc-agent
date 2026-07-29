@@ -61,6 +61,7 @@ const requiredSymbols = [
   "agentProcedure",
   "createCapabilityRegistry",
   "defaultToolName",
+  "defineGovernance",
   "createAgentRuntime",
   "definePolicy",
   "composePolicies",
