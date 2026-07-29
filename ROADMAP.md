@@ -1,29 +1,38 @@
 # Roadmap
 
-> **Status:** v0.1 implemented and **published to npm** at 0.1.0 ([Q1 resolved](docs/open-questions.md#q1)); the v0.2 "Durability seams" core is **implemented** (release flows through the changesets pipeline). Scope commitments below are firm.
+> **Status:** **1.0.0 published to npm** — semver applies strictly from here ([release process](docs/contributing/release-process.md)). The lines below record how it got here and what is next; scope commitments are firm.
 
-## Now — v0.2 "Durability seams" (implemented)
-
-Driven by the first production consumer (an ~85-capability finance app):
-
-- `@orpc-agent/postgres` — reference `ApprovalCoordinator` + `AuditSink` over a driver-agnostic query seam; DDL as exported strings; the shared coordinator contract suite runs against in-memory, pglite, and a real server incl. a two-connection consumption race ([Q8](docs/open-questions.md#q8) resolved via [ADR-013](docs/architecture/decisions.md#adr-013-postgres-reference-persistence-package))
-- Core: startup footgun warnings (`warnings: false` to silence), schema-conversion cache invalidation + descriptor isolation ([ADR-014](docs/architecture/decisions.md#adr-014-as-built-api-deltas-for-v02))
-- MCP: `session.authInfo` typed as the SDK's `AuthInfo`
-- Guides: [headless invocations](docs/guides/headless-invocations.md), [workflow steps](docs/guides/workflow-steps.md), [MCP authentication](docs/guides/mcp-authentication.md) (Better Auth worked example), host-loop approval interop ([ai-sdk adapter](docs/adapters/ai-sdk.md))
-
-## Next — v0.3
-
-- `@orpc-agent/cli` — capability inventory and CI drift gate (`orpc-agent inspect | snapshot | check`), with committed snapshots dogfooded on both examples ([ADR-015](docs/architecture/decisions.md#adr-015-a-developer-cli-with-capability-inventory-as-its-first-command)). Core: `defaultToolName` becomes public, collapsing three copies into one
-- Reverses the 0.2 plan's "no CLI" exclusion deliberately; the surface name `cli` stays reserved for nothing — a future CLI *adapter* would take the surface `shell`
-
-Still on the 0.2 line, order by demand:
+## Now — after 1.0
 
 - First workflow-engine adapter for the `workflow` surface ([Q7](docs/open-questions.md#q7) — Mastra currently leads the candidate list)
 - MCP: dynamic `list_changed`; elicitation-based confirmation prototype behind a flag ([Q4](docs/open-questions.md#q4))
 - Community schema-converter adoption for Valibot/ArkType ([Q3](docs/open-questions.md#q3))
-- API stabilization pass: experimental → stable for core definition APIs
 
-## Shipped — v0.1 "Governed core" (published)
+## Shipped — 1.0 "Governance contract"
+
+Runtime-level policies become part of the recorded contract ([ADR-016](docs/architecture/decisions.md#adr-016-runtime-policies-are-part-of-the-governance-contract)), and the API drops its remaining choices:
+
+- `defineGovernance({ registry, policies })` — the governed surface as one declared value, and the only form `createAgentRuntime` accepts. A runtime built from it cannot evaluate a policy list no exported value names, and tooling can read it without a runtime instance
+- CLI: snapshot v2 records runtime-level policies; removing one is **widening**. The header qualifies its own count (`0 approval-gated (declared)`), and `--entry` accepts a governance, a runtime, or a bare registry
+- `orpc-agent init` — interactive setup; `inspect` renders an Ink view in a terminal while `check` stays plain text with no rendering framework in its path
+- `@orpc-agent/core` becomes a peer dependency of the CLI: the requirement is one *module instance*, not one version — a duplicated copy makes an application's schema converter invisible and fabricates drift
+- Removed: the `warnings` flag, and the `registry`/`policies` pair on `createAgentRuntime`. Each was a second way to say something a configuration choice already says
+
+## Shipped — v0.3
+
+- `@orpc-agent/cli` — capability inventory and CI drift gate (`orpc-agent inspect | snapshot | check`), with committed snapshots dogfooded on both examples ([ADR-015](docs/architecture/decisions.md#adr-015-a-developer-cli-with-capability-inventory-as-its-first-command)). Core: `defaultToolName` becomes public, collapsing three copies into one
+- Reverses the 0.2 plan's "no CLI" exclusion deliberately; the surface name `cli` stays reserved for nothing — a future CLI *adapter* would take the surface `shell`
+
+## Shipped — v0.2 "Durability seams"
+
+Driven by the first production consumer (an ~85-capability finance app):
+
+- `@orpc-agent/postgres` — reference `ApprovalCoordinator` + `AuditSink` over a driver-agnostic query seam; DDL as exported strings; the shared coordinator contract suite runs against in-memory, pglite, and a real server incl. a two-connection consumption race ([Q8](docs/open-questions.md#q8) resolved via [ADR-013](docs/architecture/decisions.md#adr-013-postgres-reference-persistence-package))
+- Core: startup footgun warnings, schema-conversion cache invalidation + descriptor isolation ([ADR-014](docs/architecture/decisions.md#adr-014-as-built-api-deltas-for-v02))
+- MCP: `session.authInfo` typed as the SDK's `AuthInfo`
+- Guides: [headless invocations](docs/guides/headless-invocations.md), [workflow steps](docs/guides/workflow-steps.md), [MCP authentication](docs/guides/mcp-authentication.md) (Better Auth worked example), host-loop approval interop ([ai-sdk adapter](docs/adapters/ai-sdk.md))
+
+## Shipped — v0.1 "Governed core"
 
 The smallest coherent release proving the thesis: *define a capability once, expose it through multiple governed surfaces.*
 

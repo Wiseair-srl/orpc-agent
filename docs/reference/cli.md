@@ -1,6 +1,6 @@
 # CLI
 
-> **Status:** implemented in v0.3 · package `@orpc-agent/cli` · binary `orpc-agent` · [ADR-015](../architecture/decisions.md#adr-015-a-developer-cli-with-capability-inventory-as-its-first-command)
+> **Status:** Stable — 1.0 · package `@orpc-agent/cli` · binary `orpc-agent` · [ADR-015](../architecture/decisions.md#adr-015-a-developer-cli-with-capability-inventory-as-its-first-command)
 
 A developer tool, not an adapter: it exposes nothing to an agent and hardcodes no surface value. It answers *what can an agent reach from this repository*, and *did that change in this pull request*.
 

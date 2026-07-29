@@ -1,6 +1,6 @@
 # Package boundaries
 
-> **Status:** Implemented in v0.1 — the package layout as built. Packages are not yet published to npm. npm names use the `@orpc-agent` scope as a placeholder pending registration ([ADR-011](decisions.md#adr-011-npm-scope-and-project-independence)).
+> **Status:** Stable — 1.0. the package layout as built. Published to npm at 1.0.0 under the `@orpc-agent` scope ([ADR-011](decisions.md#adr-011-npm-scope-and-project-independence)).
 
 ## Monorepo layout
 
@@ -67,7 +67,7 @@ subpath @orpc-agent/core/schema: toJsonSchema, registerSchemaConverter
 
 **Non-responsibilities.** No persistence (the in-memory approval coordinator is for development and tests), no HTTP server, no model calls, no OpenTelemetry objects (only the neutral `TracingAdapter` interface), no scheduling.
 
-**Maturity target.** v0.1 experimental; API review gate before 0.2.
+**Maturity.** Stable at 1.0.
 
 ## @orpc-agent/ai-sdk
 
@@ -81,7 +81,7 @@ subpath @orpc-agent/core/schema: toJsonSchema, registerSchemaConverter
 
 **Relationship.** Pure consumer of `runtime.describe("aiSdk", …)` and `runtime.invoke(…, { surface: "aiSdk" })` per the [adapter model](adapter-model.md).
 
-**Maturity target.** v0.1 experimental.
+**Maturity.** Stable at 1.0.
 
 ## @orpc-agent/mcp
 
@@ -93,7 +93,7 @@ subpath @orpc-agent/core/schema: toJsonSchema, registerSchemaConverter
 
 **Non-responsibilities.** No OAuth server (the app authenticates and hands the adapter a verified identity), no resource/prompt MCP features in v0.1, no dynamic `list_changed` in v0.1 (Planned).
 
-**Maturity target.** v0.1 experimental (last core-track increment; may slip to v0.2 — see [ROADMAP](../../ROADMAP.md)).
+**Maturity.** Stable at 1.0.
 
 ## @orpc-agent/opentelemetry
 
@@ -105,7 +105,7 @@ subpath @orpc-agent/core/schema: toJsonSchema, registerSchemaConverter
 
 **Non-responsibilities.** No exporter/SDK setup (the app owns its OTel SDK), no metrics in v0.1, no log correlation.
 
-**Maturity target.** v0.1 experimental.
+**Maturity.** Stable at 1.0.
 
 ## @orpc-agent/postgres
 
@@ -117,7 +117,7 @@ subpath @orpc-agent/core/schema: toJsonSchema, registerSchemaConverter
 
 **Non-responsibilities.** No migrations framework (DDL ships as strings; the app owns its schema lifecycle), no connection pooling, no retention/pruning policy.
 
-**Maturity target.** v0.2 experimental.
+**Maturity.** Stable at 1.0 (added in 0.2).
 
 ## @orpc-agent/cli
 
@@ -129,7 +129,7 @@ subpath @orpc-agent/core/schema: toJsonSchema, registerSchemaConverter
 
 **Non-responsibilities.** Does not evaluate policies (declarations, not reachability — see ADR-005), does not invoke application code (a function export is refused, never called), does not judge new capabilities that have no snapshot baseline.
 
-**Maturity target.** v0.3 experimental.
+**Maturity.** Stable at 1.0 (added in 0.3).
 
 ## @orpc-agent/testing
 
@@ -141,7 +141,7 @@ subpath @orpc-agent/core/schema: toJsonSchema, registerSchemaConverter
 
 **Non-responsibilities.** Not a test framework (works inside Vitest/Jest/node:test), no snapshot management, no LLM simulation.
 
-**Maturity target.** v0.1 experimental, co-developed with core (core's own tests use it from M5 onward).
+**Maturity.** Stable at 1.0, co-developed with core (core's own tests use it).
 
 ## Boundary tests (implementation must enforce)
 

@@ -1,6 +1,6 @@
 # Reference: configuration
 
-> **Status:** Implemented in v0.1. Stability: experimental.
+> **Status:** Stable — 1.0.
 
 Single page for every knob, its default, and where it applies. Precedence for overlapping settings: **call site > capability meta > runtime defaults**.
 

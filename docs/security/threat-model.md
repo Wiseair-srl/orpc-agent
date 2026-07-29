@@ -1,6 +1,6 @@
 # Threat model
 
-> **Status:** Implemented in v0.1 — v0.1. Scope: the framework's own layers (adapter → runtime → capability). Application infrastructure (network, OS, database, identity provider) and model-provider security are out of scope here but not out of your responsibility.
+> **Status:** Stable — 1.0. Scope: the framework's own layers (adapter → runtime → capability). Application infrastructure (network, OS, database, identity provider) and model-provider security are out of scope here but not out of your responsibility.
 
 ## Assets
 

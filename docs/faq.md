@@ -1,6 +1,6 @@
 # FAQ
 
-> **Status:** Implemented in v0.1.
+> **Status:** Stable — 1.0.
 
 ## Positioning
 

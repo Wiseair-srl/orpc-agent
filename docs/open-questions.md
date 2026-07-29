@@ -1,6 +1,6 @@
 # Open design questions
 
-> **Status:** Living document. Every unresolved decision lives here — not scattered through the docs. Each entry states the decision needed, options, a recommendation, implications, and whether v0.1 implementation is blocked. With v0.1 implemented and published, **Q1 and Q2 are resolved**; v0.2 resolved **Q8** (see the entries); none of the rest blocked either build.
+> **Status:** Living document. Every unresolved decision lives here — not scattered through the docs. Each entry states the decision needed, options, a recommendation, and implications. **Q1 and Q2** were resolved by the v0.1 release, **Q8** by v0.2; the rest are open and none blocks a release.
 
 ## Q1 — Final npm scope <a id="q1"></a>
 **Status: RESOLVED (2026-07-27).** Option (a) confirmed: npm org `orpc-agent` registered (owner: pbwise), all five packages published at 0.1.0 under `@orpc-agent/*` with the independence disclaimer in every description and README. Release flow: changesets (linked lockstep across `@orpc-agent/*`), `pnpm release` locally or the CI release job on main (needs `NPM_TOKEN` + `RELEASE_TOKEN` secrets). Courtesy note to oRPC maintainers still pending.

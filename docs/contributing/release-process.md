@@ -1,12 +1,13 @@
 # Contributing: release process
 
-> **Status:** Implemented in v0.1 — applies from the first published release onward.
+> **Status:** Stable — 1.0. Applies from the first published release onward.
 
 ## Versioning
 
 - Changesets-driven; independent package versions within one coordinated release train (a release publishes all changed packages together, keeping intra-repo peer ranges valid).
-- Pre-1.0 semantics: minor = features and *documented* breaking changes with migration notes; patch = fixes. Everything is **experimental** until the stability table in each reference page says otherwise; experimental APIs may break in minors, always with changelog migration notes.
-- `0.1.0` ships only when the [acceptance criteria](../implementation/brief.md#acceptance-criteria) pass.
+- **Semver, strictly, from 1.0 onward**: major = a breaking change to any documented API; minor = additive; patch = fixes. A breaking change never ships in a minor, whatever the migration notes say — that was the pre-1.0 allowance and it is over.
+- The published surface is what the [reference](../reference/core.md) documents. Anything reachable but undocumented is not part of the contract.
+- Peer-dependency ranges are part of the contract: widening one is a minor, narrowing one is a major. Note that changesets bumps a package **major** when a package it peer-depends on is bumped at all — intended, since a peer range change is breaking downstream.
 
 ## Release checklist
 
@@ -19,8 +20,8 @@
 
 ## Security releases
 
-Fixes for reported vulnerabilities ([SECURITY.md](../../SECURITY.md)) may skip the normal train: minimal-diff patch on the latest minor (and previous minor if within its 6-month critical-fix window), advisory published simultaneously, credit per reporter preference. Any maintainer may veto a regular release to prioritize a security one.
+Fixes for reported vulnerabilities ([SECURITY.md](../../SECURITY.md)) may skip the normal train: minimal-diff patch on the latest minor of the current major (and the previous minor if within its 6-month critical-fix window), advisory published simultaneously, credit per reporter preference. Any maintainer may veto a regular release to prioritize a security one.
 
 ## Deprecations
 
-Experimental-phase policy: deprecate in minor N with a runtime warning where feasible + changelog + doc strike-through; remove no earlier than minor N+2. Error codes and audit event types are never repurposed — only added or (rarely, with ADR) retired.
+Deprecate in a minor — runtime warning where feasible, changelog entry, doc strike-through — and remove no earlier than the next major. Error codes and audit event types are never repurposed, only added or (rarely, with ADR) retired.

@@ -1,6 +1,6 @@
 # Capability registry
 
-> **Status:** Implemented in v0.1 — v0.1 concepts. APIs shown are the as-built v0.1 surface.
+> **Status:** Stable — 1.0.
 
 The **registry** is the typed collection that turns annotated procedures into addressable capabilities. It answers: *what capabilities exist, what are they called, and which subset applies here?*
 

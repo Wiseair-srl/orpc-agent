@@ -16,7 +16,7 @@
 Your application UI, an AI runtime, an MCP client, a workflow, and your tests can all call the same typed oRPC procedures, under one set of validation rules, permissions, approvals, execution policies, and observability.
 
 > [!NOTE]
-> **Published to npm** under `@orpc-agent/*`: [`core`](https://www.npmjs.com/package/@orpc-agent/core), [`ai-sdk`](https://www.npmjs.com/package/@orpc-agent/ai-sdk), [`mcp`](https://www.npmjs.com/package/@orpc-agent/mcp), [`postgres`](https://www.npmjs.com/package/@orpc-agent/postgres), [`opentelemetry`](https://www.npmjs.com/package/@orpc-agent/opentelemetry), [`testing`](https://www.npmjs.com/package/@orpc-agent/testing) (`postgres` is new in 0.2, `cli` in 0.3; each ships with its release). The design documentation in [`docs/`](docs) is normative; CI runs the governance suite on every push (303 tests across 25 files, plus a real-Postgres pass) and gates the examples' committed capability snapshots. Progress lives in the [ROADMAP](ROADMAP.md).
+> **Published to npm** under `@orpc-agent/*`: [`core`](https://www.npmjs.com/package/@orpc-agent/core), [`ai-sdk`](https://www.npmjs.com/package/@orpc-agent/ai-sdk), [`mcp`](https://www.npmjs.com/package/@orpc-agent/mcp), [`postgres`](https://www.npmjs.com/package/@orpc-agent/postgres), [`opentelemetry`](https://www.npmjs.com/package/@orpc-agent/opentelemetry), [`testing`](https://www.npmjs.com/package/@orpc-agent/testing) and [`cli`](https://www.npmjs.com/package/@orpc-agent/cli), all at **1.0.0** (`postgres` arrived in 0.2, `cli` in 0.3). The design documentation in [`docs/`](docs) is normative; CI runs the governance suite on every push (336 tests across 27 files, plus a real-Postgres pass) and gates the examples' committed capability snapshots. Progress lives in the [ROADMAP](ROADMAP.md).
 
 ```bash
 pnpm add @orpc-agent/core @orpc/server
@@ -68,7 +68,7 @@ oRPC Agent sits between agent runtimes and business logic. It agent-enables an e
 
 ```ts
 import { os } from "@orpc/server";
-import { agentProcedure, createCapabilityRegistry, createAgentRuntime } from "@orpc-agent/core";
+import { agentProcedure, createCapabilityRegistry, defineGovernance, createAgentRuntime } from "@orpc-agent/core";
 import { toAISDKTools } from "@orpc-agent/ai-sdk";
 import * as z from "zod";
 
@@ -89,9 +89,10 @@ export const searchOrders = agentBase
   .output(z.object({ orders: z.array(OrderSummary) }))
   .handler(async ({ input, context, signal }) => ({ orders: await context.orders.search(input, { signal }) }));
 
-// 3. Registry + governed runtime
+// 3. Registry, declared governance, governed runtime
 const capabilities = createCapabilityRegistry({ orders: { search: searchOrders } });
-const runtime = createAgentRuntime({ registry: capabilities });
+const governance = defineGovernance({ registry: capabilities });   // + policies: [...]
+const runtime = createAgentRuntime({ governance });
 
 // 4. Per-request tools for your model loop — actor = authenticated identity, never the model
 const tools = await toAISDKTools(runtime, { actor, context });
@@ -125,7 +126,7 @@ sequenceDiagram
     Runtime-->>Model: model-safe result
 ```
 
-## What v0.1 gives you
+## What it gives you
 
 Procedures are the single source of truth, and a "tool" is only how an adapter represents one ([ADR-001](docs/architecture/decisions.md#adr-001-orpc-procedures-are-the-source-of-truth), [ADR-002](docs/architecture/decisions.md#adr-002-capability-is-the-internal-abstraction)). On top of that:
 
@@ -196,7 +197,7 @@ No agent loop, planner, prompts, or memory. No workflow engine, though durable e
 
 ## Roadmap
 
-v0.1 "Governed core" is the governed runtime, four adapters, and the reference example, per the [implementation brief](docs/implementation/brief.md). v0.2 "Durability seams" adds `@orpc-agent/postgres` (persistent approvals + audit), production-footgun warnings, and the headless/workflow/MCP-auth recipes; the workflow-engine adapter and MCP dynamic listings remain on the 0.2 line by demand. After that: streaming capabilities, quotas, and more adapters. Details and open questions in [ROADMAP.md](ROADMAP.md) and [docs/open-questions.md](docs/open-questions.md).
+**1.0 is published**, and semver applies strictly from here: a breaking change means a major, never a minor with migration notes ([release process](docs/contributing/release-process.md)). Getting here took three lines — v0.1 "Governed core" (runtime, four adapters, reference example), v0.2 "Durability seams" (`@orpc-agent/postgres`, startup warnings, headless/workflow/MCP-auth recipes), v0.3 (`@orpc-agent/cli`, the capability inventory and CI drift gate). Next: the workflow-engine adapter, MCP dynamic listings, streaming capabilities, quotas. Details and open questions in [ROADMAP.md](ROADMAP.md) and [docs/open-questions.md](docs/open-questions.md).
 
 ## Contributing
 

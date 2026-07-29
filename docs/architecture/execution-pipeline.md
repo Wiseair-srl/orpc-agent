@@ -1,6 +1,6 @@
 # Execution pipeline
 
-> **Status:** Implemented in v0.1 — normative specification for the v0.1 runtime. The implementation must follow the stage ordering and semantics defined here. APIs shown are the as-built v0.1 surface.
+> **Status:** Stable — 1.0 — the normative specification for the runtime. The implementation must follow the stage ordering and semantics defined here.
 
 This document specifies the canonical lifecycle of every capability invocation. Other documents cite these stages by number ("stage 7"). Do not reorder stages in the implementation without an ADR.
 

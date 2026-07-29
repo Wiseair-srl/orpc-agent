@@ -1,6 +1,6 @@
 # Guide: human approval
 
-> **Status:** Implemented in v0.1. Semantics: [concepts/approvals.md](../concepts/approvals.md). This guide wires the full loop: gate → surface → decide → resume — plus the inline variant.
+> **Status:** Stable — 1.0. Semantics: [concepts/approvals.md](../concepts/approvals.md). This guide wires the full loop: gate → surface → decide → resume — plus the inline variant.
 
 ## 1. Gate the capability
 

@@ -1,6 +1,6 @@
 # Reference: core
 
-> **Status:** Implemented in v0.1. Stability: experimental unless noted.
+> **Status:** Stable — 1.0. Stability: stable unless noted.
 
 Package: `@orpc-agent/core`. This page covers the definition-side API: `agentProcedure`, the registry, policies, decision helpers, and schema utilities. The execution-side API (`createAgentRuntime`, `invoke`, `describe`, `resume`, approvals) is in [runtime.md](runtime.md); errors in [errors.md](errors.md); events in [events.md](events.md).
 
@@ -218,7 +218,7 @@ export const refundLimit = definePolicy("refund-limit", ({ capability, input }) 
 ## `unwrap`
 
 ```ts
-function unwrap<O>(result: ExecutionResult<O>): O;   // stability: experimental
+function unwrap<O>(result: ExecutionResult<O>): O;
 ```
 
 Convenience for direct/workflow callers: returns `output` for `completed`, throws the contained `CapabilityError` for `failed`/`cancelled`, and throws a `CapabilityError` with code `APPROVAL_REQUIRED` (carrying the approval record in `details`) for `approval-required`. Adapters do not use it — they translate envelopes.

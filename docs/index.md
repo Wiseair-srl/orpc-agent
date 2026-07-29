@@ -46,7 +46,7 @@ features:
     link: /guides/auditing
 ---
 
-> **Status:** v0.1 implemented and published to npm (`@orpc-agent/*` at 0.1.0). These documents are the source of truth the implementation was built from; where the build forced a change, the [decision records](architecture/decisions.md) carry an as-built addendum. Independent community project, not affiliated with the oRPC maintainers.
+> **Status:** Stable — `@orpc-agent/*` published to npm at **1.0.0**. These documents are the source of truth the implementation was built from; where the build forced a change, the [decision records](architecture/decisions.md) carry an as-built addendum. Independent community project, not affiliated with the oRPC maintainers.
 
 **Start here:** [Getting started](getting-started.md) · **The idea in one page:** [Architecture overview](architecture/overview.md) · **The worked example:** [Customer-support agent](examples/customer-support-agent.md) · **Full-stack with Mastra:** [Task board](examples/mastra-task-board.md)
 
