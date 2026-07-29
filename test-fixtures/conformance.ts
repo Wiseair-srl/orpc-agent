@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import { signalObservations, EXPECTED_TOOL_NAMES } from "./registry";
 
 /**
@@ -119,7 +119,12 @@ export function describeAdapterConformance(
       const before = signalObservations.length;
       const controller = new AbortController();
       const pending = harness.callTool("fixtures_slow", {}, { signal: controller.signal });
-      setTimeout(() => controller.abort(), 25);
+      // Abort only once the handler is demonstrably running. A fixed delay
+      // races the pipeline: if the signal is already aborted when the runtime
+      // reaches stage 12 it cancels before the handler starts, which is
+      // correct behavior but leaves no observation to assert on.
+      await vi.waitFor(() => expect(signalObservations.length).toBeGreaterThan(before));
+      controller.abort();
       const envelope = await pending;
       expect(envelope.status).toBe("error");
       if (envelope.status === "error") {
