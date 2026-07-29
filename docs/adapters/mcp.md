@@ -25,7 +25,7 @@ const mcp = createMCPServer(runtime, {
 await mcp.connect(transport);   // stdio, Streamable HTTP — the app picks and hosts
 ```
 
-`mcp.server` exposes the underlying MCP SDK server for advanced composition; `connect` is a pass-through.
+`mcp.server` exposes the underlying MCP SDK server for advanced composition; `connect` starts the session and installs the identity-cache teardown (below).
 
 ### Options (`MCPServerOptions`)
 
@@ -68,6 +68,18 @@ Rules the adapter enforces or expects:
 1. **No ambient identity.** Every session's actor comes from `createContext` verification of transport credentials (OAuth for Streamable HTTP; process trust for stdio in dev). The adapter never derives identity from tool arguments (SI-3).
 2. **One actor per session, your choice of granularity** — the end user behind an OAuth token (best attribution), or a scoped service identity for machine integrations (`kind: "service"` with least-privilege attributes). Avoid one shared super-actor for all MCP traffic ([authorization](../security/authorization.md#service-accounts-and-automations)).
 3. **Exposure to `mcp` is a bigger decision than to `aiSdk`.** Your own AI-SDK loop runs in your process against your prompts; MCP clients run other people's loops. The reference app exposes reads to both but keeps `orders.refund` off MCP entirely — a worked example of surface-specific exposure ([example](../examples/customer-support-agent.md)).
+
+### Session lifetime
+
+`createContext` runs **once per session** and its result is cached, so what the cache holds matters as much as what `createContext` returns. Two rules bound it:
+
+- **Expiry is re-checked on every request, not once per session.** The adapter reads `authInfo.expiresAt` from the credential the transport verified for *that* request; when it has passed, the cached identity is dropped and the request is refused with `InvalidRequest` ("Unauthorized: the session's access token has expired"). It applies to `tools/call` and `tools/list` alike, since both are identity-derived. A token that expires mid-session therefore stops working at the next call rather than when the session ends — which, on a long-lived Streamable HTTP session, could be hours. A *refreshed* token on the same session re-runs `createContext` and continues, because the refusal already evicted the stale entry.
+
+  `authInfo` with no `expiresAt` means the transport gave no expiry to enforce; the adapter does not invent one, and whether that credential is acceptable is your `createContext`'s call.
+
+- **A closed session's identity is evicted.** Nothing else would remove it, so on a long-lived server the cache would otherwise grow with every session the process has ever served. Both `connect()` and the underlying server's close path are hooked, so eviction holds whether you connect through the handle or compose over `mcp.server` — including when your composition sets `server.onclose` itself.
+
+Neither check replaces your token verification: the adapter enforces the expiry the transport reported, and `createContext` remains where signature, audience, scope, and revocation are decided ([mcp-authentication](../guides/mcp-authentication.md)).
 
 ## Deployment sketch
 

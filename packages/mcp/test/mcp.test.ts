@@ -1,6 +1,8 @@
 import { describe, expect, test } from "vitest";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
+import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
+import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
 import { os } from "@orpc/server";
 import * as z from "zod";
 import {
@@ -165,6 +167,189 @@ describe("per-session identity", () => {
     await expect(client.callTool({ name: "open", arguments: {} })).rejects.toThrowError(
       /Unauthorized/,
     );
+  });
+});
+
+describe("session lifetime", () => {
+  const base = agentProcedure(os.$context<object>());
+  const registry = createCapabilityRegistry({
+    open: base
+      .meta({
+        agent: {
+          description: "Open.",
+          expose: { mcp: true },
+          sideEffect: "read",
+          risk: "low",
+        },
+      })
+      .input(z.object({}))
+      .handler(async () => ({})),
+  });
+
+  function fixture(): AgentRuntime<object> {
+    return createAgentRuntime<object>({ governance: defineGovernance({ registry }) });
+  }
+
+  /** A bearer token that expires `seconds` from now (negative = already expired). */
+  function tokenExpiringIn(seconds: number): AuthInfo {
+    return {
+      token: "tok_dana",
+      clientId: "cli_test",
+      scopes: ["tools"],
+      expiresAt: Math.floor(Date.now() / 1000) + seconds,
+    };
+  }
+
+  /**
+   * Stamps every inbound message with an authInfo, the way a Streamable HTTP
+   * transport attaches what it verified from that request's bearer token. The
+   * holder is mutable, which is what makes a mid-session expiry observable.
+   */
+  function stampAuthInfo(
+    transport: InMemoryTransport,
+    credential: { authInfo?: AuthInfo | undefined },
+  ): void {
+    let handler: Transport["onmessage"];
+    Object.defineProperty(transport, "onmessage", {
+      configurable: true,
+      get: () => handler,
+      set: (next: Transport["onmessage"]) => {
+        handler = next && ((message, extra) => next(message, { ...extra, authInfo: credential.authInfo }));
+      },
+    });
+  }
+
+  async function connect(
+    mcp: { connect(transport: Transport): Promise<void> },
+    serverTransport: InMemoryTransport,
+    clientTransport: InMemoryTransport,
+  ): Promise<Client> {
+    const client = new Client({ name: "session-lifetime-client", version: "1.0.0" });
+    await Promise.all([client.connect(clientTransport), mcp.connect(serverTransport)]);
+    return client;
+  }
+
+  test("a token that expires mid-session is refused on the next call", async () => {
+    let calls = 0;
+    const credential: { authInfo?: AuthInfo | undefined } = { authInfo: tokenExpiringIn(60) };
+    const mcp = createMCPServer(fixture(), {
+      createContext: () => {
+        calls += 1;
+        return { actor: dana, context: {} };
+      },
+    });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    stampAuthInfo(serverTransport, credential);
+    const client = await connect(mcp, serverTransport, clientTransport);
+
+    await client.callTool({ name: "open", arguments: {} });
+    expect(calls).toBe(1);
+
+    // Same session, same cached identity — but the credential behind it died.
+    credential.authInfo = tokenExpiringIn(-1);
+    await expect(client.callTool({ name: "open", arguments: {} })).rejects.toThrowError(
+      /Unauthorized: the session's access token has expired/,
+    );
+    // Listing is identity-derived too, so it refuses on the same grounds.
+    await expect(client.listTools()).rejects.toThrowError(/expired/);
+
+    // The refusal evicted the entry, so a refreshed token re-verifies rather
+    // than resuming the dead session's identity.
+    credential.authInfo = tokenExpiringIn(60);
+    await client.callTool({ name: "open", arguments: {} });
+    expect(calls).toBe(2);
+  });
+
+  test("a token with no expiry is left to createContext to judge", async () => {
+    const credential: { authInfo?: AuthInfo | undefined } = {
+      authInfo: { token: "tok_dana", clientId: "cli_test", scopes: ["tools"] },
+    };
+    const mcp = createMCPServer(fixture(), {
+      createContext: () => ({ actor: dana, context: {} }),
+    });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    stampAuthInfo(serverTransport, credential);
+    const client = await connect(mcp, serverTransport, clientTransport);
+    await expect(client.callTool({ name: "open", arguments: {} })).resolves.toBeDefined();
+  });
+
+  test("closing a session evicts its cached identity", async () => {
+    let calls = 0;
+    const mcp = createMCPServer(fixture(), {
+      createContext: () => {
+        calls += 1;
+        return { actor: dana, context: {} };
+      },
+    });
+
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    const client = await connect(mcp, serverTransport, clientTransport);
+    await client.listTools();
+    expect(calls).toBe(1);
+
+    await client.close();
+
+    // Same server, same session key. A surviving entry would answer the new
+    // connection with the closed session's identity — and, on a long-lived
+    // server, would never be removed at all.
+    const [nextClientTransport, nextServerTransport] = InMemoryTransport.createLinkedPair();
+    const next = await connect(mcp, nextServerTransport, nextClientTransport);
+    await next.listTools();
+    expect(calls).toBe(2);
+  });
+
+  test("eviction survives an app that takes over server.onclose", async () => {
+    let calls = 0;
+    let appNotified = 0;
+    const mcp = createMCPServer(fixture(), {
+      createContext: () => {
+        calls += 1;
+        return { actor: dana, context: {} };
+      },
+    });
+    // Composing over `mcp.server` this way replaces the adapter's own onclose
+    // hook; the transport hook installed by connect() is what keeps the cache
+    // from outliving the session anyway.
+    mcp.server.onclose = () => {
+      appNotified += 1;
+    };
+
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    const client = await connect(mcp, serverTransport, clientTransport);
+    await client.listTools();
+    expect(calls).toBe(1);
+
+    await client.close();
+    expect(appNotified).toBe(1);
+
+    const [nextClientTransport, nextServerTransport] = InMemoryTransport.createLinkedPair();
+    const next = await connect(mcp, nextServerTransport, nextClientTransport);
+    await next.listTools();
+    expect(calls).toBe(2);
+  });
+
+  test("eviction also holds when the app connects the SDK server itself", async () => {
+    let calls = 0;
+    const mcp = createMCPServer(fixture(), {
+      createContext: () => {
+        calls += 1;
+        return { actor: dana, context: {} };
+      },
+    });
+
+    // `mcp.server` is documented as the seam for advanced composition, so the
+    // adapter's own connect() wrapper is not on this path.
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    const client = await connect(mcp.server, serverTransport, clientTransport);
+    await client.listTools();
+    expect(calls).toBe(1);
+
+    await client.close();
+
+    const [nextClientTransport, nextServerTransport] = InMemoryTransport.createLinkedPair();
+    const next = await connect(mcp.server, nextServerTransport, nextClientTransport);
+    await next.listTools();
+    expect(calls).toBe(2);
   });
 });
 
