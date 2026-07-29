@@ -137,6 +137,7 @@ The `Actor` is what policies target and audit records — invest a minute in the
 - **Identity from arguments.** Nothing a model sends in `tools/call` may influence the actor (SI-3) — identity is settled at session establishment, full stop.
 - **Skipping audience validation.** A JWT for a *different* resource of the same AS must not pass; validate `aud`.
 - **Anonymous fallbacks.** `createContext` returning a default actor for unauthenticated sessions reintroduces ambient identity; return nothing and let the adapter refuse. If you truly run an open read-only endpoint, model it explicitly (`kind: "anonymous"`) over a registry filtered to reads ([narrowed deployments](capability-exposure.md#narrowed-deployments)).
+- **Treating session establishment as the last identity check.** It is the last time `createContext` runs, not the last time the credential is examined: the adapter re-reads `authInfo.expiresAt` on every request and refuses once it has passed ([session lifetime](../adapters/mcp.md#session-lifetime)). Anything with a shorter horizon than the token — a revocation, a permission change — is still yours to handle, and short token lifetimes are how you get the adapter to notice.
 - **Approval decisions over MCP.** Deciding stays in your app, never exposed as a capability to the same clients (SI-4; [adapters/mcp](../adapters/mcp.md#result-shape)).
 
 ## Related

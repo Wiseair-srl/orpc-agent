@@ -95,6 +95,17 @@ export function createMCPServer<TContext = unknown>(
     authInfo?: AuthInfo;
   }): Promise<{ actor: Actor; context: TContext }> => {
     const key = extra.sessionId ?? "__single_session__";
+    // The cache holds the identity, never the right to keep using it. Expiry
+    // is re-checked on EVERY request from the credential the transport
+    // verified for THAT request, so a token that expires mid-session stops
+    // working at the next call rather than at the next session.
+    if (isExpired(extra.authInfo)) {
+      identities.delete(key);
+      throw new McpError(
+        ErrorCode.InvalidRequest,
+        "Unauthorized: the session's access token has expired",
+      );
+    }
     let identity = identities.get(key);
     if (!identity) {
       identity = Promise.resolve(
@@ -113,6 +124,18 @@ export function createMCPServer<TContext = unknown>(
     }
     return identity;
   };
+
+  // A closed connection's identities are dead, and on a long-lived server
+  // nothing else would ever remove them — the map would grow with every
+  // session the process has served. One Server serves one transport at a
+  // time, so everything cached at close time belongs to the connection that
+  // just ended.
+  //
+  // Hooked in two places on purpose: `server.onclose` covers apps that
+  // connect the underlying SDK server themselves (`mcp.server`); the
+  // transport hook in connect() covers apps that overwrite `server.onclose`
+  // while still connecting through the handle. Clearing twice is harmless.
+  server.onclose = () => identities.clear();
 
   server.setRequestHandler(ListToolsRequestSchema, async (_request, extra) => {
     const { actor, context } = await identityFor(extra);
@@ -152,8 +175,26 @@ export function createMCPServer<TContext = unknown>(
 
   return {
     server,
-    connect: (transport) => server.connect(transport),
+    connect: async (transport) => {
+      // Set before connect: the SDK chains whatever handler it finds rather
+      // than replacing it, so this runs in addition to its own teardown.
+      const priorOnClose = transport.onclose;
+      transport.onclose = () => {
+        identities.clear();
+        priorOnClose?.();
+      };
+      await server.connect(transport);
+    },
   };
+}
+
+/**
+ * `AuthInfo.expiresAt` is seconds since the epoch (MCP SDK). Absent means the
+ * transport gave no expiry to enforce — that is the app's `createContext` call
+ * to make, not this adapter's.
+ */
+function isExpired(authInfo: AuthInfo | undefined): boolean {
+  return authInfo?.expiresAt !== undefined && authInfo.expiresAt * 1000 <= Date.now();
 }
 
 type MCPEnvelope =
