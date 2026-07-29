@@ -1,6 +1,6 @@
 # Authorization
 
-> **Status:** Implemented in v0.1 — v0.1 security semantics.
+> **Status:** Stable — 1.0.
 
 Four layers touch "may this happen?". They complement each other; none replaces another. The framework's contribution is making each layer's role explicit — and guaranteeing the authoritative one always runs.
 

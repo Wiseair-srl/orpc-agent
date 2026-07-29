@@ -1,6 +1,6 @@
 # Reference: runtime
 
-> **Status:** Implemented in v0.1. Stability: experimental.
+> **Status:** Stable — 1.0.
 
 Package: `@orpc-agent/core`. The runtime is the governed execution engine; every surface funnels through it. Behavior is normatively specified by the [execution pipeline](../architecture/execution-pipeline.md) — this page defines the API contract.
 

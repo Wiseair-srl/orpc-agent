@@ -1,6 +1,6 @@
 # Adapter model
 
-> **Status:** Implemented in v0.1 — normative contract for v0.1 adapters. APIs shown are the as-built v0.1 surface.
+> **Status:** Stable — 1.0 — the normative contract for adapters.
 
 An **adapter** exposes capabilities to one external protocol or runtime. Adapters are thin by design: every governance decision belongs to the runtime, so that a capability behaves identically no matter which surface invokes it. If an adapter ever makes an authorization decision, that is a bug ([ADR-002](decisions.md#adr-002-capability-is-the-internal-abstraction), [ADR-005](decisions.md#adr-005-discovery-and-execution-authorization-are-separate)).
 

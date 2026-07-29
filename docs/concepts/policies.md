@@ -1,6 +1,6 @@
 # Policies
 
-> **Status:** Implemented in v0.1 — v0.1 concepts and normative policy semantics. APIs shown are the as-built v0.1 surface.
+> **Status:** Stable — 1.0 — normative policy semantics.
 
 A **policy** is a deterministic function that evaluates an execution request and returns one of four decisions. Policies are the governance layer's programmable part — small, composable, auditable — and deliberately *not* a general plugin system.
 

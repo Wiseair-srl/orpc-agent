@@ -1,6 +1,6 @@
 # Security model
 
-> **Status:** Implemented in v0.1 — the invariants below are **binding** for the v0.1 implementation. oRPC Agent provides controls that reduce the impact of agent misbehavior; it does not make an unsafe application safe, and it requires application-level authorization to exist and remain enforced.
+> **Status:** Stable — 1.0. The invariants below are **binding**. oRPC Agent provides controls that reduce the impact of agent misbehavior; it does not make an unsafe application safe, and it requires application-level authorization to exist and remain enforced.
 
 ## Threat posture
 

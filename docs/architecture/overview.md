@@ -1,6 +1,6 @@
 # Architecture overview
 
-> **Status:** Implemented in v0.1 — describes the architecture as built. Packages are not yet published to npm.
+> **Status:** Stable — 1.0. describes the architecture as built. Packages are published to npm at 1.0.0.
 
 This document is the normative starting point for understanding oRPC Agent. It defines the system's thesis, its layers, and the boundaries between them. Every other document assumes the model described here.
 

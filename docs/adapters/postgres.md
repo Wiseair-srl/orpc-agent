@@ -1,6 +1,6 @@
 # Postgres persistence
 
-> **Status:** Implemented in v0.2. Package: `@orpc-agent/postgres`. Peer: `@orpc-agent/core` only — **no database driver dependency**. Design bounds: [ADR-013](../architecture/decisions.md#adr-013-postgres-reference-persistence-package), resolving [Q8](../open-questions.md#q8).
+> **Status:** Stable — 1.0. Package: `@orpc-agent/postgres`. Peer: `@orpc-agent/core` only — **no database driver dependency**. Design bounds: [ADR-013](../architecture/decisions.md#adr-013-postgres-reference-persistence-package), resolving [Q8](../open-questions.md#q8).
 
 Reference implementations of the two durability seams: `ApprovalCoordinator` (restart-surviving approvals, [ADR-006](../architecture/decisions.md#adr-006-approvals-are-external-and-input-bound)/[ADR-007](../architecture/decisions.md#adr-007-durable-execution-is-adapter-based)) and `AuditSink` (durable audit trail, [ADR-010](../architecture/decisions.md#adr-010-audit-events-are-structured-and-storage-neutral)). Both behave exactly like their in-memory counterparts — the same behavioral contract suite runs against both.
 

@@ -1,6 +1,6 @@
 # Reference: errors
 
-> **Status:** Implemented in v0.1. Stability: experimental (codes are intended to be stable from 0.1 onward; additions allowed, meanings never repurposed).
+> **Status:** Stable — 1.0. Codes are stable: additions allowed, meanings never repurposed.
 
 Package: `@orpc-agent/core`. Concepts and rationale: [concepts/errors.md](../concepts/errors.md).
 

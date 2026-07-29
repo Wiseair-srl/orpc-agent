@@ -1,6 +1,6 @@
 # Context and actors
 
-> **Status:** Implemented in v0.1 — v0.1 concepts. APIs shown are the as-built v0.1 surface.
+> **Status:** Stable — 1.0.
 
 Two request-scoped objects travel with every invocation and are easy to conflate. They answer different questions:
 

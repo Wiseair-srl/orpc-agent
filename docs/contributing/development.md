@@ -1,6 +1,6 @@
 # Contributing: development
 
-> **Status:** Implemented in v0.1 — describes the dev environment as scaffolded (pnpm workspace, TypeScript strict, Vitest, boundary/API/docs checks in CI).
+> **Status:** Stable — 1.0. describes the dev environment as scaffolded (pnpm workspace, TypeScript strict, Vitest, boundary/API/docs checks in CI).
 
 ## Setup
 

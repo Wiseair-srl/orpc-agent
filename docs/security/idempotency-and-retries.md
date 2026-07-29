@@ -1,6 +1,6 @@
 # Idempotency and retries
 
-> **Status:** Implemented in v0.1 — v0.1 semantics. This page states guarantees precisely, including the ones the framework does **not** make.
+> **Status:** Stable — 1.0. This page states guarantees precisely, including the ones the framework does **not** make.
 
 ## What the framework guarantees — and what it doesn't
 

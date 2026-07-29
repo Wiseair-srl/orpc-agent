@@ -1,6 +1,6 @@
 # Adapter: Vercel AI SDK
 
-> **Status:** Implemented in v0.1. Package: `@orpc-agent/ai-sdk`. Peer: `ai@^5`, `@orpc-agent/core`.
+> **Status:** Stable — 1.0. Package: `@orpc-agent/ai-sdk`. Peer: `ai@^5`, `@orpc-agent/core`.
 
 Converts a runtime's capabilities into AI SDK v5 tools. Surface id: **`aiSdk`**. One capability exposed to `aiSdk` ⇢ one tool; the adapter is thin by contract ([adapter model](../architecture/adapter-model.md)) — discovery, validation, policy, approval, and execution all happen in the runtime.
 

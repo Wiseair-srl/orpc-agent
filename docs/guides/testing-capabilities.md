@@ -1,6 +1,6 @@
 # Guide: testing capabilities
 
-> **Status:** Implemented in v0.1. Package reference: [adapters/testing.md](../adapters/testing.md).
+> **Status:** Stable — 1.0. Package reference: [adapters/testing.md](../adapters/testing.md).
 
 Governance is code; test it like code. Everything below runs deterministically in CI — no model, no network. The examples use Vitest; any runner works.
 

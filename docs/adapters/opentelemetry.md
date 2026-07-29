@@ -1,6 +1,6 @@
 # Adapter: OpenTelemetry
 
-> **Status:** Implemented in v0.1. Package: `@orpc-agent/opentelemetry`. Peer: `@opentelemetry/api`, `@orpc-agent/core`.
+> **Status:** Stable — 1.0. Package: `@orpc-agent/opentelemetry`. Peer: `@opentelemetry/api`, `@orpc-agent/core`.
 
 Implements core's neutral `TracingAdapter` interface with real OpenTelemetry spans. Core stays OTel-free ([ADR-003](../architecture/decisions.md#adr-003-core-is-provider-neutral)); this package is ~a page of mapping code plus conventions, which is exactly the point.
 
