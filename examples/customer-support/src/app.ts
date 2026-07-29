@@ -39,6 +39,32 @@ export const capabilities = createCapabilityRegistry({
 });
 
 /**
+ * The governance configuration every runtime this app builds starts from.
+ * One constant, spread into each instance below, so there is exactly one
+ * place where the runtime-level policy list is written down.
+ */
+const GOVERNANCE = {
+  registry: capabilities,
+  policies: [orgIsolation, mcpReadOnly],
+};
+
+/**
+ * The same governance, at module scope, for `orpc-agent` to read.
+ *
+ * The runtimes that serve traffic are built per instance inside makeApp()
+ * (they need the seeded db's audit sink and the injected clock), and a value
+ * behind a factory is one the CLI will not call. Constructing a runtime is
+ * pure and does no I/O, so exporting one costs nothing — and because it
+ * spreads GOVERNANCE, it cannot report a policy list the real runtimes do not
+ * use. Without it the snapshot would record org-isolation and mcp-read-only
+ * as "not observed", and deleting either would pass CI.
+ */
+export const governanceRuntime = createAgentRuntime<AppContext>({
+  ...GOVERNANCE,
+  warnings: false,
+});
+
+/**
  * One assembled application instance: seed data, services, shared audit
  * store, coordinator, and the two runtime configurations over one registry —
  * the main runtime (coordinator/resume flow, used by the dashboard, workers,
@@ -60,8 +86,7 @@ export function makeApp(options?: { tracing?: TracingAdapter; clock?: TestClock 
   const coordinator = createInMemoryApprovalCoordinator({ now: clock.now });
 
   const runtimeConfig = {
-    registry: capabilities,
-    policies: [orgIsolation, mcpReadOnly],
+    ...GOVERNANCE,
     audit: { sinks: [dbAuditSink], strict: false },
     now: clock.now,
     ...(options?.tracing ? { tracing: options.tracing } : {}),

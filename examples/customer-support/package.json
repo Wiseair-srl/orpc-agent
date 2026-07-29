@@ -35,6 +35,6 @@
   },
   "orpcAgent": {
     "entry": "src/app.ts",
-    "export": "capabilities"
+    "export": "governanceRuntime"
   }
 }

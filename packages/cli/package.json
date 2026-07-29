@@ -29,10 +29,11 @@
     "typecheck": "tsc -p tsconfig.json",
     "prepublishOnly": "node ../../scripts/copy-license.cjs"
   },
-  "dependencies": {
+  "peerDependencies": {
     "@orpc-agent/core": "workspace:^"
   },
   "devDependencies": {
+    "@orpc-agent/core": "workspace:^",
     "@orpc/server": "^1.14.10",
     "@types/node": "^24.13.3",
     "tsup": "^8.5.1",

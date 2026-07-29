@@ -138,9 +138,26 @@ const entrySource: EntrySource = !isRuntimeLike(source!)
     ? "runtime"
     : "runtime-unreported";
 
+/**
+ * Reading the registry while the same module also exports a runtime over it is
+ * almost always an accident, and a costly one: the runtime-level policies go
+ * unrecorded. Reported, not enforced — pointing at the registry can be
+ * deliberate.
+ */
+const runtimeAvailableAs =
+  entrySource === "registry"
+    ? Object.entries(moduleExports).find(
+        ([, value]) =>
+          isRuntimeLike(value) && value.registry === (source as CapabilityRegistry),
+      )?.[0]
+    : undefined;
+
 try {
   const snapshot = buildSnapshot(source!, { descriptions: options.descriptions !== false });
-  writeFileSync(outFile, JSON.stringify({ ok: true, snapshot, entrySource }));
+  writeFileSync(
+    outFile,
+    JSON.stringify({ ok: true, snapshot, entrySource, runtimeAvailableAs }),
+  );
 } catch (error) {
   fail(
     12,

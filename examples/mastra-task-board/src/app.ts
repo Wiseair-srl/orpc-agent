@@ -19,6 +19,18 @@ import { router } from "./capabilities";
 export const capabilities = createCapabilityRegistry(router);
 
 /**
+ * Module-scope runtime for `orpc-agent` to read: the serving runtime is built
+ * per instance in makeApp(), and a value behind a factory is one the CLI will
+ * not call. This app configures no runtime-level policies, and recording that
+ * positively — "observed, none" rather than "not observed" — is the point:
+ * adding one later shows up as drift.
+ */
+export const governanceRuntime = createAgentRuntime<AppContext>({
+  registry: capabilities,
+  warnings: false,
+});
+
+/**
  * One assembled application instance: seed data, services, audit trail,
  * approval coordinator, and the governed runtime the Mastra agent runs
  * against. The board UI does not go through the runtime — it calls the

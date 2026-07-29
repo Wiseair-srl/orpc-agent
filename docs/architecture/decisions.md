@@ -262,3 +262,34 @@ The alternative shape considered was a single-purpose `@orpc-agent/inspect`. It 
 **Consequences.** The examples carry committed snapshots and `pnpm check:capabilities` runs in CI, which makes exposure semantics a regression test of the framework itself: a change to registry construction or metadata normalization that moves what reaches a surface fails the build. A rules engine for code that is wrong from the start (rather than newly wrong) is a different mechanism and is not in this version.
 
 **Unresolved.** Whether `approvals` becomes the second command family, and on what schedule. If it does, the decision path must go through the application's configured coordinator: a CLI that records approval decisions is an approval authority, and who may approve stays the application's authorization question ([human approval](../guides/human-approval.md)).
+
+---
+
+## ADR-016: Runtime policies are part of the governance contract
+
+**Status:** accepted · v0.3
+
+**Context.** [`AgentMeta.approval`](../reference/metadata.md) documents itself as a *static* gate and directs conditional approval into policies — correctly, since a static gate fires on every surface, so an application that gates destructive work only when a model asks would otherwise make its own UI buttons and its cron actors demand human approval. Applications follow that instruction and register one runtime-level policy that returns `requireApproval()` for `aiSdk`/`mcp` and `allow()` for `direct`.
+
+The inventory then reported those applications as having **zero approval gating**, because [`@orpc-agent/cli`](../reference/cli.md) read `meta.approval` and `meta.policies` only. Two distinct failures followed.
+
+1. `82 capabilities · 82 exposed · 0 approval-gated` is a factual claim about declarations that reads as a claim about the application. The caveat lived in a README, which does not travel with terminal output pasted into a compliance review.
+2. Worse: deleting the policy from `createAgentRuntime` left **every snapshot field byte-identical**, so `check` passed green while destructive capabilities became callable by a model loop with no approval. The single most security-relevant one-line deletion available in this architecture was invisible to the tool whose stated job is catching widening. ADR-015's snapshot covered capability declarations and silently treated runtime configuration as out of scope.
+
+**Decision.**
+
+1. **`runtime.policies` exposes `{ name, phases }`,** in evaluation order, composites flattened, frozen. Never `evaluate`: a decision is meaningful only inside the pipeline (shared batch deadline, fail-closed on throw, audit record), and handing out the closure would invite calls that look authoritative and are not. This leaks nothing new — the names are already in every `PolicyDecisionRecord`.
+2. **The CLI still never evaluates a policy.** It reports that one *exists*; it cannot know which capabilities it gates or under what conditions, and the output says so rather than implying coverage it lacks. The inventory stays read-from-values (ADR-015 §6).
+3. **Snapshot version 2 adds an optional `runtime` key, where absent ≠ empty.** Absent means no runtime was observed — *unknown*; present with `policies: []` means observed and none. Representing that difference is what makes the removal check sound, so the key is never defaulted.
+4. **Removing a runtime policy is widening.** So is a policy dropping a phase, and so is the snapshot ceasing to observe runtime policies at all — reverting to a weaker check is a weakened control.
+5. **Version 1 snapshots are still read,** as "never observed". No committed snapshot breaks and no `--fail-on widening` gate turns red on upgrade. The transition to observed is neutral, because the application did not change — but `check` prints a stderr notice that survives widening-only mode, since until the snapshot is rewritten the removal check is inert.
+6. **The header count is qualified:** `0 approval-gated (declared)`, plus whether runtime policies were even in scope. The headline is the line that gets pasted somewhere on its own, so it carries its own caveat.
+7. **A runtime dominates its own registry when a module exports both.** Same capabilities plus the policies; previously this was refused as ambiguous, which would have been hostile once the guidance is to point at the runtime.
+8. **`@orpc-agent/core` becomes a peer dependency of the CLI.** The requirement is not "same version" but **same module instance**: `registerSchemaConverter` writes to module-level state in core, so a duplicated copy makes the app's converter invisible to the CLI's `toJsonSchema`, and every custom-vendor `inputSchemaHash` becomes `"unconvertible"` — phantom drift no source change caused, reproducible with two *byte-identical* copies.
+9. **A startup warning for the same blind spot in core.** `emitStartupWarnings` keyed on `meta.approval.required`, so an application gating only via policy got no warning that its approvals were suspending into the restart-amnesiac default coordinator. Condition 1b covers it, deliberately narrowed to `destructive`/`external` capabilities on model surfaces: warning on every write would fire for ordinary rate-limit policies and devalue all three warnings.
+
+**Consequences.** A runtime built inside a factory is not reachable by the CLI (a function export is refused, ADR-015 §6). The documented shape is a module-scope runtime spread from the same policy constant the serving runtimes use — construction is pure and does no I/O, and sharing the constant makes the two impossible to drift apart. Both examples in this repository adopt it, which turns `mcp-read-only` and `org-isolation` into gate-protected configuration.
+
+Capability-scoped composite policies still serialize under the composite's name while runtime-level ones are flattened. The asymmetry is deliberate: flattening at capability scope would rewrite values in every committed snapshot for no security gain, whereas at runtime scope it is required for correctness — an unflattened composite keeps its name when a member is removed, which is exactly the removal that must not be invisible.
+
+**Unresolved.** Whether capability-scoped composites should flatten in a future major, accepting the one-time churn for consistency.
