@@ -1,4 +1,5 @@
 import { describe, expect, test } from "vitest";
+import * as aiModule from "ai";
 import { generateText, stepCountIs, type ToolSet } from "ai";
 import type { LanguageModelV2 } from "@ai-sdk/provider";
 import { os } from "@orpc/server";
@@ -21,7 +22,21 @@ import { buildFixtureRegistry, collidingToolNaming } from "../../../test-fixture
 const actor: Actor = { id: "u_dana", kind: "user" };
 const context = {};
 
-/** Minimal scripted LanguageModelV2 — no live provider, no test-helper deps. */
+/**
+ * Which `ai` major the module graph actually loaded. `ai@6` dropped
+ * `convertToCoreMessages` and that is exactly the v5↔v6 boundary; feature
+ * detection (rather than reading package.json) survives the bundler alias the
+ * v6 leg resolves through.
+ */
+function loadedAiMajor(): 5 | 6 {
+  return "convertToCoreMessages" in aiModule ? 5 : 6;
+}
+
+/**
+ * Minimal scripted LanguageModelV2 — no live provider, no test-helper deps.
+ * `ai@6`'s `LanguageModel` union still accepts a v2 model (its provider spec
+ * bumped to v3 but kept v2 support), so one scripted model serves both legs.
+ */
 function scriptedModel(
   responses: Awaited<ReturnType<LanguageModelV2["doGenerate"]>>[],
 ): LanguageModelV2 {
@@ -273,5 +288,35 @@ describe("scripted generateText flow", () => {
     };
     expect(output.status).toBe("approval-required");
     expect(output.approvalId).toMatch(/^apr_/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Supported `ai` majors — this file runs twice, once per peer-range major
+// ---------------------------------------------------------------------------
+
+describe("ai v5 / v6 compatibility", () => {
+  test("the leg runs against the major it claims", () => {
+    // Without this, a broken alias would silently run the v6 leg against v5
+    // and every assertion above would still pass.
+    const claimed = Number(process.env.ORPC_AGENT_AI_MAJOR);
+    expect(claimed).toBeGreaterThan(0);
+    expect(loadedAiMajor()).toBe(claimed);
+  });
+
+  test("tool-call approval stays with the runtime, not with the host loop", async () => {
+    // `ai@6` promoted tool approval into the SDK itself (`needsApproval` +
+    // `ToolApprovalRequest`). Setting it would fork the approval authority:
+    // the host would gate raw arguments before `invoke`, with no canonical
+    // input hash (SI-5), no coordinator record and no audit events. The
+    // adapter therefore leaves it unset on both majors and answers approvals
+    // through the `approval-required` envelope instead
+    // (docs/adapters/ai-sdk.md#host-loops-with-their-own-approval-ux).
+    const tools = await toAISDKTools(fixtureRuntime(), { actor, context });
+    const gated = tools.fixtures_gated as { needsApproval?: unknown; toModelOutput?: unknown };
+    expect(gated.needsApproval).toBeUndefined();
+    // Nor toModelOutput — whose signature changed in v6. Leaving it unset
+    // means both majors send the envelope through the default JSON encoding.
+    expect(gated.toModelOutput).toBeUndefined();
   });
 });

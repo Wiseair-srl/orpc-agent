@@ -1,8 +1,21 @@
 # Adapter: Vercel AI SDK
 
-> **Status:** Stable — 1.0. Package: `@orpc-agent/ai-sdk`. Peer: `ai@^5`, `@orpc-agent/core`.
+> **Status:** Stable — 1.0. Package: `@orpc-agent/ai-sdk`. Peer: `ai@^5 || ^6`, `@orpc-agent/core`.
 
-Converts a runtime's capabilities into AI SDK v5 tools. Surface id: **`aiSdk`**. One capability exposed to `aiSdk` ⇢ one tool; the adapter is thin by contract ([adapter model](../architecture/adapter-model.md)) — discovery, validation, policy, approval, and execution all happen in the runtime.
+Converts a runtime's capabilities into AI SDK tools. Surface id: **`aiSdk`**. One capability exposed to `aiSdk` ⇢ one tool; the adapter is thin by contract ([adapter model](../architecture/adapter-model.md)) — discovery, validation, policy, approval, and execution all happen in the runtime.
+
+## Supported `ai` versions
+
+The peer range is `^5.0.0 || ^6.0.0`, and there is one code path — no version branch, no compat shim. The three `ai` APIs the adapter touches are unchanged across the majors: `tool()` has the same overloads, `jsonSchema()` only widened its input (it accepts a promise now), and a `Record<string, Tool>` still satisfies `ToolSet`. `jsonSchema()` without an explicit `validate` performs no validation in either major, so the runtime stays the single validation authority on both.
+
+CI runs the package's suite and its typecheck against both majors on every PR (the `ai-sdk (ai v5)` and `ai-sdk (ai v6)` legs); the v6 leg is pinned by an aliased `ai-v6` devDependency rather than a floating install.
+
+Two v6 changes are worth knowing even though they need no adapter change:
+
+- **v6 has its own tool approval** (`needsApproval` on a tool, `ToolApprovalRequest` in the stream). The adapter never sets it — see [host loops with their own approval UX](#host-loops-with-their-own-approval-ux) for why the runtime has to be the only approval authority. A test asserts the field stays unset.
+- **`toModelOutput` changed shape** (it now receives `{ toolCallId, input, output }`). The adapter does not set it, so on both majors the envelope reaches the model through the default JSON encoding.
+
+Provider spec versions differ (`LanguageModelV2` in v5, `LanguageModelV3` in v6), but that is between your model provider and `ai` — the adapter never touches a model. v6 still accepts a v2 model, which is why one scripted model drives both CI legs.
 
 ## Usage
 
@@ -87,12 +100,12 @@ The inline `approvals.handler` mode exists for short-latency confirmation UIs (t
 
 ## Host loops with their own approval UX
 
-Agent frameworks that consume AI SDK tools (Mastra, and others) often ship their own tool-approval mechanism — a pre-execution "approve this tool call?" gate rendered by the host's stream. When a governed runtime sits underneath, **pick one authority, and it must be the runtime**:
+Agent frameworks that consume AI SDK tools (Mastra, and others) often ship their own tool-approval mechanism — a pre-execution "approve this tool call?" gate rendered by the host's stream. As of `ai@6` the SDK ships one itself: a tool's `needsApproval` suspends the loop and emits a `ToolApprovalRequest`. When a governed runtime sits underneath, **pick one authority, and it must be the runtime**:
 
 - Host-loop approval decides on the *raw tool-call arguments, before `invoke`*: no canonical input hash (SI-5), no coordinator record, no `capability.approval_requested`/`approved` audit events, no expiry, no self-approval check. For governed operations that is a shadow approval system your audit trail cannot see.
 - Running both gates double-prompts: the host asks, then the runtime's policy suspends the same call again.
 
-So: **do not enable the host's tool approval for governed tools.** Let orpc-agent's policies decide, and render the `approval-required` envelope — it is a typed tool result (`AISDKToolResult`), so your UI can render an approve/deny card generically from the stream's tool-result parts (or from a pending-approvals fetch), then call your `decide` + `resume` endpoints. The [Mastra task board example](../examples/mastra-task-board.md) is this exact wiring, working.
+So: **do not enable the host's — or `ai@6`'s — tool approval for governed tools.** Let orpc-agent's policies decide, and render the `approval-required` envelope — it is a typed tool result (`AISDKToolResult`), so your UI can render an approve/deny card generically from the stream's tool-result parts (or from a pending-approvals fetch), then call your `decide` + `resume` endpoints. The [Mastra task board example](../examples/mastra-task-board.md) is this exact wiring, working.
 
 For requester-confirmed gates where the human is present in the chat, the composition from the [ADR-006 addendum](../architecture/decisions.md#adr-006-approvals-are-external-and-input-bound) fits streaming UIs: an inline `approvals.handler` holds the call open for `human-confirmation` types and returns `undefined` for everything else, deferring manager-type approvals to the coordinator flow unchanged.
 

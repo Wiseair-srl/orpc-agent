@@ -2,7 +2,9 @@
 
 A thin full-stack example: a team task board whose UI talks plain typed oRPC, plus a [Mastra](https://mastra.ai) chat agent that reaches the **same four procedures** through the oRPC Agent governed runtime — exposure, validation, policies, human approvals, redaction, audit.
 
-The Mastra integration is the whole point, and it is small: `toAISDKTools(runtime, { actor, context })` produces AI SDK v5 tools, and a Mastra `Agent` consumes them directly ([src/agent.ts](src/agent.ts)).
+The Mastra integration is the whole point, and it is small: `toAISDKTools(runtime, { actor, context })` produces AI SDK tools, and a Mastra `Agent` consumes them directly ([src/agent.ts](src/agent.ts)).
+
+`@orpc-agent/ai-sdk` peer-depends on `ai@^5 || ^6` and is tested against both. This example pins `ai@^5`, which is the example's choice — a Mastra app on `ai@^6` wires up identically.
 
 ```text
 you ──┬─ board UI ── typed oRPC client ──── /rpc ────────► procedures (middleware runs)

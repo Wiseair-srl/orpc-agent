@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@orpc-agent/core": ["../core/src/index.ts"],
+      "@orpc-agent/core/schema": ["../core/src/schema/index.ts"],
+      "@orpc-agent/testing": ["../testing/src/index.ts"],
+      "ai": ["./node_modules/ai-v6/dist/index.d.ts"],
+      "@ai-sdk/provider": ["./node_modules/@ai-sdk/provider-v3/dist/index.d.ts"]
+    }
+  }
+}

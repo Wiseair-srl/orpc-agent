@@ -9,7 +9,7 @@ import type {
 } from "@orpc-agent/core";
 
 /**
- * Adapter: Vercel AI SDK v5. Surface id: "aiSdk". One capability exposed to
+ * Adapter: Vercel AI SDK, `ai@^5 || ^6`. Surface id: "aiSdk". One capability exposed to
  * aiSdk ⇢ one tool; discovery, validation, policy, approval, and execution
  * all happen in the runtime (docs/adapters/ai-sdk.md).
  */

@@ -7,7 +7,7 @@ Goal: from an existing oRPC app to a governed AI-SDK tool call in five steps —
 ## Prerequisites
 
 - An oRPC application (`@orpc/server`) with typed procedures and a context factory
-- Vercel AI SDK v5 for the model loop (any provider)
+- Vercel AI SDK v5 or v6 for the model loop (any provider)
 - Node 20+, `pnpm`
 
 ```bash
