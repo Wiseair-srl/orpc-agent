@@ -145,6 +145,8 @@ function manifestOf(policies: AgentPolicy[]): readonly PolicyManifestEntry[] {
 
 const MODEL_SURFACES: readonly ExposureSurface[] = ["aiSdk", "mcp"];
 const WRITE_SIDE_EFFECTS = new Set(["write", "destructive", "external"]);
+/** Where losing a pending approval on restart is not recoverable by retrying. */
+const IRREVERSIBLE_SIDE_EFFECTS = new Set(["destructive", "external"]);
 
 /**
  * Production footgun warnings (never fatal; `warnings: false` silences).
@@ -174,13 +176,15 @@ function emitStartupWarnings<TContext>(
     } else if ((options.policies ?? []).length > 0) {
       // 1b. The same footgun reached the other way. A policy that returns
       //     requireApproval suspends into the same amnesiac coordinator, and
-      //     nothing here can tell whether one does — so this keys on the shape
-      //     where a conditional gate is worth having: write-capable
-      //     capabilities a model can reach.
+      //     nothing here can tell whether one does. Deliberately narrower than
+      //     condition 2: only destructive/external work a model can reach, not
+      //     every write. A rate-limit policy over ordinary writes is the
+      //     common case and must not cost a warning, or all three stop being
+      //     read.
       const gatable = capabilities
         .filter(
           (c) =>
-            WRITE_SIDE_EFFECTS.has(c.meta.sideEffect) &&
+            IRREVERSIBLE_SIDE_EFFECTS.has(c.meta.sideEffect) &&
             MODEL_SURFACES.some((s) => c.meta.expose[s] === true),
         )
         .map((c) => c.id);

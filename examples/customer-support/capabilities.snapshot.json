@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "capabilities": [
     {
       "id": "cases.escalate",
@@ -230,5 +230,21 @@
     }
   ],
   "excluded": [],
-  "unexposed": []
+  "unexposed": [],
+  "runtime": {
+    "policies": [
+      {
+        "name": "org-isolation",
+        "phases": [
+          "invocation"
+        ]
+      },
+      {
+        "name": "mcp-read-only",
+        "phases": [
+          "invocation"
+        ]
+      }
+    ]
+  }
 }

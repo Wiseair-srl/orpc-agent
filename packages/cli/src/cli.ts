@@ -226,7 +226,7 @@ async function main(argv: string[]): Promise<number> {
     );
   }
 
-  const { snapshot, entrySource } = await loadSnapshot({
+  const { snapshot, entrySource, runtimeAvailableAs } = await loadSnapshot({
     entry,
     ...(exportName ? { exportName } : {}),
     descriptions: flags.descriptions,
@@ -234,6 +234,15 @@ async function main(argv: string[]): Promise<number> {
     cwd: flags.cwd,
     ...(flags.import ? { importSpecifier: flags.import } : {}),
   });
+
+  // stderr, so it survives `--json`, `-o -`, and a piped report.
+  if (runtimeAvailableAs) {
+    process.stderr.write(
+      `orpc-agent: read the registry, but "${runtimeAvailableAs}" in the same module is an ` +
+        "agent runtime over it. Runtime-level policies are NOT recorded this way. " +
+        `Use --export ${runtimeAvailableAs} to include them.\n`,
+    );
+  }
 
   if (flags.command === "inspect") {
     process.stdout.write(
@@ -273,6 +282,20 @@ async function main(argv: string[]): Promise<number> {
 
   const changes = diffSnapshots(committed, snapshot);
   writeReport(changes, flags.format);
+
+  // The committed baseline predates runtime-policy recording. That is classed
+  // neutral — the application did not change, the tool started looking — so
+  // `--fail-on widening` passes. It must not pass *quietly*: until the
+  // snapshot is rewritten, deleting a runtime policy is still invisible.
+  if (!committed.runtime && snapshot.runtime) {
+    process.stderr.write(
+      `\norpc-agent: ${snapshotPath} predates runtime-policy recording. ` +
+        `${snapshot.runtime.policies.length} runtime ` +
+        `${snapshot.runtime.policies.length === 1 ? "policy is" : "policies are"} ` +
+        "configured and NOT covered by this gate yet. " +
+        `Run: orpc-agent snapshot --entry ${entry}\n`,
+    );
+  }
 
   if (changes.length === 0) return EXIT_OK;
   const failing =

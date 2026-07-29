@@ -38,6 +38,16 @@ type ApprovalsConfig = {
 
 **`runtime.registry`.** The runtime exposes its registry read-only. Adapters read capability meta from it for protocol concerns descriptors deliberately omit (tool-name overrides, MCP annotations) — see [ADR-012](../architecture/decisions.md#adr-012-as-built-api-deltas-for-v01).
 
+**`runtime.policies`.** The identity of the runtime-level policies, in evaluation order, composites flattened, frozen:
+
+```ts
+readonly policies: readonly { name: string; phases: readonly PolicyPhase[] }[];
+```
+
+Name and phases only — never `evaluate`. A decision is meaningful only inside the pipeline (shared batch deadline, fail-closed on throw, audit record), so the closure is not handed out; a policy evaluated outside it would produce an answer that looks authoritative and is not. The names are the same ones audit events already record in `PolicyDecisionRecord.policy`.
+
+This is the configuration, not its effect. **Governance tooling may report that these policies exist; it may not conclude which capabilities they gate** — that depends on the actor, surface, input and context of a real invocation. [`@orpc-agent/cli`](cli.md) records this list so that removing a runtime policy registers as drift ([ADR-016](../architecture/decisions.md#adr-016-runtime-policies-are-part-of-the-governance-contract)).
+
 ---
 
 ## `runtime.invoke`

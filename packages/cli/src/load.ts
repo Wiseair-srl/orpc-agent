@@ -43,6 +43,8 @@ export async function loadSnapshot(
   snapshot: CapabilitySnapshot;
   usedImport: string | undefined;
   entrySource: EntrySource;
+  /** Export name of a runtime over the same registry that was not read. */
+  runtimeAvailableAs?: string;
 }> {
   const cwd = options.cwd ?? process.cwd();
   const entry = isAbsolute(options.entry) ? options.entry : resolve(cwd, options.entry);
@@ -68,6 +70,7 @@ export async function loadSnapshot(
       snapshot: first.snapshot,
       usedImport: explicit ?? detected,
       entrySource: first.entrySource,
+      ...(first.runtimeAvailableAs ? { runtimeAvailableAs: first.runtimeAvailableAs } : {}),
     };
   }
 
@@ -78,7 +81,12 @@ export async function loadSnapshot(
   if (first.code === EXIT_MODULE_LOAD_FAILED && fallback && fallback !== detected) {
     const second = await runChild(entry, cwd, timeoutMs, fallback, options);
     if (second.ok) {
-      return { snapshot: second.snapshot, usedImport: fallback, entrySource: second.entrySource };
+      return {
+        snapshot: second.snapshot,
+        usedImport: fallback,
+        entrySource: second.entrySource,
+        ...(second.runtimeAvailableAs ? { runtimeAvailableAs: second.runtimeAvailableAs } : {}),
+      };
     }
     // A retry that died before reporting anything (a broken loader, say) has
     // nothing to say about the user's code. Keep the original diagnosis.
@@ -89,7 +97,12 @@ export async function loadSnapshot(
 }
 
 type ChildOutcome =
-  | { ok: true; snapshot: CapabilitySnapshot; entrySource: EntrySource }
+  | {
+      ok: true;
+      snapshot: CapabilitySnapshot;
+      entrySource: EntrySource;
+      runtimeAvailableAs?: string;
+    }
   | {
       ok: false;
       code: number;
@@ -174,6 +187,7 @@ function runChild(
         ok: boolean;
         snapshot?: CapabilitySnapshot;
         entrySource?: EntrySource;
+        runtimeAvailableAs?: string;
         message?: string;
         detail?: string;
       };
@@ -194,6 +208,9 @@ function runChild(
           ok: true,
           snapshot: payload.snapshot,
           entrySource: payload.entrySource ?? "registry",
+          ...(payload.runtimeAvailableAs
+            ? { runtimeAvailableAs: payload.runtimeAvailableAs }
+            : {}),
         });
         return;
       }

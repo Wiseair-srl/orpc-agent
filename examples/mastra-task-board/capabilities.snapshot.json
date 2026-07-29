@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "capabilities": [
     {
       "id": "tasks.create",
@@ -89,5 +89,8 @@
     }
   ],
   "excluded": [],
-  "unexposed": []
+  "unexposed": [],
+  "runtime": {
+    "policies": []
+  }
 }

@@ -199,11 +199,10 @@ importers:
         version: 4.4.3
 
   packages/cli:
-    dependencies:
+    devDependencies:
       '@orpc-agent/core':
         specifier: workspace:^
         version: link:../core
-    devDependencies:
       '@orpc/server':
         specifier: ^1.14.10
         version: 1.14.10(@opentelemetry/api@1.9.0)(ws@8.21.1)
