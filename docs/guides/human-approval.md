@@ -77,7 +77,7 @@ When the human is *present* and latency is seconds, skip the suspend/resume mach
 
 ```ts
 const runtime = createAgentRuntime({
-  registry, policies,
+  governance,
   approvals: {
     handler: async (req) => {
       const yes = await promptUserInUI(req);          // modal, CLI prompt, Slack interactive msg
@@ -100,7 +100,7 @@ The default in-memory coordinator **loses records on restart** — dev/test only
 import { createPgApprovalCoordinator, APPROVALS_DDL } from "@orpc-agent/postgres";
 
 const runtime = createAgentRuntime({
-  registry, policies,
+  governance,
   approvals: {
     coordinator: createPgApprovalCoordinator({
       query: (sql, params) => pool.query(sql, params),

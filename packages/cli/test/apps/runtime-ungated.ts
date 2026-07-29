@@ -1,6 +1,7 @@
 import { os } from "@orpc/server";
 import { z } from "zod";
-import { createAgentRuntime, createCapabilityRegistry, defineGovernance } from "@orpc-agent/core";
+import { createAgentRuntime, createCapabilityRegistry,
+  createInMemoryApprovalCoordinator, defineGovernance } from "@orpc-agent/core";
 
 /**
  * runtime-gated.ts with one line deleted: `policies: [gateModelWrites]` in
@@ -37,4 +38,10 @@ export const capabilities = createCapabilityRegistry({
 
 export const governance = defineGovernance({ registry: capabilities });
 
-export const runtime = createAgentRuntime({ governance, warnings: false });
+const coordinator = createInMemoryApprovalCoordinator();
+
+export const runtime = createAgentRuntime({
+  governance,
+  approvals: { coordinator },
+  audit: () => {},
+});

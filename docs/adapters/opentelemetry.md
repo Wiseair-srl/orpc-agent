@@ -7,11 +7,11 @@ Implements core's neutral `TracingAdapter` interface with real OpenTelemetry spa
 ## Usage
 
 ```ts
-import { createAgentRuntime } from "@orpc-agent/core";
+import { createAgentRuntime, defineGovernance } from "@orpc-agent/core";
 import { createOpenTelemetryTracing } from "@orpc-agent/opentelemetry";
 
 const runtime = createAgentRuntime({
-  registry: capabilities,
+  governance: defineGovernance({ registry: capabilities }),
   policies,
   tracing: createOpenTelemetryTracing(),   // uses trace.getTracer("orpc-agent")
 });

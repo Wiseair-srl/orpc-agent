@@ -11,12 +11,8 @@ Package: `@orpc-agent/core`. The runtime is the governed execution engine; every
 ```ts
 function createAgentRuntime<TContext>(options: AgentRuntimeOptions<TContext>): AgentRuntime<TContext>;
 
-type AgentRuntimeOptions<TContext> = RuntimeWiring & (
-  | { governance: AgentGovernance }               // preferred — see core.md#definegovernance
-  | { registry: CapabilityRegistry; policies?: AgentPolicy[] }  // runtime-level, before meta.policies
-);
-
-type RuntimeWiring = {
+type AgentRuntimeOptions<TContext> = {
+  governance: AgentGovernance;      // required — see core.md#definegovernance
   approvals?: ApprovalsConfig;
   audit?: AuditSink | AuditSink[] | { sinks: AuditSink[]; strict?: boolean; onSinkError?: (err: unknown, event: AgentAuditEvent) => void };
   tracing?: TracingAdapter;
@@ -39,16 +35,18 @@ type ApprovalsConfig = {
 
 **Construction behavior.** Pure and synchronous: wires configuration, verifies the registry's schemas are convertible for exposed schema-consuming surfaces, and returns. No I/O.
 
-**Governance or registry, not both.** Options take either a [`governance`](core.md#definegovernance) — preferred, and the only form tooling can read without a runtime instance — or `registry` and `policies` inline, which is normalized into the same shape. The forms are mutually exclusive by type: passing a governance leaves no `policies` key to append to, which is what stops one runtime from evaluating a list that differs from the one its application publishes.
+**A governance is the only accepted form.** There is no `registry`/`policies` pair: that would let a runtime evaluate a policy list no exported value names, which is exactly what tooling then cannot check. Build one with [`defineGovernance`](core.md#definegovernance).
+
+**No `warnings` flag.** The startup warnings fire only where a decision was left implicit, and each is answered by making it — naming `approvals.coordinator` (including `createInMemoryApprovalCoordinator()`, a legitimate answer) or naming an audit sink (including `audit: () => {}`, which states deliberately that nothing is recorded). A mute switch would be a second way to say the same thing, global and invisible to review.
 
 **`runtime.governance`.** The governed surface this runtime executes. Identical by reference across every runtime built from the same governance.
 
 **`runtime.registry`.** The runtime exposes its registry read-only. Adapters read capability meta from it for protocol concerns descriptors deliberately omit (tool-name overrides, MCP annotations) — see [ADR-012](../architecture/decisions.md#adr-012-as-built-api-deltas-for-v01).
 
-**`runtime.policies`.** Shorthand for `runtime.governance.manifest` — the identity of the runtime-level policies, in evaluation order, composites flattened, frozen:
+**`runtime.governance.manifest`.** The identity of the runtime-level policies, in evaluation order, composites flattened, frozen:
 
 ```ts
-readonly policies: readonly { name: string; phases: readonly PolicyPhase[] }[];
+readonly manifest: readonly { name: string; phases: readonly PolicyPhase[] }[];
 ```
 
 Name and phases only — never `evaluate`. A decision is meaningful only inside the pipeline (shared batch deadline, fail-closed on throw, audit record), so the closure is not handed out; a policy evaluated outside it would produce an answer that looks authoritative and is not. The names are the same ones audit events already record in `PolicyDecisionRecord.policy`.

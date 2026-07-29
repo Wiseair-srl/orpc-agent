@@ -3,7 +3,7 @@ import type { ApprovalCoordinator } from "../approvals/types";
 import { createInMemoryApprovalCoordinator } from "../approvals/in-memory";
 import { NOOP_TRACING } from "../tracing";
 import { toJsonSchema } from "../schema/index";
-import { defineGovernance, type AgentGovernance } from "../governance";
+import type { AgentGovernance } from "../governance";
 import { createAuditEmitter, type AuditEmitter } from "./audit";
 import { invokePipeline, resumePipeline, type PipelineDeps } from "./pipeline";
 import { describePipeline } from "./describe";
@@ -31,21 +31,14 @@ export function createAgentRuntime<TContext = unknown>(
   if (!options || typeof options !== "object") {
     throw new TypeError("createAgentRuntime: options are required");
   }
-  if (!options.governance && (!options.registry || typeof options.registry.get !== "function")) {
+  if (!options.governance?.registry || !Array.isArray(options.governance.manifest)) {
     throw new TypeError(
-      "createAgentRuntime: a governance (defineGovernance) or a capability registry is required",
+      "createAgentRuntime: a governance is required — " +
+        "createAgentRuntime({ governance: defineGovernance({ registry, policies }) })",
     );
   }
 
-  // One internal shape from here on. Inline registry/policies stay supported
-  // and are normalized into a governance, so everything downstream — and
-  // `runtime.governance` — reads the same way whichever form was passed.
-  const governance =
-    options.governance ??
-    defineGovernance({
-      registry: options.registry!,
-      ...(options.policies ? { policies: options.policies } : {}),
-    });
+  const governance = options.governance;
 
   const now = options.now ?? (() => new Date());
   const audit: AuditEmitter = createAuditEmitter(options.audit);
@@ -66,9 +59,7 @@ export function createAgentRuntime<TContext = unknown>(
     }
   }
 
-  if (options.warnings !== false) {
-    emitStartupWarnings(governance, options, audit.hasSinks);
-  }
+  emitStartupWarnings(governance, options, audit.hasSinks);
 
   const deps: PipelineDeps = {
     registry: governance.registry,
@@ -90,7 +81,6 @@ export function createAgentRuntime<TContext = unknown>(
   return {
     governance,
     registry: governance.registry,
-    policies: governance.manifest,
 
     invoke<O = unknown>(
       capabilityId: string,
@@ -144,14 +134,17 @@ export function createAgentRuntime<TContext = unknown>(
 
 const MODEL_SURFACES: readonly ExposureSurface[] = ["aiSdk", "mcp"];
 const WRITE_SIDE_EFFECTS = new Set(["write", "destructive", "external"]);
-/** Where losing a pending approval on restart is not recoverable by retrying. */
-const IRREVERSIBLE_SIDE_EFFECTS = new Set(["destructive", "external"]);
 
 /**
- * Production footgun warnings (never fatal; `warnings: false` silences).
- * Static knowledge only: what a policy decides needs a real invocation, so
- * condition 1 keys on meta.approval.required and 1b on the shape that makes a
- * policy-driven gate likely.
+ * Production footgun warnings. Never fatal, and there is no flag to silence
+ * them: each one fires only where a decision was left IMPLICIT, and is
+ * answered by making that decision — passing the coordinator you want, or the
+ * audit sink you want, including one that deliberately discards.
+ *
+ * A mute switch would be a second way to say the same thing, and a worse one:
+ * it is global, it outlives the reason it was added, and it hides the choice
+ * from whoever reads the code next. Making the choice explicit puts it where
+ * a reviewer sees it.
  */
 function emitStartupWarnings<TContext>(
   governance: AgentGovernance,
@@ -169,32 +162,36 @@ function emitStartupWarnings<TContext>(
       .map((c) => c.id);
     if (gated.length > 0) {
       console.warn(
-        `[orpc-agent] ${sampleIds(gated)} require approval but the runtime is using the ` +
-          "default in-memory coordinator: approval records will not survive restarts. " +
-          "Pass approvals.coordinator (e.g. @orpc-agent/postgres), or set warnings: false.",
+        `[orpc-agent] ${sampleIds(gated)} require approval, but no approval coordinator was ` +
+          "chosen: the default is in-memory, so pending approvals will not survive a restart. " +
+          "Choose one — approvals.coordinator: createPgApprovalCoordinator(…) to persist them, " +
+          "or createInMemoryApprovalCoordinator() to accept the tradeoff.",
       );
     } else if (governance.policies.length > 0) {
       // 1b. The same footgun reached the other way. A policy that returns
-      //     requireApproval suspends into the same amnesiac coordinator, and
-      //     nothing here can tell whether one does. Deliberately narrower than
-      //     condition 2: only destructive/external work a model can reach, not
-      //     every write. A rate-limit policy over ordinary writes is the
-      //     common case and must not cost a warning, or all three stop being
-      //     read.
+      //     requireApproval suspends into the same coordinator, and nothing
+      //     here can tell whether one does — `evaluate` needs a real actor and
+      //     context. So this keys on the shape where the question is live at
+      //     all: policies configured, and write-capable work a model can
+      //     reach. Covering every write rather than only the irreversible ones
+      //     is safe precisely because there is no mute switch: an application
+      //     that does not gate answers it once, by naming the coordinator it
+      //     already has, and the other warnings stay on.
       const gatable = capabilities
         .filter(
           (c) =>
-            IRREVERSIBLE_SIDE_EFFECTS.has(c.meta.sideEffect) &&
+            WRITE_SIDE_EFFECTS.has(c.meta.sideEffect) &&
             MODEL_SURFACES.some((s) => c.meta.expose[s] === true),
         )
         .map((c) => c.id);
       if (gatable.length > 0) {
         console.warn(
-          "[orpc-agent] runtime policies are configured and write-capable capabilities are " +
-            `reachable from model surfaces (${sampleIds(gatable)}). If any policy returns ` +
-            "requireApproval, those approvals go to the default in-memory coordinator and will " +
-            "not survive restarts. Pass approvals.coordinator (e.g. @orpc-agent/postgres), or " +
-            "set warnings: false.",
+          "[orpc-agent] policies are configured and write-capable capabilities are reachable " +
+            `from model surfaces (${sampleIds(gatable)}), but no approval coordinator was ` +
+            "chosen. If any policy returns requireApproval, those approvals go to the default " +
+            "in-memory coordinator and will not survive a restart. Choose one — " +
+            "approvals.coordinator: createPgApprovalCoordinator(…) to persist them, or " +
+            "createInMemoryApprovalCoordinator() to accept the tradeoff.",
         );
       }
     }
@@ -212,8 +209,9 @@ function emitStartupWarnings<TContext>(
     if (exposedWrites.length > 0) {
       console.warn(
         `[orpc-agent] ${sampleIds(exposedWrites)} are write-capable and exposed to model ` +
-          "surfaces with no audit sink configured: no audit trail will be stored. " +
-          "Configure audit sinks (e.g. @orpc-agent/postgres), or set warnings: false.",
+          "surfaces, but no audit sink was chosen: no audit trail will be stored. " +
+          "Choose one — audit: createPgAuditSink(…) to record, or audit: () => {} to state " +
+          "deliberately that nothing is.",
       );
     }
   }

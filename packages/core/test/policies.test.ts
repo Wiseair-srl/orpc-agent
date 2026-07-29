@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import { os } from "@orpc/server";
 import * as z from "zod";
 import { createAgentRuntime } from "../src/runtime/create";
+import { defineGovernance } from "../src/governance";
 import { createCapabilityRegistry } from "../src/registry";
 import { agentProcedure } from "../src/procedure";
 import { composePolicies, definePolicy } from "../src/policy/define";
@@ -30,12 +31,7 @@ function cap(policies?: AgentPolicy[]) {
 function runtimeWith(policies: AgentPolicy[], capPolicies?: AgentPolicy[]) {
   const audit = capturedEvents();
   const registry = createCapabilityRegistry({ target: cap(capPolicies) });
-  const runtime = createAgentRuntime({
-    registry,
-    policies,
-    audit: audit.sink,
-    defaults: { policyTimeoutMs: 100 },
-  });
+  const runtime = createAgentRuntime({ governance: defineGovernance({ registry, policies }), audit: audit.sink, defaults: { policyTimeoutMs: 100 } });
   return { runtime, audit };
 }
 
@@ -390,7 +386,7 @@ describe("discovery pipeline (describe)", () => {
       broken: brokenPolicy,
       notExposed,
     });
-    const runtime = createAgentRuntime({ registry, audit: audit.sink });
+    const runtime = createAgentRuntime({ governance: defineGovernance({ registry }), audit: audit.sink });
     return { runtime, audit };
   }
 

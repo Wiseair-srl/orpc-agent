@@ -2,14 +2,19 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { os } from "@orpc/server";
 import * as z from "zod";
 import { createAgentRuntime } from "../src/runtime/create";
+import { defineGovernance } from "../src/governance";
+import { definePolicy } from "../src/policy/define";
+import { requireApproval } from "../src/policy/helpers";
 import { createCapabilityRegistry } from "../src/registry";
 import { createInMemoryApprovalCoordinator } from "../src/approvals/in-memory";
 import { agentProcedure } from "../src/procedure";
 import type { AgentInvocationInfo } from "../src/types";
 
 /**
- * Startup footgun warnings (v0.2, ADR-014): never fatal, static knowledge
- * only, silenced by `warnings: false`.
+ * Startup footgun warnings (ADR-014, ADR-016): never fatal, static knowledge
+ * only, and with NO flag to silence them. Each fires exactly where a decision
+ * was left implicit, and is answered by making it — naming the coordinator, or
+ * the audit sink, including one that deliberately discards.
  */
 
 const base = agentProcedure(os.$context<{ agent?: AgentInvocationInfo }>());
@@ -67,56 +72,41 @@ function warningsText(): string {
 
 describe("in-memory coordinator warning", () => {
   test("fires for approval-gated capabilities on the default coordinator", () => {
-    createAgentRuntime({ registry: createCapabilityRegistry({ messages: { send: gatedSend } }) });
+    createAgentRuntime({ governance: defineGovernance({ registry: createCapabilityRegistry({ messages: { send: gatedSend } }) }) });
     expect(warningsText()).toContain('"messages.send"');
-    expect(warningsText()).toContain("in-memory coordinator");
+    expect(warningsText()).toContain("no approval coordinator was chosen");
   });
 
   test("silent when a persistent coordinator is supplied", () => {
-    createAgentRuntime({
-      registry: createCapabilityRegistry({ messages: { send: gatedSend } }),
-      approvals: { coordinator: createInMemoryApprovalCoordinator() },
-    });
+    createAgentRuntime({ governance: defineGovernance({ registry: createCapabilityRegistry({ messages: { send: gatedSend } }) }), approvals: { coordinator: createInMemoryApprovalCoordinator() } });
     expect(warningsText()).not.toContain("coordinator");
   });
 
   test("silent when an inline handler is configured (explicit choice)", () => {
-    createAgentRuntime({
-      registry: createCapabilityRegistry({ messages: { send: gatedSend } }),
-      approvals: { handler: async () => undefined },
-    });
+    createAgentRuntime({ governance: defineGovernance({ registry: createCapabilityRegistry({ messages: { send: gatedSend } }) }), approvals: { handler: async () => undefined } });
     expect(warningsText()).not.toContain("coordinator");
   });
 
   test("silent when nothing is approval-gated", () => {
-    createAgentRuntime({
-      registry: createCapabilityRegistry({ records: { search: exposedRead } }),
-    });
+    createAgentRuntime({ governance: defineGovernance({ registry: createCapabilityRegistry({ records: { search: exposedRead } }) }) });
     expect(warningsText()).not.toContain("coordinator");
   });
 });
 
 describe("missing audit sink warning", () => {
   test("fires for write-capable capabilities exposed to model surfaces", () => {
-    createAgentRuntime({
-      registry: createCapabilityRegistry({ records: { update: exposedWrite } }),
-    });
+    createAgentRuntime({ governance: defineGovernance({ registry: createCapabilityRegistry({ records: { update: exposedWrite } }) }) });
     expect(warningsText()).toContain('"records.update"');
     expect(warningsText()).toContain("no audit sink");
   });
 
   test("silent when a sink is configured", () => {
-    createAgentRuntime({
-      registry: createCapabilityRegistry({ records: { update: exposedWrite } }),
-      audit: () => {},
-    });
+    createAgentRuntime({ governance: defineGovernance({ registry: createCapabilityRegistry({ records: { update: exposedWrite } }) }), audit: () => {} });
     expect(warningsText()).not.toContain("no audit sink");
   });
 
   test("silent when only reads are exposed to model surfaces", () => {
-    createAgentRuntime({
-      registry: createCapabilityRegistry({ records: { search: exposedRead } }),
-    });
+    createAgentRuntime({ governance: defineGovernance({ registry: createCapabilityRegistry({ records: { search: exposedRead } }) }) });
     expect(warningsText()).not.toContain("no audit sink");
   });
 
@@ -131,18 +121,66 @@ describe("missing audit sink warning", () => {
         },
       })
       .handler(async () => ({ ok: true }));
-    createAgentRuntime({ registry: createCapabilityRegistry({ internal: { write: directWrite } }) });
+    createAgentRuntime({ governance: defineGovernance({ registry: createCapabilityRegistry({ internal: { write: directWrite } }) }) });
     expect(warningsText()).not.toContain("no audit sink");
   });
 });
 
-test("warnings: false silences everything", () => {
-  createAgentRuntime({
-    registry: createCapabilityRegistry({
-      messages: { send: gatedSend },
-      records: { update: exposedWrite },
-    }),
-    warnings: false,
+describe("policy-driven approval durability", () => {
+  const gate = definePolicy("gate", () => requireApproval({ reason: "x" }));
+
+  test("fires when policies are configured and a model can reach a write", () => {
+    createAgentRuntime({
+      governance: defineGovernance({
+        registry: createCapabilityRegistry({ records: { update: exposedWrite } }),
+        policies: [gate],
+      }),
+    });
+
+    // No capability declares meta.approval here — only a policy could gate,
+    // and whether it does is unknowable without a real invocation.
+    expect(warningsText()).toContain("no approval coordinator was chosen");
+    expect(warningsText()).toContain('"records.update"');
   });
+
+  test("silent without policies — nothing could suspend", () => {
+    createAgentRuntime({
+      governance: defineGovernance({
+        registry: createCapabilityRegistry({ records: { update: exposedWrite } }),
+      }),
+    });
+
+    expect(warningsText()).not.toContain("approval coordinator");
+  });
+
+  test("silent when only reads are reachable", () => {
+    createAgentRuntime({
+      governance: defineGovernance({
+        registry: createCapabilityRegistry({ records: { search: exposedRead } }),
+        policies: [gate],
+      }),
+    });
+
+    expect(warningsText()).not.toContain("approval coordinator");
+  });
+});
+
+/**
+ * The replacement for the old `warnings: false`. Silence is not a flag: it is
+ * what naming both choices produces, and the code then documents the decision
+ * where a reviewer sees it.
+ */
+test("explicit configuration silences everything, with no flag to do it", () => {
+  createAgentRuntime({
+    governance: defineGovernance({
+      registry: createCapabilityRegistry({
+        messages: { send: gatedSend },
+        records: { update: exposedWrite },
+      }),
+    }),
+    approvals: { coordinator: createInMemoryApprovalCoordinator() },
+    audit: () => {},
+  });
+
   expect(warn).not.toHaveBeenCalled();
 });

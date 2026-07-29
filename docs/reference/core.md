@@ -114,7 +114,7 @@ const dashboard = createAgentRuntime({ governance, approvals: { coordinator } })
 const chat = createAgentRuntime({ governance, approvals: { coordinator, handler } });
 ```
 
-Frozen on return. Passing `registry` and `policies` to `createAgentRuntime` directly remains supported and is normalized into the same shape, reachable as `runtime.governance`.
+Frozen on return, and the **only** thing `createAgentRuntime` accepts: there is no `registry`/`policies` pair, because that is the shape where a runtime evaluates a list no exported value names — precisely what tooling then cannot check.
 
 ## `defaultToolName`
 

@@ -54,7 +54,7 @@ Existing routers, HTTP handlers, and OpenAPI output are untouched — the `agent
 
 ```ts
 // src/agent.ts
-import { createCapabilityRegistry, createAgentRuntime } from "@orpc-agent/core";
+import { createCapabilityRegistry, createAgentRuntime, defineGovernance } from "@orpc-agent/core";
 import { searchOrders } from "./capabilities/orders";
 
 export const capabilities = createCapabilityRegistry({
@@ -62,7 +62,7 @@ export const capabilities = createCapabilityRegistry({
 });
 
 export const runtime = createAgentRuntime({
-  registry: capabilities,
+  governance: defineGovernance({ registry: capabilities }),
   // policies, approvals, audit, tracing — all optional to start; add as you grow
 });
 ```

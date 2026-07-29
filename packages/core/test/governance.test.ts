@@ -59,29 +59,38 @@ describe("defineGovernance", () => {
 describe("createAgentRuntime with a governance", () => {
   it("evaluates exactly the published list — there is no policies key to append to", () => {
     const governance = defineGovernance({ registry: registry(), policies: [a, b] });
-    const runtime = createAgentRuntime({ governance, warnings: false });
+    const runtime = createAgentRuntime({ governance });
 
-    expect(runtime.policies).toEqual(governance.manifest);
+    expect(runtime.governance.manifest).toEqual(governance.manifest);
     expect(runtime.governance).toBe(governance);
   });
 
-  it("normalizes the inline registry/policies form into the same shape", () => {
-    const runtime = createAgentRuntime({ registry: registry(), policies: [a], warnings: false });
+  it("refuses anything that is not a governance — there is no second form", () => {
+    // The registry/policies pair used to be accepted here. It was the arm
+    // where a runtime could evaluate a list no exported value names, so the
+    // guarantee only held by convention. Removing it is what makes it hold.
+    expect(() => createAgentRuntime({ registry: registry() } as never)).toThrow(/governance/);
+    expect(() =>
+      createAgentRuntime({ governance: { registry: registry() } } as never),
+    ).toThrow(/governance/);
+  });
 
-    expect(runtime.governance.manifest).toEqual([{ name: "a", phases: ["invocation"] }]);
-    expect(runtime.registry).toBe(runtime.governance.registry);
+  it("exposes the registry as a shorthand for the governance's own", () => {
+    const governance = defineGovernance({ registry: registry() });
+
+    expect(createAgentRuntime({ governance }).registry).toBe(governance.registry);
   });
 
   it("shares one governance across every runtime an application builds", () => {
     const governance = defineGovernance({ registry: registry(), policies: [a] });
-    const dashboard = createAgentRuntime({ governance, warnings: false });
-    const chat = createAgentRuntime({ governance, warnings: false });
+    const dashboard = createAgentRuntime({ governance });
+    const chat = createAgentRuntime({ governance });
 
     expect(chat.governance).toBe(dashboard.governance);
-    expect(chat.policies).toEqual(dashboard.policies);
+    expect(chat.governance.manifest).toEqual(dashboard.governance.manifest);
   });
 
-  it("still requires a registry when no governance is given", () => {
-    expect(() => createAgentRuntime({} as never)).toThrow(/governance|registry/);
+  it("requires a governance", () => {
+    expect(() => createAgentRuntime({} as never)).toThrow(/governance/);
   });
 });

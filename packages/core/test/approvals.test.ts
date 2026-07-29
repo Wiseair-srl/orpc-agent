@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import { os } from "@orpc/server";
 import * as z from "zod";
 import { createAgentRuntime } from "../src/runtime/create";
+import { defineGovernance } from "../src/governance";
 import { createCapabilityRegistry } from "../src/registry";
 import { createInMemoryApprovalCoordinator } from "../src/approvals/in-memory";
 import { agentProcedure } from "../src/procedure";
@@ -54,20 +55,13 @@ function makeRuntime(overrides?: {
   const coordinator =
     overrides?.coordinator ?? createInMemoryApprovalCoordinator({ now: clock.now });
   const registry = createCapabilityRegistry({ orders: { refund } });
-  const runtime = createAgentRuntime({
-    registry,
-    policies: overrides?.policies ?? [],
-    approvals: {
+  const runtime = createAgentRuntime({ governance: defineGovernance({ registry, policies: overrides?.policies ?? [] }), approvals: {
       coordinator,
       ...(overrides?.handler ? { handler: overrides.handler } : {}),
       ...(overrides?.rejectSelfApproval !== undefined
         ? { rejectSelfApproval: overrides.rejectSelfApproval }
         : {}),
-    },
-    audit: audit.sink,
-    now: clock.now,
-    ...(overrides?.expiresInMs ? { defaults: { approvalExpiresInMs: overrides.expiresInMs } } : {}),
-  });
+    }, audit: audit.sink, now: clock.now, ...(overrides?.expiresInMs ? { defaults: { approvalExpiresInMs: overrides.expiresInMs } } : {}) });
   return { runtime, audit, clock, coordinator };
 }
 
@@ -261,7 +255,7 @@ describe("failure codes", () => {
       })
       .handler(async () => ({}));
     const registry = createCapabilityRegistry({ gated });
-    const runtime = createAgentRuntime({ registry });
+    const runtime = createAgentRuntime({ governance: defineGovernance({ registry }) });
     const result = await runtime.invoke("gated", { fn: () => 1 }, options);
     if (result.status !== "failed") expect.unreachable();
     expect(result.error.code).toBe("APPROVAL_UNSERIALIZABLE_INPUT");
@@ -314,11 +308,7 @@ describe("input binding (SI-5)", () => {
     const clock = mutableClock();
     const coordinator = createInMemoryApprovalCoordinator({ now: clock.now });
     const looseRegistry = createCapabilityRegistry({ orders: { refund } });
-    const loose = createAgentRuntime({
-      registry: looseRegistry,
-      approvals: { coordinator },
-      now: clock.now,
-    });
+    const loose = createAgentRuntime({ governance: defineGovernance({ registry: looseRegistry }), approvals: { coordinator }, now: clock.now });
 
     const strictRefund = base
       .meta({
@@ -337,11 +327,7 @@ describe("input binding (SI-5)", () => {
         }),
       )
       .handler(async () => ({ refundId: "x", amount: 0 }));
-    const tightened = createAgentRuntime({
-      registry: createCapabilityRegistry({ orders: { refund: strictRefund } }),
-      approvals: { coordinator },
-      now: clock.now,
-    });
+    const tightened = createAgentRuntime({ governance: defineGovernance({ registry: createCapabilityRegistry({ orders: { refund: strictRefund } }) }), approvals: { coordinator }, now: clock.now });
 
     const pending = await loose.invoke("orders.refund", REFUND_649, options);
     if (pending.status !== "approval-required") expect.unreachable();
@@ -397,7 +383,7 @@ describe("static approval gate", () => {
       .handler(async () => ({ messageId: "m_1" }));
     const registry = createCapabilityRegistry({ send });
     const audit = capturedEvents();
-    const runtime = createAgentRuntime({ registry, audit: audit.sink });
+    const runtime = createAgentRuntime({ governance: defineGovernance({ registry }), audit: audit.sink });
     const result = await runtime.invoke("send", { draftId: "d_1" }, options);
     if (result.status !== "approval-required") expect.unreachable();
     expect(result.approval.types).toEqual(["human-confirmation"]);

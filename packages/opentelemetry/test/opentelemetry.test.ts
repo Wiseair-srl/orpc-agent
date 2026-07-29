@@ -14,6 +14,7 @@ import * as z from "zod";
 import {
   agentProcedure,
   createAgentRuntime,
+  defineGovernance,
   createCapabilityRegistry,
   definePolicy,
   deny,
@@ -89,10 +90,7 @@ beforeEach(() => {
 
 describe("span tree", () => {
   test("completed call: capability_call with policy_evaluation and procedure_execution children", async () => {
-    const runtime = createAgentRuntime({
-      registry,
-      tracing: createOpenTelemetryTracing({ tracer }),
-    });
+    const runtime = createAgentRuntime({ governance: defineGovernance({ registry }), tracing: createOpenTelemetryTracing({ tracer }) });
     await runtime.invoke("orders.search", { q: "x" }, { actor, context: {} });
 
     const spans = spansByName();
@@ -120,10 +118,7 @@ describe("span tree", () => {
   });
 
   test("approval-required ends the root span OK with the approval span child", async () => {
-    const runtime = createAgentRuntime({
-      registry,
-      tracing: createOpenTelemetryTracing({ tracer }),
-    });
+    const runtime = createAgentRuntime({ governance: defineGovernance({ registry }), tracing: createOpenTelemetryTracing({ tracer }) });
     await runtime.invoke("orders.refund", { amount: 10 }, { actor, context: {} });
 
     const spans = spansByName();
@@ -137,10 +132,7 @@ describe("span tree", () => {
   });
 
   test("failure: error status and error code attribute", async () => {
-    const runtime = createAgentRuntime({
-      registry,
-      tracing: createOpenTelemetryTracing({ tracer }),
-    });
+    const runtime = createAgentRuntime({ governance: defineGovernance({ registry }), tracing: createOpenTelemetryTracing({ tracer }) });
     await runtime.invoke("orders.denied", {}, { actor, context: {} });
     const root = spansByName().get("agent.capability_call")![0]!;
     expect(root.status.code).toBe(SpanStatusCode.ERROR);
@@ -149,10 +141,7 @@ describe("span tree", () => {
   });
 
   test("parents under the active OTel context at invoke time", async () => {
-    const runtime = createAgentRuntime({
-      registry,
-      tracing: createOpenTelemetryTracing({ tracer }),
-    });
+    const runtime = createAgentRuntime({ governance: defineGovernance({ registry }), tracing: createOpenTelemetryTracing({ tracer }) });
     const httpSpan = tracer.startSpan("POST /api/chat");
     await otelContext.with(trace.setSpan(otelContext.active(), httpSpan), () =>
       runtime.invoke("orders.search", { q: "x" }, { actor, context: {} }),
@@ -165,10 +154,7 @@ describe("span tree", () => {
 
 describe("attribute safety (SI-10)", () => {
   test("no payloads anywhere; actor id absent by default", async () => {
-    const runtime = createAgentRuntime({
-      registry,
-      tracing: createOpenTelemetryTracing({ tracer }),
-    });
+    const runtime = createAgentRuntime({ governance: defineGovernance({ registry }), tracing: createOpenTelemetryTracing({ tracer }) });
     await runtime.invoke("orders.search", { q: "SECRET_QUERY" }, { actor, context: {} });
     for (const span of exporter.getFinishedSpans()) {
       const serialized = JSON.stringify(span.attributes);
@@ -178,10 +164,7 @@ describe("attribute safety (SI-10)", () => {
   });
 
   test("actorIdAttribute: true opts in to the actor id", async () => {
-    const runtime = createAgentRuntime({
-      registry,
-      tracing: createOpenTelemetryTracing({ tracer, actorIdAttribute: true }),
-    });
+    const runtime = createAgentRuntime({ governance: defineGovernance({ registry }), tracing: createOpenTelemetryTracing({ tracer, actorIdAttribute: true }) });
     await runtime.invoke("orders.search", { q: "x" }, { actor, context: {} });
     const root = spansByName().get("agent.capability_call")![0]!;
     expect(root.attributes["orpc_agent.actor_id"]).toBe("u_dana");

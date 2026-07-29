@@ -122,8 +122,7 @@ export const capabilities = createCapabilityRegistry({
 });
 
 export const runtime = createAgentRuntime({
-  registry: capabilities,
-  policies: [orgIsolation, mcpReadOnly],
+  governance: defineGovernance({ registry: capabilities, policies: [orgIsolation, mcpReadOnly] }),
   approvals: {
     coordinator: createDbApprovalCoordinator(db),           // in-memory in dev
     handler: undefined,                                     // messages.send uses inline confirm in the chat UI variant

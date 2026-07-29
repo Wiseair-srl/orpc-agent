@@ -60,8 +60,7 @@ Remember discovery calls carry `input: undefined` — guard input access by phas
 ```ts
 // Runtime-level: cross-cutting rules, evaluated first, in array order
 const runtime = createAgentRuntime({
-  registry: capabilities,
-  policies: [orgIsolation, surfaceRules, destructiveNeedsApproval],
+  governance: defineGovernance({ registry: capabilities, policies: [orgIsolation, surfaceRules, destructiveNeedsApproval] }),
 });
 
 // Capability-level: rules that belong to one operation, next to its definition

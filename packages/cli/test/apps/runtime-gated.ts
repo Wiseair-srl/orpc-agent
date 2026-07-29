@@ -4,6 +4,7 @@ import {
   allow,
   createAgentRuntime,
   createCapabilityRegistry,
+  createInMemoryApprovalCoordinator,
   defineGovernance,
   definePolicy,
   requireApproval,
@@ -53,5 +54,12 @@ export const governance = defineGovernance({
   policies: [gateModelWrites],
 });
 
+/** Chosen explicitly: implicit is exactly what the startup warnings are about. */
+const coordinator = createInMemoryApprovalCoordinator();
+
 /** Also exported, to cover the loader preferring the governance over it. */
-export const runtime = createAgentRuntime({ governance, warnings: false });
+export const runtime = createAgentRuntime({
+  governance,
+  approvals: { coordinator },
+  audit: () => {},
+});

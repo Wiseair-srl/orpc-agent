@@ -1,5 +1,6 @@
 import {
   createAgentRuntime,
+  defineGovernance,
   createInMemoryApprovalCoordinator,
   type Actor,
   type AgentPolicy,
@@ -117,14 +118,7 @@ export function createAgentTestRuntime<TContext = Record<string, unknown>>(
         : { coordinator };
 
   const makeRuntime = (reg: CapabilityRegistry) =>
-    createAgentRuntime<TContext>({
-      registry: reg,
-      policies: options.policies ?? [],
-      approvals: approvalsConfig,
-      audit,
-      ...(options.tracing ? { tracing: options.tracing } : {}),
-      now: clock.now,
-    });
+    createAgentRuntime<TContext>({ governance: defineGovernance({ registry: reg, policies: options.policies ?? [] }), approvals: approvalsConfig, audit, ...(options.tracing ? { tracing: options.tracing } : {}), now: clock.now });
 
   const runtime = makeRuntime(registry);
   const timeoutVariants = new Map<number, AgentRuntime<TContext>>();

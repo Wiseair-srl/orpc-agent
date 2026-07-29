@@ -25,7 +25,7 @@ On Postgres, the reference sink is one line ([adapters/postgres.md](../adapters/
 import { createPgAuditSink, AUDIT_DDL } from "@orpc-agent/postgres";
 
 const runtime = createAgentRuntime({
-  registry, policies,
+  governance,
   audit: { sinks: [createPgAuditSink({ query: (sql, params) => pool.query(sql, params) })] },
 });
 ```
