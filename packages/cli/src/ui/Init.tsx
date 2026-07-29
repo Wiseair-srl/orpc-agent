@@ -126,11 +126,11 @@ export function Init({
     if (step.probe.runtimeAvailableAs) {
       return (
         <Box flexDirection="column">
-          <Callout tone="warn" title="A runtime is available on this module">
+          <Callout tone="warn" title="A governed export is available on this module">
             <Text>
-              Reading the registry records no runtime-level policies. Export{" "}
-              <Text color="cyan">{step.probe.runtimeAvailableAs}</Text> is an agent runtime over
-              the same registry.
+              Reading the bare registry records no runtime-level policies. Export{" "}
+              <Text color="cyan">{step.probe.runtimeAvailableAs}</Text> carries the governance
+              over the same registry.
             </Text>
           </Callout>
           <Box marginTop={1}>

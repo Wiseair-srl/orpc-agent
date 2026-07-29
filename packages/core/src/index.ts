@@ -16,6 +16,10 @@ export type {
   SideEffect,
 } from "./types";
 
+// ---- Governance ----
+export { defineGovernance } from "./governance";
+export type { AgentGovernance } from "./governance";
+
 // ---- Policies ----
 export { composePolicies, definePolicy } from "./policy/define";
 export { allow, deny, hide, requireApproval } from "./policy/helpers";

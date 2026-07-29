@@ -102,12 +102,13 @@ function renderRuntimeSection(
   if (!snapshot.runtime) {
     const why =
       entrySource === "runtime-unreported"
-        ? "the runtime came from a version of @orpc-agent/core that does not report its\n" +
-          "  policies. Upgrade core to record them."
-        : "--entry resolved a capability registry, so a runtime was never in scope. If this\n" +
-          "  application calls createAgentRuntime({ policies: … }), those gates are missing\n" +
-          "  from this inventory and from the snapshot. Point --entry at the module that\n" +
-          "  exports the runtime to record them.";
+        ? "the runtime came from a version of @orpc-agent/core that does not carry its\n" +
+          "  governance. Upgrade core to record its policies."
+        : "--entry resolved a bare capability registry, which names no policies. If this\n" +
+          "  application registers runtime-level policies, those gates are missing from this\n" +
+          "  inventory and from the snapshot — deleting one will not fail the gate.\n" +
+          "  Declare them with defineGovernance({ registry, policies }) and point --entry at\n" +
+          "  that export.";
     return [
       paint("Runtime policies — NOT OBSERVED", "bold", mode),
       `  ${why}`,

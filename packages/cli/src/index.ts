@@ -1,5 +1,5 @@
 // ---- Snapshot model ----
-export { buildSnapshot, runtimeReportsPolicies } from "./snapshot";
+export { buildSnapshot, governanceOf } from "./snapshot";
 export type { SnapshotSource } from "./snapshot";
 export { diffSnapshots } from "./diff";
 export { canonicalJson, snapshotJson, sha256 } from "./canonical";

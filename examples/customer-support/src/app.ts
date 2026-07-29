@@ -1,6 +1,7 @@
 import {
   createAgentRuntime,
   createCapabilityRegistry,
+  defineGovernance,
   createInMemoryApprovalCoordinator,
   type AgentAuditEvent,
   type ApprovalDecision,
@@ -39,29 +40,19 @@ export const capabilities = createCapabilityRegistry({
 });
 
 /**
- * The governance configuration every runtime this app builds starts from.
- * One constant, spread into each instance below, so there is exactly one
- * place where the runtime-level policy list is written down.
+ * What an agent may reach here, and what is evaluated before it does —
+ * declared once, at module scope.
+ *
+ * Both runtimes below are built from this value, and a runtime built from a
+ * governance has no `policies` key to append to, so neither can evaluate a
+ * list that differs from the one published here. It is also what
+ * `orpc-agent` reads: the runtimes are per-instance (they need the seeded
+ * db's audit sink and the injected clock) and the CLI reads values rather
+ * than calling factories.
  */
-const GOVERNANCE = {
+export const governance = defineGovernance({
   registry: capabilities,
   policies: [orgIsolation, mcpReadOnly],
-};
-
-/**
- * The same governance, at module scope, for `orpc-agent` to read.
- *
- * The runtimes that serve traffic are built per instance inside makeApp()
- * (they need the seeded db's audit sink and the injected clock), and a value
- * behind a factory is one the CLI will not call. Constructing a runtime is
- * pure and does no I/O, so exporting one costs nothing — and because it
- * spreads GOVERNANCE, it cannot report a policy list the real runtimes do not
- * use. Without it the snapshot would record org-isolation and mcp-read-only
- * as "not observed", and deleting either would pass CI.
- */
-export const governanceRuntime = createAgentRuntime<AppContext>({
-  ...GOVERNANCE,
-  warnings: false,
 });
 
 /**
@@ -86,7 +77,7 @@ export function makeApp(options?: { tracing?: TracingAdapter; clock?: TestClock 
   const coordinator = createInMemoryApprovalCoordinator({ now: clock.now });
 
   const runtimeConfig = {
-    ...GOVERNANCE,
+    governance,
     audit: { sinks: [dbAuditSink], strict: false },
     now: clock.now,
     ...(options?.tracing ? { tracing: options.tracing } : {}),

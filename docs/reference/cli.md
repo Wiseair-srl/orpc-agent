@@ -8,25 +8,27 @@ A developer tool, not an adapter: it exposes nothing to an agent and hardcodes n
 pnpm add -D @orpc-agent/cli
 ```
 
-## Point `--entry` at the runtime
+## Point `--entry` at the governance
 
-Both a capability registry and an [`AgentRuntime`](runtime.md) are accepted, but only the runtime puts **runtime-level policies** in scope — and a conditional approval gate usually lives there rather than in `meta.approval`, which fires on every surface.
-
-A module exporting both is not ambiguous: the runtime wins, since it describes the same capabilities plus the policies. Exports resolving to genuinely different registries still require `--export`. Reading a registry while the same module exports a runtime over it prints a warning naming the export you probably wanted.
-
-When the serving runtime is built inside a factory — for per-request context, an injected clock, a seeded audit sink — the CLI will not call it. Export one at module scope for governance, built from the same policy constant:
+A [`defineGovernance`](core.md#definegovernance) value is the form to read: it names the registry **and** the runtime-level policies, and it is safe at module scope, so it does not matter that the runtimes serving traffic are built inside a factory the CLI will not call.
 
 ```ts
-const GOVERNANCE = { registry: capabilities, policies: [orgIsolation, mcpReadOnly] };
-
-/** Read by `orpc-agent`; makeApp() spreads the same constant. */
-export const governanceRuntime = createAgentRuntime<AppContext>({
-  ...GOVERNANCE,
-  warnings: false,
+export const governance = defineGovernance({
+  registry: capabilities,
+  policies: [orgIsolation, mcpReadOnly],
 });
+
+// every runtime this app builds starts from it
+const dashboard = createAgentRuntime({ governance, approvals: { coordinator } });
 ```
 
-Construction is pure and does no I/O, so this costs nothing at import time, and spreading one constant means it cannot report a policy list the serving runtimes do not use. Both examples in this repository use exactly this shape.
+```json
+{ "orpcAgent": { "entry": "src/app.ts", "export": "governance" } }
+```
+
+An [`AgentRuntime`](runtime.md) works too — it carries the governance it was built from. A bare `CapabilityRegistry` also works and names no policies at all.
+
+A module exporting all three is not ambiguous: whichever carries the most governance wins, governance first. Exports resolving to genuinely different registries still require `--export`. Reading a bare registry while the same module exports a governance over it prints a warning naming the export you probably wanted.
 
 ## What it does not see
 
@@ -35,7 +37,7 @@ Stated first, because a governance tool that overstates its coverage is worse th
 - **It does not evaluate policies, and never will.** `evaluate` needs a real actor, surface, input and context, and may do I/O. The tool reports that a policy *exists* — its name and phases — and never which capabilities it gates or under what conditions. A capability a policy would hide from every actor still appears here, and the `APPROVAL` column shows only what `meta.approval` declares.
 
   This is why the header reads `1 approval-gated (declared)` rather than `1 approval-gated`: a `0` there is a statement about metadata, never on its own a statement that nothing is gated. Read it with the runtime policies block. `check` diffs *declarations*, not reachability.
-- **Runtime policies are in scope only when a runtime is.** `--entry` resolving a bare registry reports `runtime policies not observed` — *unknown*, not *none*. A snapshot taken that way cannot detect a runtime policy being deleted.
+- **Runtime policies are in scope only when the entry names them.** `--entry` resolving a bare registry reports `runtime policies not observed` — *unknown*, not *none*. A snapshot taken that way cannot detect a runtime policy being deleted.
 - **Adapter-level `toolNaming` is invisible.** `toolNames` comes from metadata (`meta.adapters.<surface>.toolName ?? defaultToolName(id)`); an adapter constructed with its own naming function overrides it.
 - **Composite policies:** runtime-level composites are **flattened** to their members, matching what the pipeline evaluates and audit records — otherwise removing a member from a composite would leave the composite's name unchanged and the removal invisible. Capability-scoped `meta.policies` still appear under the composite's name; the asymmetry is deliberate, since changing it would rewrite values in every committed snapshot for no security gain.
 - **It compares against a baseline.** Code that is wrong from the first commit has nothing to drift from — that is a rules engine, a different mechanism, not in this version.
@@ -64,7 +66,7 @@ Found in src/app.ts
 Write this to package.json? (Y/n)
 ```
 
-When the chosen export is a registry while the same module exports a runtime over it, `init` says so and offers the runtime instead, since recording less is the expensive default. On confirmation it writes `orpcAgent` into `package.json` (merging, so a hand-set `snapshot` path survives a re-run), optionally the baseline snapshot, and a `check:capabilities` script if none exists.
+When the chosen export is a bare registry while the same module exports a governance over it, `init` says so and offers the governance instead, since recording less is the expensive default. On confirmation it writes `orpcAgent` into `package.json` (merging, so a hand-set `snapshot` path survives a re-run), optionally the baseline snapshot, and a `check:capabilities` script if none exists.
 
 It **refuses rather than degrades** without a terminal: a wizard with no keyboard is not a wizard, and writing a guessed config would be worse than printing what to set by hand.
 
@@ -74,7 +76,7 @@ It **refuses rather than degrades** without a terminal: a wizard with no keyboar
 
 | Option | Meaning |
 |---|---|
-| `--entry <path>` | the module exporting a capability registry |
+| `--entry <path>` | the module exporting a governance, runtime, or registry |
 | `--export <name>` | which export to read (required when several match) |
 | `--snapshot <path>` | snapshot file (default `capabilities.snapshot.json`) |
 | `-o, --out <path>` | snapshot output path; `-` for stdout |
@@ -90,7 +92,7 @@ It **refuses rather than degrades** without a terminal: a wizard with no keyboar
 Defaults may live in `package.json`, which reduces the CI step to `orpc-agent check`:
 
 ```json
-{ "orpcAgent": { "entry": "src/app.ts", "export": "governanceRuntime" } }
+{ "orpcAgent": { "entry": "src/app.ts", "export": "governance" } }
 ```
 
 ## The snapshot
@@ -126,7 +128,7 @@ Deterministic by construction — no timestamps, no generator version, no absolu
 
 Field notes:
 
-- `runtime` is present **only when a runtime was in scope**, and absence is a different fact from emptiness. Absent means no runtime was observed (`--entry` resolved a bare registry, or the runtime came from a core too old to report) — *unknown*. Present with `"policies": []` means observed, and genuinely none. The diff acts on the difference, so the key is never defaulted to empty.
+- `runtime` is present **only when the entry named the runtime-level policies**, and absence is a different fact from emptiness. Absent means they were never observed (`--entry` resolved a bare registry, or a runtime from a core too old to carry its governance) — *unknown*. Present with `"policies": []` means observed, and genuinely none. The diff acts on the difference, so the key is never defaulted to empty.
 
 - `expose` lists only surfaces set to exactly `true` — an explicit `false` and an absent surface are the same fact (SI-1) and serialize identically.
 - `policies` keeps **declaration order**, not sorted: evaluation order decides which policy is recorded as the denier and how the batch timeout budget is spent. `tags` are sorted, being a set.

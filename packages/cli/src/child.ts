@@ -1,7 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
-import type { AgentRuntime, CapabilityRegistry } from "@orpc-agent/core";
-import { buildSnapshot, runtimeReportsPolicies, type SnapshotSource } from "./snapshot";
+import type { AgentGovernance, AgentRuntime, CapabilityRegistry } from "@orpc-agent/core";
+import { buildSnapshot, governanceOf, type SnapshotSource } from "./snapshot";
 import type { EntrySource } from "./types";
 
 /**
@@ -62,19 +62,35 @@ function isRuntimeLike(value: unknown): value is AgentRuntime<unknown> {
   return typeof candidate.invoke === "function" && isRegistryLike(candidate.registry);
 }
 
-/**
- * A runtime is a strictly better source than the registry it wraps: same
- * capabilities, plus the runtime-level policies. Prefer it wherever both are
- * on offer.
- */
+/** A value from `defineGovernance`: a registry plus a policy manifest. */
+function isGovernanceLike(value: unknown): value is AgentGovernance {
+  if (typeof value !== "object" || value === null) return false;
+  const candidate = value as Record<string, unknown>;
+  return Array.isArray(candidate.manifest) && isRegistryLike(candidate.registry);
+}
+
 function sourceOf(value: unknown): SnapshotSource | undefined {
+  if (isGovernanceLike(value)) return value;
   if (isRuntimeLike(value)) return value;
   if (isRegistryLike(value)) return value;
   return undefined;
 }
 
 function registryOf(source: SnapshotSource): CapabilityRegistry {
-  return isRuntimeLike(source) ? source.registry : (source as CapabilityRegistry);
+  return isGovernanceLike(source) || isRuntimeLike(source)
+    ? source.registry
+    : (source as CapabilityRegistry);
+}
+
+/**
+ * Ranked by how much of the governed surface each form carries. A governance
+ * is the declared contract itself; a runtime carries the one it was built
+ * from; a bare registry carries no policies at all.
+ */
+function rank(source: SnapshotSource): number {
+  if (isGovernanceLike(source)) return 2;
+  if (isRuntimeLike(source)) return 1;
+  return 0;
 }
 
 let source: SnapshotSource | undefined;
@@ -117,10 +133,10 @@ if (options.exportName) {
     );
   }
 
-  // Exporting both a registry and the runtime built over it is the ordinary
-  // shape of an application module, and it is not ambiguous: every candidate
-  // describes the same capabilities. Take the runtime — it carries the
-  // runtime-level policies too. Genuinely different registries still ask.
+  // Exporting a governance, the registry it names, and the runtimes built
+  // over it is the ordinary shape of an application module, and it is not
+  // ambiguous: every candidate describes the same capabilities. Take the one
+  // carrying the most governance. Genuinely different registries still ask.
   const distinct = new Set(matches.map((m) => registryOf(m.source)));
   if (distinct.size > 1) {
     fail(
@@ -129,26 +145,28 @@ if (options.exportName) {
       `candidates: ${matches.map((m) => m.name).join(", ")}. Pass --export <name> to choose.`,
     );
   }
-  source = (matches.find((m) => isRuntimeLike(m.source)) ?? matches[0]!).source;
+  source = matches.reduce((best, m) => (rank(m.source) > rank(best.source) ? m : best)).source;
 }
 
-const entrySource: EntrySource = !isRuntimeLike(source!)
-  ? "registry"
-  : runtimeReportsPolicies(source)
-    ? "runtime"
-    : "runtime-unreported";
+const entrySource: EntrySource = isGovernanceLike(source!)
+  ? "governance"
+  : !isRuntimeLike(source!)
+    ? "registry"
+    : governanceOf(source)
+      ? "runtime"
+      : "runtime-unreported";
 
 /**
- * Reading the registry while the same module also exports a runtime over it is
- * almost always an accident, and a costly one: the runtime-level policies go
- * unrecorded. Reported, not enforced — pointing at the registry can be
- * deliberate.
+ * Reading a value that carries no policies while the same module exports one
+ * that does is almost always an accident, and a costly one. Reported, not
+ * enforced — pointing at the registry can be deliberate.
  */
 const runtimeAvailableAs =
   entrySource === "registry"
     ? Object.entries(moduleExports).find(
         ([, value]) =>
-          isRuntimeLike(value) && value.registry === (source as CapabilityRegistry),
+          (isGovernanceLike(value) || isRuntimeLike(value)) &&
+          value.registry === (source as CapabilityRegistry),
       )?.[0]
     : undefined;
 

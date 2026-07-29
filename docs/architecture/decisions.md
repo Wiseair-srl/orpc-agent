@@ -278,7 +278,12 @@ The inventory then reported those applications as having **zero approval gating*
 
 **Decision.**
 
-1. **`runtime.policies` exposes `{ name, phases }`,** in evaluation order, composites flattened, frozen. Never `evaluate`: a decision is meaningful only inside the pipeline (shared batch deadline, fail-closed on throw, audit record), and handing out the closure would invite calls that look authoritative and are not. This leaks nothing new — the names are already in every `PolicyDecisionRecord`.
+1. **`defineGovernance({ registry, policies })` declares the governed surface as one value**, separate from the per-instance wiring (`approvals`, `audit`, `tracing`, `now`) that `createAgentRuntime` also takes. Two properties follow, and both are structural rather than disciplinary:
+
+    - **Runtimes cannot disagree about what is governed.** An application legitimately builds several over one surface — coordinator-backed for its dashboard, inline-confirm for chat. A runtime built from a governance has no `policies` key to append to, so the value it publishes IS the list every one of its runtimes evaluates. The alternative considered — a shared plain constant spread into each `createAgentRuntime` call — was rejected precisely here: `policies: [...SHARED, extra]` reintroduces the divergence one level up, and the guarantee reverts to discipline.
+    - **Tooling reads it without a runtime instance.** Runtimes are usually built inside a factory (per-request context, injected clock, seeded audit sink), and the CLI reads values rather than calling functions (ADR-015 §6). A governance is pure and I/O-free, so it is safe at module scope, which is where tooling can see it.
+
+    `manifest` carries `{ name, phases }`, in evaluation order, composites flattened, frozen. Never `evaluate`: a decision is meaningful only inside the pipeline (shared batch deadline, fail-closed on throw, audit record), and handing out the closure would invite calls that look authoritative and are not. This leaks nothing new — the names are already in every `PolicyDecisionRecord`. `runtime.governance` exposes it on a runtime too, and the inline `registry`/`policies` form stays supported, normalized into the same shape.
 2. **The CLI still never evaluates a policy.** It reports that one *exists*; it cannot know which capabilities it gates or under what conditions, and the output says so rather than implying coverage it lacks. The inventory stays read-from-values (ADR-015 §6).
 3. **Snapshot version 2 adds an optional `runtime` key, where absent ≠ empty.** Absent means no runtime was observed — *unknown*; present with `policies: []` means observed and none. Representing that difference is what makes the removal check sound, so the key is never defaulted.
 4. **Removing a runtime policy is widening.** So is a policy dropping a phase, and so is the snapshot ceasing to observe runtime policies at all — reverting to a weaker check is a weakened control.
@@ -293,7 +298,9 @@ The inventory then reported those applications as having **zero approval gating*
 
     Why `inspect` and not `check`: the runtime-policy state is the fact most easily skimmed past, and a panel is harder to miss than a trailing line. `check`'s output, by contrast, is pasted into pull requests and read out of CI logs, where byte-stable text is worth more than colour.
 
-**Consequences.** A runtime built inside a factory is not reachable by the CLI (a function export is refused, ADR-015 §6). The documented shape is a module-scope runtime spread from the same policy constant the serving runtimes use — construction is pure and does no I/O, and sharing the constant makes the two impossible to drift apart. Both examples in this repository adopt it, which turns `mcp-read-only` and `org-isolation` into gate-protected configuration.
+**Consequences.** `AgentRuntimeOptions` becomes a union — `governance` and `registry`/`policies` are mutually exclusive by type. Existing code passing `registry` is unaffected.
+
+Both examples in this repository now export a `governance`, which turns `mcp-read-only` and `org-isolation` into gate-protected configuration: deleting either fails `pnpm check:capabilities`. Neither example needed to restructure how it builds runtimes, because the governance is what moved to module scope, not the runtime.
 
 Capability-scoped composite policies still serialize under the composite's name while runtime-level ones are flattened. The asymmetry is deliberate: flattening at capability scope would rewrite values in every committed snapshot for no security gain, whereas at runtime scope it is required for correctness — an unflattened composite keeps its name when a member is removed, which is exactly the removal that must not be invisible.
 

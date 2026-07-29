@@ -1,6 +1,7 @@
 import {
   createAgentRuntime,
   createCapabilityRegistry,
+  defineGovernance,
   createInMemoryApprovalCoordinator,
   type AgentAuditEvent,
 } from "@orpc-agent/core";
@@ -19,16 +20,12 @@ import { router } from "./capabilities";
 export const capabilities = createCapabilityRegistry(router);
 
 /**
- * Module-scope runtime for `orpc-agent` to read: the serving runtime is built
- * per instance in makeApp(), and a value behind a factory is one the CLI will
- * not call. This app configures no runtime-level policies, and recording that
- * positively — "observed, none" rather than "not observed" — is the point:
- * adding one later shows up as drift.
+ * The governed surface, declared at module scope for the serving runtime in
+ * makeApp() and for `orpc-agent` to read. This app configures no
+ * runtime-level policies, and recording that positively — "observed, none"
+ * rather than "not observed" — is the point: adding one later shows as drift.
  */
-export const governanceRuntime = createAgentRuntime<AppContext>({
-  registry: capabilities,
-  warnings: false,
-});
+export const governance = defineGovernance({ registry: capabilities });
 
 /**
  * One assembled application instance: seed data, services, audit trail,
@@ -46,7 +43,7 @@ export function makeApp(options?: { now?: () => Date }) {
   const coordinator = createInMemoryApprovalCoordinator({ now });
 
   const runtime = createAgentRuntime<AppContext>({
-    registry: capabilities,
+    governance,
     approvals: {
       coordinator,
       /**
