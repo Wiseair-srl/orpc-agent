@@ -1,6 +1,6 @@
 {
   "name": "@orpc-agent/testing",
-  "version": "0.3.0",
+  "version": "1.0.0",
   "description": "Deterministic governance testing for oRPC Agent capabilities — no model, no network. Independent community project, not affiliated with or endorsed by the oRPC maintainers.",
   "license": "MIT",
   "author": "Paolo Barbato",

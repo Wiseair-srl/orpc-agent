@@ -1,5 +1,16 @@
 # customer-support-example
 
+## 0.1.3
+
+### Patch Changes
+
+- Updated dependencies [7751b9a]
+  - @orpc-agent/core@1.0.0
+  - @orpc-agent/testing@1.0.0
+  - @orpc-agent/ai-sdk@1.0.0
+  - @orpc-agent/mcp@1.0.0
+  - @orpc-agent/opentelemetry@1.0.0
+
 ## 0.1.2
 
 ### Patch Changes

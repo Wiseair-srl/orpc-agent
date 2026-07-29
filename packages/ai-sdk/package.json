@@ -1,6 +1,6 @@
 {
   "name": "@orpc-agent/ai-sdk",
-  "version": "0.3.0",
+  "version": "1.0.0",
   "description": "Vercel AI SDK v5 adapter for oRPC Agent: per-request tool sets from a governed runtime. Independent community project, not affiliated with or endorsed by the oRPC maintainers.",
   "license": "MIT",
   "author": "Paolo Barbato",
