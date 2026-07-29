@@ -4,7 +4,9 @@
 
 Where the [customer-support agent](customer-support-agent.md) is the exhaustive reference, this example is the minimal *full-stack* one: a React task board, a [Mastra](https://mastra.ai) agent, and four capabilities shared between them. It exists to show two things concretely:
 
-1. **An agent-framework integration is one function call.** `toAISDKTools` output plugs straight into a Mastra `Agent` — the adapter targets the AI SDK v5 tool interface, and Mastra consumes those tools natively. No Mastra-specific adapter package is needed.
+1. **An agent-framework integration is one function call.** `toAISDKTools` output plugs straight into a Mastra `Agent` — the adapter targets the AI SDK tool interface, and Mastra consumes those tools natively. No Mastra-specific adapter package is needed.
+
+   The adapter's peer range is `ai@^5 || ^6` ([supported versions](../adapters/ai-sdk.md#supported-ai-versions)), so it fits a Mastra app on either major; the tool set is the same object in both. This example pins `ai@^5` — pinning is the example's choice, not the adapter's constraint.
 2. **The two-surface architecture in working code.** The UI calls procedures as plain typed oRPC (`/rpc`); the model reaches the same procedures only through the governed runtime. Middleware runs on both paths; governance (exposure, policies, approvals, redaction, audit) applies to the model's path.
 
 ```text
@@ -42,7 +44,7 @@ const agent = new Agent({
   name: "Task board assistant",
   instructions: INSTRUCTIONS,       // includes how to read result envelopes
   model,                            // "openrouter/<any-slug>" — model-agnostic
-  tools,                            // AI SDK v5 tools, consumed natively
+  tools,                            // AI SDK tools (v5 or v6), consumed natively
 });
 
 const result = await agent.generate(messages, { maxSteps: 8 });

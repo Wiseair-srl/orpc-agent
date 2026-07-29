@@ -6,7 +6,7 @@ import type { App } from "./app";
 /**
  * The Mastra side of the integration. The whole of it: build the per-request
  * tool set with `toAISDKTools` and hand it to a Mastra `Agent` — Mastra
- * consumes AI SDK v5 tools directly, so no glue code is needed. The agent
+ * consumes AI SDK tools directly, so no glue code is needed. The agent
  * loop plans and talks; every action goes through the governed runtime.
  */
 

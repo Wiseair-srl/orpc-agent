@@ -29,7 +29,7 @@ pnpm workspaces; TypeScript strict; ESM-first with CJS compatibility left to the
                   ^      ^      ^      ^
                   |      |      |      |
         ai-sdk ---+      |      |      +--- testing
-        (peer: ai@^5)    |      |           (no protocol deps)
+     (peer: ai@^5||^6)   |      |           (no protocol deps)
                          |      |
         mcp -------------+      +--- opentelemetry
         (peer: @modelcontextprotocol/sdk)   (peer: @opentelemetry/api)
@@ -71,11 +71,11 @@ subpath @orpc-agent/core/schema: toJsonSchema, registerSchemaConverter
 
 ## @orpc-agent/ai-sdk
 
-**Purpose.** Convert a runtime's exposed capabilities into Vercel AI SDK v5 tools: per-request tool sets bound to an actor and context, structured tool results, model-safe error envelopes, approval-required signaling.
+**Purpose.** Convert a runtime's exposed capabilities into Vercel AI SDK tools: per-request tool sets bound to an actor and context, structured tool results, model-safe error envelopes, approval-required signaling.
 
 **Public exports.** `toAISDKTools(runtime, options)`; types `AISDKToolsOptions`, `AISDKToolResult`.
 
-**Dependencies.** `@orpc-agent/core`; peer `ai@^5`.
+**Dependencies.** `@orpc-agent/core`; peer `ai@^5 || ^6` (one code path, both majors covered in CI).
 
 **Non-responsibilities.** No agent loop, no prompt management, no model selection, no streaming UI helpers. It produces tools; the application runs `generateText`/`streamText`.
 

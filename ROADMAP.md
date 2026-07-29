@@ -37,7 +37,7 @@ Driven by the first production consumer (an ~85-capability finance app):
 The smallest coherent release proving the thesis: *define a capability once, expose it through multiple governed surfaces.*
 
 - `@orpc-agent/core` — capability metadata + registry, 15-stage runtime, policies, in-memory approvals with input-hash binding, structured errors, audit events, tracing interface, timeout/cancellation, eligibility-gated retries, Zod v4 JSON-Schema conversion
-- `@orpc-agent/ai-sdk` — AI SDK v5 tools over the runtime
+- `@orpc-agent/ai-sdk` — AI SDK tools over the runtime (`ai@^5 || ^6`)
 - `@orpc-agent/testing` — deterministic governance testing, no LLM required
 - `@orpc-agent/opentelemetry` — tracing adapter
 - `@orpc-agent/mcp` — MCP server adapter *(final increment; slips to 0.2 rather than delaying the release)*

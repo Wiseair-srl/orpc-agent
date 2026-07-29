@@ -1,6 +1,6 @@
 # @orpc-agent/ai-sdk
 
-Vercel AI SDK v5 adapter for [oRPC Agent](https://github.com/Wiseair-srl/orpc-agent): per-request tool sets from a governed runtime (`toAISDKTools`).
+Vercel AI SDK (v5 and v6) adapter for [oRPC Agent](https://github.com/Wiseair-srl/orpc-agent): per-request tool sets from a governed runtime (`toAISDKTools`).
 
 > Independent community project, not affiliated with or endorsed by the oRPC maintainers.
 

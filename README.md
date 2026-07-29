@@ -155,7 +155,7 @@ Your oRPC middleware stays the authoritative authorization layer on every call. 
 | Package | Purpose |
 |---|---|
 | `@orpc-agent/core` | Capability model, registry, runtime, policies, approvals, errors, events. No provider or protocol dependencies |
-| `@orpc-agent/ai-sdk` | Vercel AI SDK v5 tools over the runtime |
+| `@orpc-agent/ai-sdk` | Vercel AI SDK tools over the runtime (`ai@^5 || ^6`) |
 | `@orpc-agent/mcp` | MCP server adapter with per-session identity |
 | `@orpc-agent/postgres` | Reference Postgres approval coordinator + audit sink (driver-agnostic) |
 | `@orpc-agent/opentelemetry` | Tracing adapter (spans and conventions) |

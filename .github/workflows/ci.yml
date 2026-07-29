@@ -49,9 +49,35 @@ jobs:
       - run: pnpm check:docs
       - run: pnpm docs:build
 
+  # @orpc-agent/ai-sdk declares `ai: ^5.0.0 || ^6.0.0`, so the suite has to
+  # hold on both majors — the `test` job above only covers v5 (the primary
+  # devDependency). The v6 leg resolves through the `ai-v6` /
+  # `@ai-sdk/provider-v3` aliased devDependencies, so it is lockfile-pinned:
+  # `--frozen-lockfile` installs both majors and neither leg mutates the tree.
+  ai-sdk-majors:
+    name: ai-sdk (ai v${{ matrix.ai-major }})
+    if: github.event_name != 'pull_request' || github.head_ref != 'changeset-release/main'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        ai-major: [5, 6]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Types first: `tool()`/`jsonSchema()`/`ToolSet` drift between majors
+      # would surface here, and the suite typechecks with the sources.
+      - run: pnpm --filter @orpc-agent/ai-sdk typecheck:ai-v${{ matrix.ai-major }}
+      - run: pnpm --filter @orpc-agent/ai-sdk test:ai-v${{ matrix.ai-major }}
+
   release:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    needs: test
+    needs: [test, ai-sdk-majors]
     runs-on: ubuntu-latest
     permissions:
       contents: write

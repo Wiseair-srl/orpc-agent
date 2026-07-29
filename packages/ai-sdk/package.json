@@ -1,7 +1,7 @@
 {
   "name": "@orpc-agent/ai-sdk",
   "version": "1.0.0",
-  "description": "Vercel AI SDK v5 adapter for oRPC Agent: per-request tool sets from a governed runtime. Independent community project, not affiliated with or endorsed by the oRPC maintainers.",
+  "description": "Vercel AI SDK (v5 and v6) adapter for oRPC Agent: per-request tool sets from a governed runtime. Independent community project, not affiliated with or endorsed by the oRPC maintainers.",
   "license": "MIT",
   "author": "Paolo Barbato",
   "type": "module",
@@ -23,19 +23,25 @@
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc -p tsconfig.json",
+    "typecheck:ai-v5": "tsc -p tsconfig.json",
+    "typecheck:ai-v6": "tsc -p tsconfig.ai-v6.json",
+    "test:ai-v5": "vitest run --config vitest.config.ts",
+    "test:ai-v6": "vitest run --config vitest.ai-v6.config.ts",
     "prepublishOnly": "node ../../scripts/copy-license.cjs"
   },
   "dependencies": {
     "@orpc-agent/core": "workspace:^"
   },
   "peerDependencies": {
-    "ai": "^5.0.0"
+    "ai": "^5.0.0 || ^6.0.0"
   },
   "devDependencies": {
     "@ai-sdk/provider": "^2.0.0",
+    "@ai-sdk/provider-v3": "npm:@ai-sdk/provider@^3.0.0",
     "@orpc/server": "^1.14.10",
     "@types/node": "^24.13.3",
     "ai": "^5.0.220",
+    "ai-v6": "npm:ai@^6.0.0",
     "tsup": "^8.5.1",
     "typescript": "^5.9.2",
     "vitest": "^4.1.10",

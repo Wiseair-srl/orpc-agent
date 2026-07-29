@@ -2,8 +2,9 @@ import type { LanguageModelV2, LanguageModelV2Content } from "@ai-sdk/provider";
 
 /**
  * A deterministic LanguageModelV2 that plays a fixed conversation — Mastra
- * accepts any AI SDK v5 model instance, so tests and the demo exercise the
- * real Agent loop (planning → tool calls → reply) without a provider or key.
+ * accepts any AI SDK model instance, so tests and the demo exercise the real
+ * Agent loop (planning → tool calls → reply) without a provider or key. This
+ * example runs on `ai@^5`, hence the v2 provider spec.
  */
 
 export type ScriptStep = { toolName: string; args: unknown } | { text: string };
