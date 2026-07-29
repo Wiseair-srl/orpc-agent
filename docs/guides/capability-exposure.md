@@ -66,7 +66,10 @@ Exposure is per-capability; **registries** narrow whole deployments:
 ```ts
 // A read-only MCP endpoint, structurally incapable of writes
 const mcpRegistry = capabilities.filter({ sideEffect: ["none", "read"] });
-const mcpRuntime = createAgentRuntime({ registry: mcpRegistry, policies: mcpPolicies, audit });
+const mcpRuntime = createAgentRuntime({
+  governance: defineGovernance({ registry: mcpRegistry, policies: mcpPolicies }),
+  audit,
+});
 ```
 
 Filtering removes capabilities from that runtime entirely (they're `CAPABILITY_NOT_FOUND` there); combine with per-capability `expose` for the full picture. Per-*actor* narrowing stays in policies — never fork registries per user ([concepts/registry.md](../concepts/registry.md#filtering-is-composition-not-authorization)).

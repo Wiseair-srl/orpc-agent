@@ -7,6 +7,7 @@ import {
   agentProcedure,
   allow,
   createAgentRuntime,
+  defineGovernance,
   createCapabilityRegistry,
   definePolicy,
   hide,
@@ -42,7 +43,7 @@ function scriptedModel(
 }
 
 function fixtureRuntime(): AgentRuntime<object> {
-  return createAgentRuntime<object>({ registry: buildFixtureRegistry() });
+  return createAgentRuntime<object>({ governance: defineGovernance({ registry: buildFixtureRegistry() }) });
 }
 
 // ---------------------------------------------------------------------------
@@ -137,7 +138,7 @@ describe("per-request tool sets", () => {
   });
 
   test("two actors get different tool sets from the same runtime", async () => {
-    const runtime = createAgentRuntime<object>({ registry });
+    const runtime = createAgentRuntime<object>({ governance: defineGovernance({ registry }) });
     const danaTools = await toAISDKTools(runtime, { actor, context });
     const priyaTools = await toAISDKTools(runtime, {
       actor: { id: "u_priya", kind: "user" },
@@ -148,7 +149,7 @@ describe("per-request tool sets", () => {
   });
 
   test("filter narrows the set (UX only)", async () => {
-    const runtime = createAgentRuntime<object>({ registry });
+    const runtime = createAgentRuntime<object>({ governance: defineGovernance({ registry }) });
     const tools = await toAISDKTools(runtime, {
       actor: { id: "u_priya", kind: "user" },
       context,
@@ -172,9 +173,7 @@ describe("per-request tool sets", () => {
         seenActors.push((context as { agent: { actor: unknown } }).agent.actor);
         return { ok: true };
       });
-    const runtime = createAgentRuntime<object>({
-      registry: createCapabilityRegistry({ whoami }),
-    });
+    const runtime = createAgentRuntime<object>({ governance: defineGovernance({ registry: createCapabilityRegistry({ whoami }) }) });
     const tools = await toAISDKTools(runtime, { actor, context });
     // A prompt-injected model tries to smuggle an identity through arguments.
     const result = (await tools.whoami!.execute!(

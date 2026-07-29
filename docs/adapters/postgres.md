@@ -23,8 +23,7 @@ const query = (sql: string, params: unknown[]) => pool.query(sql, params);
 const auditSink = createPgAuditSink({ query });
 
 const runtime = createAgentRuntime({
-  registry,
-  policies,
+  governance,
   approvals: { coordinator: createPgApprovalCoordinator({ query }) },
   audit: { sinks: [auditSink], strict: true },
 });

@@ -42,7 +42,9 @@ Registry construction is also the **validation gate** — every metadata problem
 
 ```ts
 const readOnly = capabilities.filter({ sideEffect: ["none", "read"] });
-const supportRuntime = createAgentRuntime({ registry: readOnly, policies });
+const supportRuntime = createAgentRuntime({
+  governance: defineGovernance({ registry: readOnly, policies }),
+});
 ```
 
 `filter` produces a narrowed registry for building purpose-specific runtimes (a read-only deployment, a low-risk sandbox). It is a *composition* tool: removing a capability from a registry makes it nonexistent for that runtime — which is fine — but per-actor visibility belongs in **policies**, and per-request authorization belongs in policies + middleware (SI-2). If you find yourself filtering registries per user, you are reimplementing discovery policies without the audit trail.

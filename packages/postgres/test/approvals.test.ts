@@ -5,6 +5,7 @@ import * as z from "zod";
 import {
   agentProcedure,
   createAgentRuntime,
+  defineGovernance,
   createCapabilityRegistry,
   type ApprovalCoordinator,
   type AgentInvocationInfo,
@@ -79,10 +80,7 @@ describe("runtime integration (pglite)", () => {
   test("invoke → decide → resume → consumed, exactly once", async () => {
     await freshTable();
     const coordinator = createPgApprovalCoordinator({ query: pgliteQuery });
-    const runtime = createAgentRuntime({
-      registry: createCapabilityRegistry({ messages: { send } }),
-      approvals: { coordinator },
-    });
+    const runtime = createAgentRuntime({ governance: defineGovernance({ registry: createCapabilityRegistry({ messages: { send } }) }), approvals: { coordinator } });
     const actor = { id: "u_dana", kind: "user" as const };
 
     const pending = await runtime.invoke(

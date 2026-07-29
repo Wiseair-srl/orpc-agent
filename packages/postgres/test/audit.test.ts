@@ -5,6 +5,7 @@ import * as z from "zod";
 import {
   agentProcedure,
   createAgentRuntime,
+  defineGovernance,
   createCapabilityRegistry,
   type AgentAuditEvent,
   type AgentInvocationInfo,
@@ -222,10 +223,7 @@ describe("strict mode with a real runtime", () => {
       startedRowsSeenFromHandler = rows.length;
     });
 
-    const runtime = createAgentRuntime({
-      registry: createCapabilityRegistry({ echo }),
-      audit: { sinks: [sink], strict: true },
-    });
+    const runtime = createAgentRuntime({ governance: defineGovernance({ registry: createCapabilityRegistry({ echo }) }), audit: { sinks: [sink], strict: true } });
     const result = await runtime.invoke(
       "echo",
       { text: "hi" },
@@ -242,10 +240,7 @@ describe("strict mode with a real runtime", () => {
       },
     });
     const echo = makeEcho();
-    const runtime = createAgentRuntime({
-      registry: createCapabilityRegistry({ echo }),
-      audit: { sinks: [failing], strict: true },
-    });
+    const runtime = createAgentRuntime({ governance: defineGovernance({ registry: createCapabilityRegistry({ echo }) }), audit: { sinks: [failing], strict: true } });
     const result = await runtime.invoke(
       "echo",
       { text: "hi" },
@@ -264,15 +259,12 @@ describe("strict mode with a real runtime", () => {
     });
     const errors: string[] = [];
     const echo = makeEcho();
-    const runtime = createAgentRuntime({
-      registry: createCapabilityRegistry({ echo }),
-      audit: {
+    const runtime = createAgentRuntime({ governance: defineGovernance({ registry: createCapabilityRegistry({ echo }) }), audit: {
         sinks: [failing],
         onSinkError: (_error, failedEvent) => {
           errors.push(failedEvent.type);
         },
-      },
-    });
+      } });
     const result = await runtime.invoke(
       "echo",
       { text: "hi" },

@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import { ORPCError, call, os } from "@orpc/server";
 import * as z from "zod";
 import { createAgentRuntime } from "../src/runtime/create";
+import { defineGovernance } from "../src/governance";
 import { createCapabilityRegistry } from "../src/registry";
 import { agentProcedure } from "../src/procedure";
 import { CapabilityError } from "../src/errors";
@@ -115,10 +116,7 @@ function makeRuntime(extra?: Parameters<typeof createAgentRuntime>[0]["audit"]) 
       .input(z.object({}))
       .handler(async () => ({ ok: true })),
   });
-  const runtime = createAgentRuntime<Ctx>({
-    registry,
-    audit: extra ?? audit.sink,
-  });
+  const runtime = createAgentRuntime<Ctx>({ governance: defineGovernance({ registry }), audit: extra ?? audit.sink });
   return { runtime, audit };
 }
 
@@ -326,17 +324,14 @@ describe("audit strict mode", () => {
         return {};
       });
     const registry = createCapabilityRegistry({ probe });
-    const runtime = createAgentRuntime<Ctx>({
-      registry,
-      audit: {
+    const runtime = createAgentRuntime<Ctx>({ governance: defineGovernance({ registry }), audit: {
         sinks: [
           (event) => {
             if (event.type === "capability.started") throw new Error("sink down");
           },
         ],
         strict: true,
-      },
-    });
+      } });
     const result = await runtime.invoke("probe", {}, options);
     if (result.status !== "failed") expect.unreachable();
     expect(result.error.code).toBe("AUDIT_UNAVAILABLE");
@@ -347,17 +342,14 @@ describe("audit strict mode", () => {
   test("best-effort: throwing sinks invoke onSinkError and never fail the execution", async () => {
     const errors: unknown[] = [];
     const registry = createCapabilityRegistry({ echo });
-    const runtime = createAgentRuntime<Ctx>({
-      registry,
-      audit: {
+    const runtime = createAgentRuntime<Ctx>({ governance: defineGovernance({ registry }), audit: {
         sinks: [
           () => {
             throw new Error("sink down");
           },
         ],
         onSinkError: (err) => errors.push(err),
-      },
-    });
+      } });
     const result = await runtime.invoke("echo", { value: "hi" }, options);
     expect(result.status).toBe("completed");
     expect(errors.length).toBeGreaterThan(0);

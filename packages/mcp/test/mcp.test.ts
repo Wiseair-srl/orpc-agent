@@ -7,6 +7,7 @@ import {
   agentProcedure,
   allow,
   createAgentRuntime,
+  defineGovernance,
   createCapabilityRegistry,
   definePolicy,
   hide,
@@ -51,7 +52,7 @@ function parseEnvelope(result: {
 // ---------------------------------------------------------------------------
 
 describeAdapterConformance("mcp", async (): Promise<ConformanceHarness> => {
-  const runtime = createAgentRuntime<object>({ registry: buildFixtureRegistry() });
+  const runtime = createAgentRuntime<object>({ governance: defineGovernance({ registry: buildFixtureRegistry() }) });
   const { client } = await connectedClient(runtime, {
     createContext: () => ({ actor: dana, context: {} }),
   });
@@ -81,7 +82,7 @@ describeAdapterConformance("mcp", async (): Promise<ConformanceHarness> => {
       }
     },
     buildWithCollidingNaming: async () =>
-      createMCPServer(createAgentRuntime<object>({ registry: buildFixtureRegistry() }), {
+      createMCPServer(createAgentRuntime<object>({ governance: defineGovernance({ registry: buildFixtureRegistry() }) }), {
         createContext: () => ({ actor: dana, context: {} }),
         toolNaming: collidingToolNaming,
       }),
@@ -127,7 +128,7 @@ describe("per-session identity", () => {
   });
 
   test("two sessions with different actors see different tool lists", async () => {
-    const runtime = createAgentRuntime<object>({ registry });
+    const runtime = createAgentRuntime<object>({ governance: defineGovernance({ registry }) });
     const danaSession = await connectedClient(runtime, {
       createContext: () => ({ actor: dana, context: {} }),
     });
@@ -142,7 +143,7 @@ describe("per-session identity", () => {
 
   test("createContext is called once per session", async () => {
     let calls = 0;
-    const runtime = createAgentRuntime<object>({ registry });
+    const runtime = createAgentRuntime<object>({ governance: defineGovernance({ registry }) });
     const { client } = await connectedClient(runtime, {
       createContext: () => {
         calls += 1;
@@ -156,7 +157,7 @@ describe("per-session identity", () => {
   });
 
   test("sessions without identity are refused — no anonymous default", async () => {
-    const runtime = createAgentRuntime<object>({ registry });
+    const runtime = createAgentRuntime<object>({ governance: defineGovernance({ registry }) });
     const { client } = await connectedClient(runtime, {
       createContext: () => null,
     });
@@ -184,7 +185,7 @@ describe("protocol mapping details", () => {
         .input(z.object({ q: z.string() }))
         .handler(async () => ({})),
     });
-    const runtime = createAgentRuntime<object>({ registry });
+    const runtime = createAgentRuntime<object>({ governance: defineGovernance({ registry }) });
     const { client } = await connectedClient(runtime, {
       createContext: () => ({ actor: dana, context: {} }),
     });
@@ -197,7 +198,7 @@ describe("protocol mapping details", () => {
   });
 
   test("no approval-deciding surface exists on MCP (SI-4)", async () => {
-    const runtime = createAgentRuntime<object>({ registry: buildFixtureRegistry() });
+    const runtime = createAgentRuntime<object>({ governance: defineGovernance({ registry: buildFixtureRegistry() }) });
     const { client } = await connectedClient(runtime, {
       createContext: () => ({ actor: dana, context: {} }),
     });
@@ -208,7 +209,7 @@ describe("protocol mapping details", () => {
   });
 
   test("serverInfo defaults are applied", async () => {
-    const runtime = createAgentRuntime<object>({ registry: buildFixtureRegistry() });
+    const runtime = createAgentRuntime<object>({ governance: defineGovernance({ registry: buildFixtureRegistry() }) });
     const mcp = createMCPServer(runtime, {
       createContext: () => ({ actor: dana, context: {} }),
     });

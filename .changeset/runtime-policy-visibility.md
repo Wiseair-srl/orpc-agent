@@ -1,6 +1,8 @@
 ---
 "@orpc-agent/core": minor
 "@orpc-agent/cli": minor
+"@orpc-agent/testing": patch
+"@orpc-agent/postgres": patch
 ---
 
 Runtime-level policies become part of the governance contract (ADR-016).
@@ -13,9 +15,16 @@ Runtime-level policies become part of the governance contract (ADR-016).
   - Every runtime built from it evaluates exactly the published list — there is no `policies` key to append to. An application can build a coordinator-backed runtime and an inline-confirm one over the same governance and they cannot disagree about what is governed.
   - Tooling reads it without a runtime instance, which matters because runtimes are usually built inside a factory and the CLI reads values rather than calling functions.
 
-  `AgentRuntimeOptions` becomes a union: `governance`, or `registry`/`policies` inline as before, normalized into the same shape and reachable as `runtime.governance`.
-- `runtime.policies` (aka `governance.manifest`) exposes the runtime-level policies as `{ name, phases }`, in evaluation order, composites flattened, frozen. Never `evaluate`: a decision is only meaningful inside the pipeline, and handing out the closure would invite calls that look authoritative and are not. The names are already in every audit event.
-- New startup warning for the same blind spot: policies configured, `destructive`/`external` capabilities on model surfaces, and the default in-memory coordinator — a policy-driven approval would suspend into storage that does not survive restarts. Narrowed to irreversible side effects on purpose, so ordinary rate-limit policies do not cost a warning.
+  **BREAKING — `governance` is the only form `createAgentRuntime` accepts.** Keeping `registry`/`policies` as a compatible second arm was considered and rejected: it is exactly the arm where a runtime evaluates a list no exported value names, so it would have preserved the hole this release closes. Migration is one mechanical edit per call site:
+
+  ```ts
+  - createAgentRuntime({ registry, policies, ...wiring })
+  + createAgentRuntime({ governance: defineGovernance({ registry, policies }), ...wiring })
+  ```
+
+  `runtime.governance.manifest` exposes the policy identity as `{ name, phases }`, frozen. Never `evaluate`: a decision is only meaningful inside the pipeline. `runtime.registry` remains as a read accessor for adapters.
+- **BREAKING — `warnings` is removed, with no replacement.** Every startup warning already fires only where a decision was left implicit, and is answered by making it: name `approvals.coordinator` (`createInMemoryApprovalCoordinator()` is a legitimate answer), or name an audit sink (`audit: () => {}` states deliberately that nothing is recorded). A mute switch was a second way to say the same thing and a worse one — global, outliving the reason it was added, and hiding the decision from review.
+- New startup warning for the policy-shaped blind spot: policies configured, write-capable capabilities on model surfaces, and no coordinator named — a policy returning `requireApproval` would suspend into storage that does not survive a restart. Sized for coverage rather than quiet, which is only safe because there is no mute switch left for a noisy warning to trip.
 
 **CLI**
 

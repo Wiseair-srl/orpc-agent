@@ -38,12 +38,16 @@ export type AuditConfig =
       onSinkError?: (err: unknown, event: AgentAuditEvent) => void;
     };
 
-/**
- * Per-instance wiring: everything that is NOT the governed surface. An
- * application may build several runtimes over one governance and vary all of
- * this between them.
- */
-type RuntimeWiring = {
+export type AgentRuntimeOptions<TContext = unknown> = {
+  /**
+   * The governed surface — what an agent may reach, and what is evaluated
+   * before it does. Declared with `defineGovernance`, which is the only way
+   * to build one: a runtime that took a registry and a policy list directly
+   * could evaluate a list no exported value names, and tooling would have
+   * nothing to check against.
+   */
+  governance: AgentGovernance;
+
   approvals?: ApprovalsConfig;
   audit?: AuditConfig;
   tracing?: TracingAdapter;
@@ -57,31 +61,7 @@ type RuntimeWiring = {
   };
   /** Clock injection; default system clock. */
   now?: () => Date;
-  /**
-   * Startup footgun warnings (default true): approval-gated capabilities on
-   * the default in-memory coordinator, and write-capable capabilities exposed
-   * to model surfaces with no audit sink. Never fatal; `false` silences.
-   */
-  warnings?: boolean;
 };
-
-/**
- * Either a governance declared with `defineGovernance` — preferred, and the
- * only form tooling can read without a runtime instance — or the registry and
- * policies inline. The two are mutually exclusive: passing a governance means
- * there is no `policies` key to append to, which is what stops a runtime from
- * evaluating a list that differs from the one an application publishes.
- */
-export type AgentRuntimeOptions<TContext = unknown> = RuntimeWiring &
-  (
-    | { governance: AgentGovernance; registry?: never; policies?: never }
-    | {
-        registry: CapabilityRegistry;
-        /** Runtime-level, evaluated in order before meta.policies. */
-        policies?: AgentPolicy[];
-        governance?: never;
-      }
-  );
 
 export type ExecutionOptions<TContext> = {
   actor: Actor;
@@ -123,22 +103,17 @@ export type CapabilityDescriptor = {
 };
 
 export interface AgentRuntime<TContext = unknown> {
-  /** The governed surface this runtime executes: registry plus policies. */
+  /**
+   * The governed surface this runtime executes. `governance.manifest` carries
+   * the runtime-level policy identity — the configuration, not its effect: a
+   * decision depends on the actor, surface, input and context of a real
+   * invocation, so tooling may report that these policies exist but may not
+   * conclude which capabilities they gate.
+   */
   readonly governance: AgentGovernance;
 
-  /** The registry this runtime executes over (adapters read meta from it). */
+  /** Shorthand for `governance.registry` — adapters read capability meta from it. */
   readonly registry: CapabilityRegistry;
-
-  /**
-   * Identity of the runtime-level policies, in evaluation order, composites
-   * flattened — exactly the names that appear in audit events. Frozen.
-   *
-   * This is the configuration, not its effect: a policy's decision depends on
-   * the actor, surface, input and context of a real invocation. Governance
-   * tooling may report that these policies exist; it may not conclude from
-   * them which capabilities are gated.
-   */
-  readonly policies: readonly PolicyManifestEntry[];
 
   /**
    * Runs pipeline stages 2–15. Never throws for governed failures — every

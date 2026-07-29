@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import { os } from "@orpc/server";
 import * as z from "zod";
 import { createAgentRuntime } from "../src/runtime/create";
+import { defineGovernance } from "../src/governance";
 import { createCapabilityRegistry } from "../src/registry";
 import { agentProcedure } from "../src/procedure";
 import { CapabilityError } from "../src/errors";
@@ -40,7 +41,7 @@ describe("bounded execution (SI-12)", () => {
     const registry = createCapabilityRegistry({
       slow: slowCapability({ timeoutMs: 25 }),
     });
-    const runtime = createAgentRuntime({ registry, audit: audit.sink });
+    const runtime = createAgentRuntime({ governance: defineGovernance({ registry }), audit: audit.sink });
     const result = await runtime.invoke("slow", {}, options);
     expect(result.status).toBe("cancelled");
     if (result.status === "cancelled") {
@@ -58,7 +59,7 @@ describe("bounded execution (SI-12)", () => {
 
   test("caller cancellation: CANCELLED, distinct from timeout, not retryable", async () => {
     const registry = createCapabilityRegistry({ slow: slowCapability({ timeoutMs: 5_000 }) });
-    const runtime = createAgentRuntime({ registry });
+    const runtime = createAgentRuntime({ governance: defineGovernance({ registry }) });
     const controller = new AbortController();
     const pending = runtime.invoke("slow", {}, { ...options, signal: controller.signal });
     setTimeout(() => controller.abort(new Error("user left")), 20);
@@ -88,7 +89,7 @@ describe("bounded execution (SI-12)", () => {
         return {};
       });
     const registry = createCapabilityRegistry({ cap });
-    const runtime = createAgentRuntime({ registry });
+    const runtime = createAgentRuntime({ governance: defineGovernance({ registry }) });
     const controller = new AbortController();
     controller.abort();
     const result = await runtime.invoke("cap", {}, { ...options, signal: controller.signal });
@@ -100,7 +101,7 @@ describe("bounded execution (SI-12)", () => {
     const registry = createCapabilityRegistry({
       ignores: slowCapability({ timeoutMs: 25 }, "ignore-signal"),
     });
-    const runtime = createAgentRuntime({ registry });
+    const runtime = createAgentRuntime({ governance: defineGovernance({ registry }) });
     const result = await runtime.invoke("ignores", {}, options);
     expect(result.status).toBe("cancelled");
     if (result.status === "cancelled") expect(result.error.code).toBe("TIMEOUT");
@@ -141,7 +142,7 @@ describe("retry eligibility (SI-11)", () => {
     const audit = capturedEvents();
     const { capability } = flaky({}, 2);
     const registry = createCapabilityRegistry({ cap: capability });
-    const runtime = createAgentRuntime({ registry, audit: audit.sink });
+    const runtime = createAgentRuntime({ governance: defineGovernance({ registry }), audit: audit.sink });
     const result = await runtime.invoke("cap", {}, options);
     expect(result.status).toBe("completed");
     if (result.status === "completed") expect((result.output as { calls: number }).calls).toBe(3);
@@ -163,7 +164,7 @@ describe("retry eligibility (SI-11)", () => {
   test("attempts are bounded by maxAttempts", async () => {
     const { capability, calls } = flaky({ retry: { maxAttempts: 1, backoffMs: 1 } }, 99);
     const registry = createCapabilityRegistry({ cap: capability });
-    const runtime = createAgentRuntime({ registry });
+    const runtime = createAgentRuntime({ governance: defineGovernance({ registry }) });
     const result = await runtime.invoke("cap", {}, options);
     expect(result.status).toBe("failed");
     expect(calls()).toBe(2);
@@ -172,7 +173,7 @@ describe("retry eligibility (SI-11)", () => {
   test("non-retryable errors are not retried", async () => {
     const { capability, calls } = flaky({}, 99, () => new Error("plain failure"));
     const registry = createCapabilityRegistry({ cap: capability });
-    const runtime = createAgentRuntime({ registry });
+    const runtime = createAgentRuntime({ governance: defineGovernance({ registry }) });
     const result = await runtime.invoke("cap", {}, options);
     expect(result.status).toBe("failed");
     expect(calls()).toBe(1);
@@ -181,7 +182,7 @@ describe("retry eligibility (SI-11)", () => {
   test("writes without retry config are never auto-retried even on retryable errors", async () => {
     const { capability, calls } = flaky({ sideEffect: "write", retry: undefined }, 99);
     const registry = createCapabilityRegistry({ cap: capability });
-    const runtime = createAgentRuntime({ registry });
+    const runtime = createAgentRuntime({ governance: defineGovernance({ registry }) });
     const result = await runtime.invoke("cap", {}, options);
     expect(result.status).toBe("failed");
     expect(calls()).toBe(1);
@@ -193,7 +194,7 @@ describe("retry eligibility (SI-11)", () => {
       1,
     );
     const registry = createCapabilityRegistry({ cap: capability });
-    const runtime = createAgentRuntime({ registry });
+    const runtime = createAgentRuntime({ governance: defineGovernance({ registry }) });
     const result = await runtime.invoke("cap", {}, options);
     expect(result.status).toBe("completed");
     expect(calls()).toBe(2);
@@ -205,7 +206,7 @@ describe("retry eligibility (SI-11)", () => {
       99,
     );
     const registry = createCapabilityRegistry({ cap: capability });
-    const runtime = createAgentRuntime({ registry });
+    const runtime = createAgentRuntime({ governance: defineGovernance({ registry }) });
     await runtime.invoke("cap", {}, options);
     expect(calls()).toBe(1);
   });
@@ -235,7 +236,7 @@ describe("retry eligibility (SI-11)", () => {
       });
     const audit = capturedEvents();
     const registry = createCapabilityRegistry({ cap: capability });
-    const runtime = createAgentRuntime({ registry, audit: audit.sink });
+    const runtime = createAgentRuntime({ governance: defineGovernance({ registry }), audit: audit.sink });
     const result = await runtime.invoke("cap", {}, options);
     expect(result.status).toBe("completed");
     expect(calls).toBe(2);
@@ -262,7 +263,7 @@ describe("retry eligibility (SI-11)", () => {
         );
       });
     const registry = createCapabilityRegistry({ cap: capability });
-    const runtime = createAgentRuntime({ registry });
+    const runtime = createAgentRuntime({ governance: defineGovernance({ registry }) });
     const result = await runtime.invoke("cap", {}, options);
     expect(result.status).toBe("cancelled");
     if (result.status === "cancelled") expect(result.error.code).toBe("TIMEOUT");
@@ -290,7 +291,7 @@ describe("retry eligibility (SI-11)", () => {
         return {};
       });
     const registry = createCapabilityRegistry({ cap: capability });
-    const runtime = createAgentRuntime({ registry });
+    const runtime = createAgentRuntime({ governance: defineGovernance({ registry }) });
     await runtime.invoke("cap", {}, options);
     expect(keys).toHaveLength(2);
     expect(keys[0]).toBe(keys[1]);
