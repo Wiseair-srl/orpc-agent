@@ -176,11 +176,19 @@ function readConfig(cwd: string): FileConfig {
   }
 }
 
+/**
+ * Version 1 files are still accepted: they predate the `runtime` key, so they
+ * simply read as "runtime policies never observed", which is what they were.
+ * Rejecting them would break every committed snapshot on upgrade.
+ */
 function readSnapshotFile(path: string): CapabilitySnapshot {
   const contents = readFileSync(path, "utf8");
   const parsed = JSON.parse(contents) as CapabilitySnapshot;
-  if (parsed.version !== 1 || !Array.isArray(parsed.capabilities)) {
-    throw new Error(`${path} is not a capability snapshot (expected version 1)`);
+  if ((parsed.version !== 1 && parsed.version !== 2) || !Array.isArray(parsed.capabilities)) {
+    throw new Error(
+      `${path} is not a capability snapshot this version can read ` +
+        `(got version ${JSON.stringify(parsed.version)}, expected 1 or 2)`,
+    );
   }
   return parsed;
 }
@@ -218,7 +226,7 @@ async function main(argv: string[]): Promise<number> {
     );
   }
 
-  const { snapshot } = await loadSnapshot({
+  const { snapshot, entrySource } = await loadSnapshot({
     entry,
     ...(exportName ? { exportName } : {}),
     descriptions: flags.descriptions,
@@ -231,7 +239,7 @@ async function main(argv: string[]): Promise<number> {
     process.stdout.write(
       flags.json
         ? snapshotJson(snapshot)
-        : `${renderInventory(snapshot, { color: supportsColor(process.stdout) })}\n`,
+        : `${renderInventory(snapshot, { color: supportsColor(process.stdout) }, entrySource)}\n`,
     );
     return EXIT_OK;
   }

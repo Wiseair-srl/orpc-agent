@@ -49,6 +49,8 @@ export function diffSnapshots(before: CapabilitySnapshot, after: CapabilitySnaps
     }
   }
 
+  changes.push(...diffRuntime(before, after));
+
   const beforeExcluded = new Set(before.excluded);
   const afterExcluded = new Set(after.excluded);
   for (const path of after.excluded) {
@@ -64,6 +66,126 @@ export function diffSnapshots(before: CapabilitySnapshot, after: CapabilitySnaps
     if (!afterExcluded.has(path) && !afterById.has(path)) {
       changes.push(change("neutral", path, "excluded", "procedure no longer listed as excluded"));
     }
+  }
+
+  return changes;
+}
+
+/**
+ * Runtime-level policies. Absent means "never observed", not "none" — so
+ * comparisons only run when both sides know, and the transitions between
+ * knowing and not knowing are reported as themselves.
+ *
+ * Removing a runtime policy is WIDENING. It is the one edit that can strip a
+ * conditional approval gate from every capability at once while leaving every
+ * per-capability field byte-identical, which is precisely what a snapshot gate
+ * exists to catch.
+ */
+function diffRuntime(before: CapabilitySnapshot, after: CapabilitySnapshot): Change[] {
+  const changes: Change[] = [];
+
+  if (!after.runtime) {
+    if (before.runtime) {
+      changes.push(
+        change(
+          "widening",
+          "(runtime)",
+          "runtime",
+          "runtime-level policies are no longer observed — this snapshot can no longer " +
+            "detect one being removed. Point --entry at the module exporting the runtime.",
+        ),
+      );
+    }
+    return changes;
+  }
+
+  if (!before.runtime) {
+    // Nothing changed in the application; the tool started looking. Neutral so
+    // `--fail-on widening` does not go red on an upgrade, but loud, because
+    // until the snapshot is rewritten the removal check is inert.
+    changes.push(
+      change(
+        "neutral",
+        "(runtime)",
+        "runtime",
+        `runtime-level policies now observed (${after.runtime.policies.length}: ` +
+          `${after.runtime.policies.map((p) => p.name).join(", ") || "none"}). ` +
+          "Re-run `orpc-agent snapshot` to record them — until then a removal is invisible.",
+      ),
+    );
+    return changes;
+  }
+
+  const beforeByName = new Map(before.runtime.policies.map((p) => [p.name, p]));
+  const afterByName = new Map(after.runtime.policies.map((p) => [p.name, p]));
+
+  const removed = before.runtime.policies.filter((p) => !afterByName.has(p.name));
+  const added = after.runtime.policies.filter((p) => !beforeByName.has(p.name));
+
+  if (removed.length > 0) {
+    changes.push(
+      change(
+        "widening",
+        "(runtime)",
+        "runtime.policies",
+        `runtime policy removed: ${removed.map((p) => p.name).join(", ")} — it applied to ` +
+          "every invocation; any approval, denial or hiding it added is gone",
+      ),
+    );
+  }
+  if (added.length > 0) {
+    changes.push(
+      change(
+        "narrowing",
+        "(runtime)",
+        "runtime.policies",
+        `runtime policy added: ${added.map((p) => p.name).join(", ")}`,
+      ),
+    );
+  }
+
+  // A policy that keeps its name but drops a phase stops running there.
+  for (const [name, afterPolicy] of afterByName) {
+    const beforePolicy = beforeByName.get(name);
+    if (!beforePolicy) continue;
+    const lost = beforePolicy.phases.filter((p) => !afterPolicy.phases.includes(p));
+    const gained = afterPolicy.phases.filter((p) => !beforePolicy.phases.includes(p));
+    if (lost.length > 0) {
+      changes.push(
+        change(
+          "widening",
+          "(runtime)",
+          "runtime.policies",
+          `runtime policy ${name} no longer evaluates in: ${lost.join(", ")}`,
+        ),
+      );
+    }
+    if (gained.length > 0) {
+      changes.push(
+        change(
+          "narrowing",
+          "(runtime)",
+          "runtime.policies",
+          `runtime policy ${name} now also evaluates in: ${gained.join(", ")}`,
+        ),
+      );
+    }
+  }
+
+  if (
+    removed.length === 0 &&
+    added.length === 0 &&
+    before.runtime.policies.some((p, index) => after.runtime?.policies[index]?.name !== p.name)
+  ) {
+    changes.push(
+      change(
+        "neutral",
+        "(runtime)",
+        "runtime.policies",
+        `runtime policy order changed: ${before.runtime.policies.map((p) => p.name).join(" → ")}` +
+          ` became ${after.runtime.policies.map((p) => p.name).join(" → ")}`,
+      ),
+    );
   }
 
   return changes;

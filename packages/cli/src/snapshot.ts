@@ -1,26 +1,63 @@
-import { defaultToolName, type AgentCapability, type CapabilityRegistry } from "@orpc-agent/core";
+import {
+  defaultToolName,
+  type AgentCapability,
+  type AgentRuntime,
+  type CapabilityRegistry,
+  type PolicyPhase,
+} from "@orpc-agent/core";
 import { toJsonSchema } from "@orpc-agent/core/schema";
 import { canonicalJson, sha256 } from "./canonical";
-import type { CapabilityEntry, CapabilitySnapshot } from "./types";
+import { SNAPSHOT_VERSION, type CapabilityEntry, type CapabilitySnapshot, type RuntimeSnapshot } from "./types";
 
 /** Surfaces that put a tool name and a JSON Schema on the wire. */
 const SCHEMA_SURFACES = ["aiSdk", "mcp"] as const;
 
+export type SnapshotSource = CapabilityRegistry | AgentRuntime<unknown>;
+
 /** Fixed field order for every entry — see canonical.ts. */
 export function buildSnapshot(
-  registry: CapabilityRegistry,
+  source: SnapshotSource,
   options: { descriptions?: boolean } = {},
 ): CapabilitySnapshot {
   const withDescriptions = options.descriptions !== false;
+  const runtime = isRuntime(source) ? source : undefined;
+  const registry = runtime ? runtime.registry : (source as CapabilityRegistry);
   const { capabilities, excluded, unexposed } = registry.inspect();
 
   return {
-    version: 1,
+    version: SNAPSHOT_VERSION,
     capabilities: [...capabilities]
       .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
       .map((capability) => entryFor(capability, withDescriptions)),
     excluded: excluded.map((e) => e.path).sort(),
     unexposed: [...unexposed].sort(),
+    // Omitted, never defaulted to empty: "no runtime seen" and "a runtime with
+    // no policies" are different facts and the diff acts on the difference.
+    ...(runtime && runtimeReportsPolicies(runtime)
+      ? { runtime: runtimeSnapshotOf(runtime) }
+      : {}),
+  };
+}
+
+function isRuntime(source: SnapshotSource): source is AgentRuntime<unknown> {
+  return typeof (source as AgentRuntime<unknown>).invoke === "function";
+}
+
+/**
+ * A runtime from a core older than the one that added `policies` reports
+ * nothing. That is "unknown", not "none", so the caller omits the whole
+ * `runtime` key rather than recording a misleading empty list.
+ */
+export function runtimeReportsPolicies(runtime: AgentRuntime<unknown>): boolean {
+  return Array.isArray((runtime as { policies?: unknown }).policies);
+}
+
+function runtimeSnapshotOf(runtime: AgentRuntime<unknown>): RuntimeSnapshot {
+  return {
+    policies: [...runtime.policies].map((policy) => ({
+      name: policy.name,
+      phases: [...policy.phases].sort() as PolicyPhase[],
+    })),
   };
 }
 

@@ -35,3 +35,17 @@ export type AgentPolicy = {
   phases: readonly PolicyPhase[];
   evaluate: (req: PolicyRequest) => PolicyDecision | Promise<PolicyDecision>;
 };
+
+/**
+ * The statically knowable identity of a policy — the same `name` audit events
+ * record, plus the phases it runs in.
+ *
+ * Deliberately omits `evaluate`: a decision is only meaningful inside the
+ * pipeline (shared batch deadline, fail-closed on throw, audit record), so
+ * handing the closure out would invite calls that look authoritative and are
+ * not. What a policy decides is not knowable without a real actor and context.
+ */
+export type PolicyManifestEntry = {
+  name: string;
+  phases: readonly PolicyPhase[];
+};
