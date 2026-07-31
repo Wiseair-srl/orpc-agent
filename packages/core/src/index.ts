@@ -50,6 +50,8 @@ export type {
   ApprovalsConfig,
   AuditConfig,
   CapabilityDescriptor,
+  DescribeOptions,
+  DescribeScope,
   ExecutionOptions,
   ExecutionRequest,
   ExecutionResult,

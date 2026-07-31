@@ -69,6 +69,7 @@ const requiredSymbols = [
   "unwrap",
   "createInMemoryApprovalCoordinator",
   "CapabilityError",
+  "DescribeScope",
   "toJsonSchema",
   "registerSchemaConverter",
   "toAISDKTools",

@@ -35,6 +35,13 @@ export type AuditConfig =
        * with AUDIT_UNAVAILABLE ("no record ⇒ no execution").
        */
       strict?: boolean;
+      /**
+       * Adds the payloads whose size grows with the catalog — today, the id
+       * list on capabilities.discovered. Off by default: a routine event
+       * carrying an unbounded array is forwarded, stored, and re-sent on every
+       * discovery (ADR-017).
+       */
+      verbose?: boolean;
       onSinkError?: (err: unknown, event: AgentAuditEvent) => void;
     };
 
@@ -56,6 +63,18 @@ export type AgentRuntimeOptions<TContext = unknown> = {
     timeoutMs?: number;
     /** Per policy-evaluation batch. Default 5_000. */
     policyTimeoutMs?: number;
+    /**
+     * How many capabilities' discovery-phase policy batches evaluate at once.
+     * Default 16. Within one capability, policies still evaluate in order
+     * against their shared batch deadline.
+     */
+    policyConcurrency?: number;
+    /**
+     * Ceiling on a whole `describe`, not on one capability's batch. Default
+     * 30_000. On expiry `describe` throws TIMEOUT rather than returning a
+     * short catalog (ADR-017).
+     */
+    discoveryBudgetMs?: number;
     /** Default 900_000 (15 min). */
     approvalExpiresInMs?: number;
   };
@@ -91,6 +110,29 @@ export type ExecutionResult<O = unknown> =
   | { status: "failed"; executionId: string; error: CapabilityError }
   | { status: "cancelled"; executionId: string; error: CapabilityError };
 
+/**
+ * Discovery shaping only, never an authority boundary (SI-2): `invoke` does
+ * not consult it, so a capability left out of a scoped `describe` remains
+ * fully invocable by an authorized actor. Use exposure or a policy to make
+ * one unreachable.
+ *
+ * `tags` matches capabilities carrying ANY listed tag; `ids` selects exactly;
+ * given both, the result is their union. A capability with no tags never
+ * matches a `tags` scope. An object carrying neither key does not narrow —
+ * same as omitting `scope`.
+ */
+export type DescribeScope = {
+  tags?: string[];
+  ids?: string[];
+};
+
+export type DescribeOptions<TContext = unknown> = {
+  actor: Actor;
+  context: TContext;
+  /** Applied after the exposure filter and BEFORE any policy runs. */
+  scope?: DescribeScope;
+};
+
 export type CapabilityDescriptor = {
   id: string;
   description: string;
@@ -125,10 +167,14 @@ export interface AgentRuntime<TContext = unknown> {
     options: ExecutionOptions<TContext>,
   ): Promise<ExecutionResult<O>>;
 
-  /** Discovery pipeline: exposure filter → discovery-phase policies → descriptors. */
+  /**
+   * Discovery pipeline: exposure filter → scope filter → discovery-phase
+   * policies → descriptors. Throws TIMEOUT if the discovery budget expires;
+   * a short catalog would be indistinguishable from lost access.
+   */
   describe(
     surface: ExposureSurface,
-    options: { actor: Actor; context: TContext },
+    options: DescribeOptions<TContext>,
   ): Promise<CapabilityDescriptor[]>;
 
   /** Re-enters the pipeline at stage 8 with the approval integrity checks. */

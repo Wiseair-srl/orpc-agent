@@ -59,3 +59,9 @@
 **Recommendation.** Out of v0.1 (capabilities return complete values; the registry rejects event-iterator outputs with a clear error). Design doc required before 0.3.
 **Implications.** Excludes long-running incremental reads from v0.1 capability sets.
 **Blocking?** No.
+
+## Q12 — `scope` on the MCP adapter <a id="q12"></a>
+**Decision.** Should [`describe`'s `scope`](reference/runtime.md#scope-discovery-shaping-never-an-authority-boundary) reach `@orpc-agent/mcp`, where a large catalog has the same discovery cost that motivated it ([ADR-017](architecture/decisions.md#adr-017-discovery-takes-a-scope-and-a-budget))?
+**Options.** A per-server construction option (`createMCPServer(runtime, { scope })`); a per-session value derived in `createContext`; nothing, leaving MCP clients to receive the full catalog.
+**Recommendation.** Deferred past 1.1 deliberately. `tools/list` is driven by the protocol rather than by a per-step host decision, so the shape is server configuration rather than a per-call argument — a different design question, and one worth a real MCP consumer's demand signal first. The AI SDK adapter needed neither, because its caller already composes per request.
+**Blocking?** No.

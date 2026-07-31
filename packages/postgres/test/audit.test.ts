@@ -63,7 +63,7 @@ describe("row mapping", () => {
     await sink(
       event({
         type: "capabilities.discovered",
-        data: { capabilityIds: ["orders.refund", "orders.search"] },
+        data: { count: 2, surface: "aiSdk", digest: "d".repeat(64) },
       }),
     );
     await sink(
@@ -101,7 +101,7 @@ describe("row mapping", () => {
     expect(discovered.capability_id).toBeNull();
     expect(discovered.correlation_id).toBeNull();
     expect(discovered.input_hash).toBeNull();
-    expect(discovered.data).toEqual({ capabilityIds: ["orders.refund", "orders.search"] });
+    expect(discovered.data).toEqual({ count: 2, surface: "aiSdk", digest: "d".repeat(64) });
 
     expect((rows[2]!.data as Record<string, unknown>).policyDecisions).toEqual([
       { policy: "refund-limit", type: "deny" },

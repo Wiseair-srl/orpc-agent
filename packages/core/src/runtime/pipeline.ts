@@ -32,7 +32,13 @@ export type PipelineDeps = {
   rejectSelfApproval: boolean;
   audit: AuditEmitter;
   tracing: TracingAdapter;
-  defaults: { timeoutMs: number; policyTimeoutMs: number; approvalExpiresInMs: number };
+  defaults: {
+    timeoutMs: number;
+    policyTimeoutMs: number;
+    policyConcurrency: number;
+    discoveryBudgetMs: number;
+    approvalExpiresInMs: number;
+  };
   now: () => Date;
 };
 

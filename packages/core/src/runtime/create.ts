@@ -16,6 +16,8 @@ import type {
 
 const DEFAULT_TIMEOUT_MS = 30_000;
 const DEFAULT_POLICY_TIMEOUT_MS = 5_000;
+const DEFAULT_POLICY_CONCURRENCY = 16;
+const DEFAULT_DISCOVERY_BUDGET_MS = 30_000;
 const DEFAULT_APPROVAL_EXPIRES_IN_MS = 900_000;
 
 const SCHEMA_CONSUMING_SURFACES: readonly ExposureSurface[] = ["aiSdk", "mcp"];
@@ -72,6 +74,8 @@ export function createAgentRuntime<TContext = unknown>(
     defaults: {
       timeoutMs: options.defaults?.timeoutMs ?? DEFAULT_TIMEOUT_MS,
       policyTimeoutMs: options.defaults?.policyTimeoutMs ?? DEFAULT_POLICY_TIMEOUT_MS,
+      policyConcurrency: options.defaults?.policyConcurrency ?? DEFAULT_POLICY_CONCURRENCY,
+      discoveryBudgetMs: options.defaults?.discoveryBudgetMs ?? DEFAULT_DISCOVERY_BUDGET_MS,
       approvalExpiresInMs:
         options.defaults?.approvalExpiresInMs ?? DEFAULT_APPROVAL_EXPIRES_IN_MS,
     },

@@ -9,6 +9,7 @@ import {
   type ApprovalRecord,
   type CapabilityDescriptor,
   type CapabilityRegistry,
+  type DescribeScope,
   type ExecutionResult,
   type ExposureSurface,
   type TracingAdapter,
@@ -61,7 +62,7 @@ export type AgentTestRuntime<TContext = Record<string, unknown>> = {
   ): Promise<ExecutionResult<O>>;
   describe(
     surface?: ExposureSurface,
-    options?: { actor?: Actor; context?: TContext },
+    options?: { actor?: Actor; context?: TContext; scope?: DescribeScope },
   ): Promise<CapabilityDescriptor[]>;
   resume<O = unknown>(
     approvalId: string,
@@ -170,6 +171,7 @@ export function createAgentTestRuntime<TContext = Record<string, unknown>>(
       return runtime.describe(surface, {
         actor: callOptions?.actor ?? defaultActor,
         context: callOptions?.context ?? defaultContext,
+        ...(callOptions?.scope ? { scope: callOptions.scope } : {}),
       });
     },
     resume(approvalId, callOptions) {

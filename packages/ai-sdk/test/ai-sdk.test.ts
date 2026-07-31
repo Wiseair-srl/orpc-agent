@@ -320,3 +320,77 @@ describe("ai v5 / v6 compatibility", () => {
     expect(gated.toModelOutput).toBeUndefined();
   });
 });
+
+// ---------------------------------------------------------------------------
+// scope (N4): what gets discovered, vs filter: what survives discovery
+// ---------------------------------------------------------------------------
+
+describe("scope pass-through", () => {
+  const scopeBase = agentProcedure(os.$context<object>());
+  const scoped = (tags: string[], risk: "low" | "high" = "low") =>
+    scopeBase
+      .meta({
+        agent: { description: "Scoped.", expose: { aiSdk: true }, sideEffect: "read", risk, tags },
+      })
+      .input(z.object({}))
+      .handler(async () => ({ ok: true }));
+
+  const evaluated: string[] = [];
+  const counting = definePolicy(
+    "counting",
+    ({ capability }) => {
+      evaluated.push(capability.id);
+      return allow();
+    },
+    { phases: ["discovery"] },
+  );
+
+  const scopeRegistry = createCapabilityRegistry({
+    devicesRead: scoped(["devices"]),
+    devicesReset: scoped(["devices"], "high"),
+    billingRead: scoped(["billing"]),
+  });
+
+  function scopeRuntime() {
+    evaluated.length = 0;
+    return createAgentRuntime<object>({
+      governance: defineGovernance({ registry: scopeRegistry, policies: [counting] }),
+    });
+  }
+
+  test("scope narrows the tool set and the discovery policies that run", async () => {
+    const tools = await toAISDKTools(scopeRuntime(), {
+      actor,
+      context,
+      scope: { tags: ["devices"] },
+    });
+    expect(Object.keys(tools)).toEqual(["devicesRead", "devicesReset"]);
+    // The point of scope over filter: billingRead's policy never evaluated.
+    expect(evaluated).toEqual(["devicesRead", "devicesReset"]);
+  });
+
+  test("filter still applies after — scope decides discovery, filter decides survival", async () => {
+    const tools = await toAISDKTools(scopeRuntime(), {
+      actor,
+      context,
+      scope: { tags: ["devices"] },
+      filter: (d) => d.risk === "low",
+    });
+    expect(Object.keys(tools)).toEqual(["devicesRead"]);
+    expect(evaluated).toEqual(["devicesRead", "devicesReset"]);
+  });
+
+  test("omitting scope keeps today's full set", async () => {
+    const tools = await toAISDKTools(scopeRuntime(), { actor, context });
+    expect(Object.keys(tools)).toEqual(["devicesRead", "devicesReset", "billingRead"]);
+  });
+
+  test("scope is not authorization: an unscoped capability stays invocable (SI-2)", async () => {
+    const runtime = scopeRuntime();
+    const tools = await toAISDKTools(runtime, { actor, context, scope: { tags: ["devices"] } });
+    expect(Object.keys(tools)).not.toContain("billingRead");
+
+    const result = await runtime.invoke("billingRead", {}, { actor, context, surface: "aiSdk" });
+    expect(result.status).toBe("completed");
+  });
+});

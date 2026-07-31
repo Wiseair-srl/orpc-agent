@@ -41,6 +41,8 @@ const REQUIRED = {
       "ExecutionResult",
       "ExecutionOptions",
       "CapabilityDescriptor",
+      "DescribeOptions",
+      "DescribeScope",
       "AgentPolicy",
       "PolicyDecision",
       "PolicyPhase",

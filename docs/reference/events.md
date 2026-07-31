@@ -1,6 +1,6 @@
 # Reference: events and tracing
 
-> **Status:** Stable — 1.0. Event names are stable; fields may be added, never repurposed.
+> **Status:** Stable — 2.0. Event names are stable and are never repurposed. Fields may be **added** in a minor; removing or changing the meaning of one is a breaking change and ships only in a major (`capabilities.discovered` in 2.0 is the first and so far only instance — [ADR-017](../architecture/decisions.md#adr-017-discovery-takes-a-scope-and-a-budget)).
 
 Package: `@orpc-agent/core` (emission, types); `@orpc-agent/opentelemetry` (span implementation). Distinctions between audit, tracing, logs, and metrics: [guides/auditing.md](../guides/auditing.md#audit-vs-tracing-vs-logs-vs-metrics).
 
@@ -31,7 +31,7 @@ type AuditEnvelope = {
 
 | `type` | Emitted | Event-specific `data` |
 |---|---|---|
-| `capabilities.discovered` | Per `describe()` call | `capabilityIds: string[]` |
+| `capabilities.discovered` | Per `describe()` call | `count: number`, `surface`, `digest: string`, `capabilityIds?: string[]` (verbose only) |
 | `capability.requested` | Pipeline stage 2 | `sideEffect?`, `risk?` (absent if unresolved) |
 | `capability.denied` | Stages 3, 4, 7 | `reason: "unknown" \| "not-exposed" \| "hidden" \| "policy-denied" \| "policy-failed"`, `publicCode`, `policyDecisions?` |
 | `capability.approval_requested` | Stage 8 | `approvalId`, `reasons`, `types`, `expiresAt` |
@@ -42,6 +42,16 @@ type AuditEnvelope = {
 | `capability.completed` | Stage 14 | `durationMs`, `attempts` |
 | `capability.failed` | Terminal failure | `code`, `stage`, `retryable`, `attempts`, `executedBeforeFailure?: boolean`, `policyDecisions?` |
 | `capability.cancelled` | Terminal abort | `code: "TIMEOUT" \| "CANCELLED"`, `durationMs` |
+
+`capabilities.discovered` is **constant-size by default** ([ADR-017](../architecture/decisions.md#adr-017-discovery-takes-a-scope-and-a-budget)). It answers *did this actor's visible catalog change, and when* with a `digest` of the sorted id list: equal digests ⇒ equal catalogs. The digest **algorithm is not part of the contract** — compare digests across events, never parse one, reconstruct ids from one, or store one as a durable identifier. `count` and `surface` are the other two fields; `surface` is also on the envelope, and is repeated here so a forwarded `data` payload stands alone.
+
+The full id list is available at the verbose audit level:
+
+```ts
+audit: { sinks: [sink], verbose: true }   // adds data.capabilityIds
+```
+
+Off by default because this event fires on every `describe`: a host that re-composes per step emits it per step, per turn, per concurrent user, and an unbounded array in a routine event is forwarded, stored, and re-sent every time. If you forward audit events to a client, note that the id list is one actor's authorized surface — filter per actor before it leaves your server.
 
 `policyDecisions` records every evaluated policy's stance — `{ policy: string; type: PolicyDecision["type"] | "error" }[]` — because stage 7 evaluates all policies precisely so this record is complete. `"error"` marks a policy that threw or timed out (recorded honestly; the combined outcome is `POLICY_FAILED`, fail closed).
 

@@ -14,11 +14,13 @@ function createAgentRuntime<TContext>(options: AgentRuntimeOptions<TContext>): A
 type AgentRuntimeOptions<TContext> = {
   governance: AgentGovernance;      // required — see core.md#definegovernance
   approvals?: ApprovalsConfig;
-  audit?: AuditSink | AuditSink[] | { sinks: AuditSink[]; strict?: boolean; onSinkError?: (err: unknown, event: AgentAuditEvent) => void };
+  audit?: AuditSink | AuditSink[] | { sinks: AuditSink[]; strict?: boolean; verbose?: boolean; onSinkError?: (err: unknown, event: AgentAuditEvent) => void };
   tracing?: TracingAdapter;
   defaults?: {
     timeoutMs?: number;             // 30_000
-    policyTimeoutMs?: number;       // 5_000
+    policyTimeoutMs?: number;       // 5_000  — per capability's policy batch
+    policyConcurrency?: number;     // 16     — capabilities evaluated at once during discovery
+    discoveryBudgetMs?: number;     // 30_000 — ceiling on a whole describe
     approvalExpiresInMs?: number;   // 900_000 (15 min)
   };
   now?: () => Date;                 // clock injection; default system clock
@@ -105,8 +107,13 @@ if (result.status === "completed") console.log(result.output);
 ```ts
 describe(
   surface: ExposureSurface,
-  options: { actor: Actor; context: TContext },
+  options: { actor: Actor; context: TContext; scope?: DescribeScope },
 ): Promise<CapabilityDescriptor[]>;
+
+type DescribeScope = {
+  tags?: string[];                   // matches capabilities carrying ANY listed tag
+  ids?: string[];                    // selects exactly
+};                                   // both given: their union
 
 type CapabilityDescriptor = {
   id: string;
@@ -119,9 +126,29 @@ type CapabilityDescriptor = {
 };
 ```
 
-**Lifecycle.** Runs the discovery pipeline: exposure filter → discovery-phase policies (deny/hide exclude; require-approval annotates; errors exclude, fail closed) → emits `capabilities.discovered`. Output schemas are omitted by default — models receive the minimum needed to call correctly.
+**Lifecycle.** Runs the discovery pipeline: exposure filter → **scope filter** → discovery-phase policies (deny/hide exclude; require-approval annotates; errors exclude, fail closed) → emits `capabilities.discovered`. Output schemas are omitted by default — models receive the minimum needed to call correctly.
 
 Descriptors are advisory for the *client*; every later `invoke` re-checks everything (SI-2).
+
+### `scope` — discovery shaping, never an authority boundary
+
+**`invoke` does not consult scope, in this or any later release.** A capability left out of a scoped `describe` remains fully invocable by an authorized actor, exactly as adapter-level `filter` behaves. To make one *unreachable*, use exposure (`meta.expose`) or a policy that returns `deny`/`hide` — those are the authority mechanisms, and scope is not one of them (SI-2, [ADR-017](../architecture/decisions.md#adr-017-discovery-takes-a-scope-and-a-budget)).
+
+What it buys is work, not concealment: the filter is applied **before any discovery policy runs**, so a host that composes a route-scoped catalog per step stops paying for the discovery policies, schema conversions, and clones of everything it was about to discard.
+
+```ts
+// A dashboard route that only shows device controls:
+const descriptors = await runtime.describe("aiSdk", { actor, context, scope: { tags: ["devices"] } });
+```
+
+- **`tags` is ANY, not ALL.** A capability carrying any listed tag matches; express an intersection with `ids`.
+- **An untagged capability matches no `tags` scope.** Scope is opt-in: tag what you intend to select. `ids` reaches untagged capabilities.
+- **`scope: {}` (neither key) does not narrow** — same as omitting it. A key present with an empty array *is* a constraint, and matches nothing: `{ tags: [] }` returns an empty catalog.
+- Omitting `scope` entirely returns exactly what 1.0 returned, in registry order.
+
+**Failure.** `describe` still rejects on programmer error (missing actor, malformed scope) with `TypeError`. It additionally rejects with a `CapabilityError` (`code: "TIMEOUT"`, `stage: "discovery"`) when `defaults.discoveryBudgetMs` expires — a partially-evaluated catalog is indistinguishable from "this actor lost access", so discovery fails loudly instead of returning short.
+
+**Concurrency.** Discovery-phase policies evaluate for up to `defaults.policyConcurrency` capabilities at a time (default 16). Within one capability, policies still evaluate in declaration order against their shared `policyTimeoutMs` deadline, and a failing policy still excludes only its own capability (SI-7). Descriptor order is registry order regardless of which evaluation finishes first.
 
 ---
 

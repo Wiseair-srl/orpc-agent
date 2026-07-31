@@ -42,7 +42,7 @@ function extra(row: AuditRow): string {
   const d = row.data;
   switch (row.type) {
     case "capabilities.discovered":
-      return `${(d.capabilityIds as string[])?.length ?? 0} capabilities visible`;
+      return `${(d.count as number) ?? 0} capabilities visible`;
     case "capability.denied":
       return `${d.reason} → ${d.publicCode}`;
     case "capability.approval_requested":

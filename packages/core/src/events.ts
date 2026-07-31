@@ -42,7 +42,20 @@ export type PolicyDecisionRecord = {
 export type AgentAuditEvent =
   | (AuditEnvelope & {
       type: "capabilities.discovered";
-      data: { capabilityIds: string[] };
+      /** Constant-size by default — the payload must not grow with the catalog (ADR-017). */
+      data: {
+        count: number;
+        surface: ExposureSurface;
+        /**
+         * Digest of the sorted id list: equal digests ⇒ equal catalogs, which
+         * answers "did this actor's visible surface change" without carrying
+         * it. The algorithm is NOT part of the contract — compare digests,
+         * never reconstruct or store one as an identifier.
+         */
+        digest: string;
+        /** Only at the verbose audit level (`audit: { verbose: true }`). */
+        capabilityIds?: string[];
+      };
     })
   | (AuditEnvelope & {
       type: "capability.requested";
