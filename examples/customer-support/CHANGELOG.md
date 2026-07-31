@@ -1,5 +1,14 @@
 # customer-support-example
 
+## 0.1.4
+
+### Patch Changes
+
+- Updated dependencies [b489ee1]
+- Updated dependencies [b3cf603]
+  - @orpc-agent/ai-sdk@1.1.0
+  - @orpc-agent/mcp@1.1.0
+
 ## 0.1.3
 
 ### Patch Changes
