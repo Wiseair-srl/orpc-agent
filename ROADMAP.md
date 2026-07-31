@@ -1,21 +1,21 @@
 # Roadmap
 
-> **Status:** **1.0.0 published to npm** — semver applies strictly from here ([release process](docs/contributing/release-process.md)). The lines below record how it got here and what is next; scope commitments are firm.
+> **Status:** **2.0.0 published to npm** — semver applies strictly from here ([release process](docs/contributing/release-process.md)). The lines below record how it got here and what is next; scope commitments are firm.
 
-## Next — 2.0 "Discovery at scale" (merged, unpublished)
-
-Driven by the second production consumer (a dashboard host at ~300 capabilities across six tag groups), and sequenced in [the plan](docs/implementation/plan-1.1.md), which named it 1.1. It ships as 2.0 for two independent reasons: one increment is breaking and semver from 1.0 is strict ([ADR-017](docs/architecture/decisions.md#adr-017-discovery-takes-a-scope-and-a-budget)), and 1.1 went out meanwhile with different contents.
-
-- `describe` takes a `scope` (`{ tags?, ids? }`), applied **before** any discovery policy runs, so a route-scoped catalog stops paying for what it discards. Discovery shaping, never an authority boundary — `invoke` does not consult it (SI-2). `@orpc-agent/ai-sdk` forwards it; `filter` still shapes what survives
-- **Breaking:** `capabilities.discovered` carries `{ count, surface, digest }` instead of the full id list, which at 300 capabilities was ~6 KB on every discovery. `audit: { verbose: true }` restores it
-- Discovery-phase policies evaluate with bounded concurrency (`defaults.policyConcurrency`, 16), under a whole-discovery ceiling (`defaults.discoveryBudgetMs`, 30 s) that fails loudly rather than returning a short catalog
-
-## Then — after 2.0
+## Now — after 2.0
 
 - First workflow-engine adapter for the `workflow` surface ([Q7](docs/open-questions.md#q7) — Mastra currently leads the candidate list)
 - MCP: dynamic `list_changed`; elicitation-based confirmation prototype behind a flag ([Q4](docs/open-questions.md#q4))
 - `scope` on the MCP adapter, if a consumer's demand shapes it ([Q12](docs/open-questions.md#q12))
 - Community schema-converter adoption for Valibot/ArkType ([Q3](docs/open-questions.md#q3))
+
+## Shipped — 2.0 "Discovery at scale"
+
+Driven by the second production consumer (a dashboard host at ~300 capabilities across six tag groups), and sequenced in [the plan](docs/implementation/plan-1.1.md), which named it 1.1. It shipped as 2.0 for two independent reasons: one increment is breaking and semver from 1.0 is strict ([ADR-017](docs/architecture/decisions.md#adr-017-discovery-takes-a-scope-and-a-budget)), and 1.1 went out meanwhile with different contents.
+
+- `describe` takes a `scope` (`{ tags?, ids? }`), applied **before** any discovery policy runs, so a route-scoped catalog stops paying for what it discards. Discovery shaping, never an authority boundary — `invoke` does not consult it (SI-2). `@orpc-agent/ai-sdk` forwards it; `filter` still shapes what survives
+- **Breaking:** `capabilities.discovered` carries `{ count, surface, digest }` instead of the full id list, which at 300 capabilities was ~6 KB on every discovery. `audit: { verbose: true }` restores it. Migration: `data.capabilityIds.length` becomes `data.count`
+- Discovery-phase policies evaluate with bounded concurrency (`defaults.policyConcurrency`, 16), under a whole-discovery ceiling (`defaults.discoveryBudgetMs`, 30 s) that fails loudly rather than returning a short catalog
 
 ## Shipped — 1.1
 
