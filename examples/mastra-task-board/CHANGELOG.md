@@ -1,5 +1,12 @@
 # mastra-task-board-example
 
+## 0.1.4
+
+### Patch Changes
+
+- Updated dependencies [b489ee1]
+  - @orpc-agent/ai-sdk@1.1.0
+
 ## 0.1.3
 
 ### Patch Changes
