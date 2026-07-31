@@ -405,7 +405,8 @@ describe("discovery pipeline (describe)", () => {
     expect(visible.sideEffect).toBe("read");
 
     const discovered = audit.ofType("capabilities.discovered")[0]!;
-    expect(discovered.data.capabilityIds).toEqual(["visible", "gated", "policyGated"]);
+    expect(discovered.data.count).toBe(3);
+    expect(discovered.data.capabilityIds).toBeUndefined();
     expect(discovered.executionId).toBeUndefined();
   });
 

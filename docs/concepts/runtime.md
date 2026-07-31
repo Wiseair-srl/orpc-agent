@@ -5,10 +5,14 @@
 The **runtime** is the governed execution engine. Every capability invocation — from the AI SDK adapter, an MCP client, a workflow step, a test, or your own server code — funnels through it. There is exactly one execution path, so there is exactly one place where governance is enforced.
 
 ```ts
-const runtime = createAgentRuntime({
+const governance = defineGovernance({
   registry: capabilities,
   policies: [orgIsolation, refundLimit],
-  approvals: { coordinator: approvalStore },
+});
+
+const runtime = createAgentRuntime({
+  governance,                                 // the governed surface, as one declared value
+  approvals: { coordinator: approvalStore },  // the per-instance wiring
   audit: auditSink,
   tracing: createOpenTelemetryTracing(),
 });

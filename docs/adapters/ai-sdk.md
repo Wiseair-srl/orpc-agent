@@ -44,11 +44,26 @@ const result = await generateText({
 |---|---|---|
 | `actor` | yes | Bound into every call of this tool set |
 | `context` | yes | The app's oRPC context for this request |
+| `scope` | no | `{ tags?, ids? }`; forwarded verbatim to `runtime.describe` — see below |
 | `filter` | no | `(descriptor) => boolean`; conversation-shaping only, not authorization (SI-2) |
 | `toolNaming` | no | Default `.`→`_` (`orders.refund` → `orders_refund`); `meta.adapters.aiSdk.toolName` overrides per capability; collisions throw at build |
 | `signal` | no | Composed into every invocation (in addition to per-call abort from the loop) |
 
-`toAISDKTools` awaits `runtime.describe("aiSdk", { actor, context })`, so the returned set is already exposure- and discovery-policy-filtered *for this actor*. Build per request; caching a tool set across users leaks visibility decisions.
+`toAISDKTools` awaits `runtime.describe("aiSdk", { actor, context, scope })`, so the returned set is already exposure- and discovery-policy-filtered *for this actor*. Build per request; caching a tool set across users leaks visibility decisions.
+
+### `scope` vs `filter`
+
+Having both invites confusion, so state it plainly: **`scope` decides what gets discovered; `filter` decides what survives discovery.** Neither is authorization (SI-2) — a capability excluded by either remains invocable by an authorized actor, and only exposure or a policy makes one unreachable.
+
+```ts
+const tools = await toAISDKTools(runtime, {
+  actor, context,
+  scope: { tags: ["devices"] },     // billing capabilities' discovery policies never run
+  filter: (d) => d.risk === "low",  // of what was discovered, keep the low-risk ones
+});
+```
+
+`scope` runs inside the runtime, before any discovery policy; `filter` runs here, on the descriptors that came back. On a large catalog re-composed per step, that is the difference between skipping the work and paying for it and dropping the result — see [reference/runtime.md](../reference/runtime.md#scope-discovery-shaping-never-an-authority-boundary) for the matching rules (`tags` is ANY; untagged capabilities match no `tags` scope).
 
 ## What each generated tool contains
 

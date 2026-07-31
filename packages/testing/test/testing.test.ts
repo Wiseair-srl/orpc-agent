@@ -278,7 +278,7 @@ describe("fakes", () => {
       timestamp: new Date(),
       surface: "test",
       actor: { id: "a", kind: "user" },
-      data: { capabilityIds: [] },
+      data: { count: 0, surface: "test", digest: "0".repeat(64) },
     });
     expect(sink.events()).toHaveLength(1);
     expect(sink.ofType("capabilities.discovered")).toHaveLength(1);

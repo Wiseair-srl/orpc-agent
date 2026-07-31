@@ -11,8 +11,7 @@ import { createAgentRuntime, defineGovernance } from "@orpc-agent/core";
 import { createOpenTelemetryTracing } from "@orpc-agent/opentelemetry";
 
 const runtime = createAgentRuntime({
-  governance: defineGovernance({ registry: capabilities }),
-  policies,
+  governance: defineGovernance({ registry: capabilities, policies }),
   tracing: createOpenTelemetryTracing(),   // uses trace.getTracer("orpc-agent")
 });
 ```

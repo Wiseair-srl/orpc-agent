@@ -66,6 +66,20 @@ export const refundOrder = agentBase
 
 The procedure remains a plain oRPC procedure: mount it in your router, call it from your UI, generate OpenAPI from it. The `agent` block only matters to `createCapabilityRegistry` and the runtime.
 
+## Tags are how a catalog gets asked for in pieces
+
+`tags` is free-form on the capability, but it carries one defined job: it is what [`describe`'s `scope`](../reference/runtime.md#scope-discovery-shaping-never-an-authority-boundary) matches on. An application that tags `devices.*` as `devices` and `billing.*` as `billing` lets each route ask for the group it needs, and the discovery policies of everything else never run.
+
+```ts
+tags: ["orders", "money"]                                  // on the capability
+runtime.describe("aiSdk", { actor, context, scope: { tags: ["orders"] } });
+```
+
+Two consequences worth knowing before you tag:
+
+- **An untagged capability matches no `tags` scope.** Adding scope to a host before tagging returns nothing rather than everything — deliberate, so a scope means what it says. Select untagged capabilities by `ids`.
+- **A tag is not a permission.** Scope shapes discovery only; the capability stays invocable by an authorized actor either way. Exposure and policies are the authority mechanisms (SI-2).
+
 ## One capability, many surfaces
 
 | Surface | Representation | Trust profile |

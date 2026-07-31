@@ -7,12 +7,15 @@ export type AuditEmitter = {
   /** Awaits every sink; rejects with the first sink failure (strict mode). */
   emitAwaited(event: AgentAuditEvent): Promise<void>;
   readonly strict: boolean;
+  /** Emitters add catalog-sized payloads only when this is on. */
+  readonly verbose: boolean;
   readonly hasSinks: boolean;
 };
 
 export function createAuditEmitter(config: AuditConfig | undefined): AuditEmitter {
   let sinks: AuditSink[] = [];
   let strict = false;
+  let verbose = false;
   let onSinkError: ((err: unknown, event: AgentAuditEvent) => void) | undefined;
 
   if (typeof config === "function") {
@@ -22,6 +25,7 @@ export function createAuditEmitter(config: AuditConfig | undefined): AuditEmitte
   } else if (config !== undefined) {
     sinks = config.sinks ?? [];
     strict = config.strict ?? false;
+    verbose = config.verbose ?? false;
     onSinkError = config.onSinkError;
   }
 
@@ -39,6 +43,7 @@ export function createAuditEmitter(config: AuditConfig | undefined): AuditEmitte
 
   return {
     strict,
+    verbose,
     hasSinks: sinks.length > 0,
     emit(event) {
       for (const sink of sinks) {

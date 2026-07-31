@@ -146,15 +146,21 @@ The handler's return value is validated against the output schema. Failure is `O
 ```text
 1. surface fixed by caller
 2. exposure filter: meta.expose[surface] === true
-3. discovery-phase policies per candidate (input is undefined):
+3. scope filter: options.scope matches tags (ANY) / ids (exact), union of both
+4. discovery-phase policies per surviving candidate (input is undefined),
+   up to defaults.policyConcurrency capabilities at a time:
      deny/hide  -> excluded (indistinguishable from nonexistent)
      require-approval -> included, descriptor.requiresApproval = true
      policy error -> excluded (fail closed)
-4. build CapabilityDescriptor: { id, description, inputSchema (JSON Schema),
+   defaults.discoveryBudgetMs bounds the whole walk; expiry throws
+   TIMEOUT @ discovery rather than returning a short catalog
+5. build CapabilityDescriptor: { id, description, inputSchema (JSON Schema),
    sideEffect, risk, tags, requiresApproval? }   — no output schema by default
-5. emit capabilities.discovered (capabilityIds only)
-6. return descriptors
+6. emit capabilities.discovered (count, surface, digest)
+7. return descriptors, in registry order
 ```
+
+The ordering of 3 before 4 is normative: after the policies, a scope would only save tokens; before them, it saves the evaluations themselves ([ADR-017](decisions.md#adr-017-discovery-takes-a-scope-and-a-budget)). Scope shapes discovery and nothing else — `invoke` does not consult it (SI-2).
 
 Discovery output is deliberately minimal: models get what they need to call correctly and nothing else. Adapters convert descriptors to protocol shapes (AI SDK tool definitions, MCP tool listings).
 

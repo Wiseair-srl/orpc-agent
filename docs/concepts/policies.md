@@ -40,6 +40,16 @@ definePolicy(name, evaluate, { phases: ["invocation", "execution"] });  // defau
 
 This phase model implements the discovery / invocation / execution separation of [ADR-005](../architecture/decisions.md#adr-005-discovery-and-execution-authorization-are-separate).
 
+### Keep discovery-phase policies synchronous or memoized
+
+A discovery policy runs **once per candidate capability**, not once per call. An invocation policy that does a permission lookup costs one round trip; the same policy at discovery phase costs one per capability — at 300 capabilities, on every `describe`, for every step of every turn.
+
+The runtime bounds the damage rather than hiding it: discovery evaluates `defaults.policyConcurrency` capabilities at a time (16), and `defaults.discoveryBudgetMs` (30 s) fails the whole `describe` rather than returning a short catalog. Neither makes the lookups free.
+
+- Read from already-resolved state — `actor.attributes`, a field on `context` — and stay synchronous.
+- If a lookup is unavoidable, **do it once in context construction** and have the policy read the result. One batched query per request beats N per discovery.
+- Narrow what is walked at all with [`describe`'s `scope`](../reference/runtime.md#scope-discovery-shaping-never-an-authority-boundary): capabilities outside the scope never reach a policy.
+
 ## Evaluation and composition semantics (normative)
 
 1. **Order.** Runtime-level `policies` array in declaration order, then the capability's `meta.policies` in order.

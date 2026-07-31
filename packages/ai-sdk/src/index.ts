@@ -5,6 +5,7 @@ import type {
   AgentRuntime,
   CapabilityDescriptor,
   CapabilityError,
+  DescribeScope,
   ExecutionResult,
 } from "@orpc-agent/core";
 
@@ -19,6 +20,12 @@ export type AISDKToolsOptions<TContext = unknown> = {
   actor: Actor;
   /** The app's oRPC context for this request. */
   context: TContext;
+  /**
+   * Narrows what gets DISCOVERED — forwarded verbatim to `runtime.describe`,
+   * so the discovery policies of everything outside it never run. Not
+   * authorization (SI-2); `filter` still shapes what survives.
+   */
+  scope?: DescribeScope;
   /** Conversation-shaping only, not authorization (SI-2). */
   filter?: (descriptor: CapabilityDescriptor) => boolean;
   /** Replaces the default "." → "_" mapping. Per-capability meta overrides win. */
@@ -51,6 +58,7 @@ export async function toAISDKTools<TContext = unknown>(
   const descriptors = await runtime.describe("aiSdk", {
     actor: options.actor,
     context: options.context,
+    ...(options.scope ? { scope: options.scope } : {}),
   });
   const filtered = options.filter ? descriptors.filter(options.filter) : descriptors;
 
