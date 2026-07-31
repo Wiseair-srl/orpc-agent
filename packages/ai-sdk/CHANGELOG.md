@@ -1,5 +1,20 @@
 # @orpc-agent/ai-sdk
 
+## 2.0.0
+
+### Minor Changes
+
+- 2f8f73f: `toAISDKTools` takes a `scope`, forwarded verbatim to `runtime.describe`.
+
+  `filter` is unchanged and still applies after, so a consumer can scope cheaply and then shape precisely: **`scope` decides what gets discovered; `filter` decides what survives discovery.** Neither is authorization (SI-2).
+
+### Patch Changes
+
+- Updated dependencies [2f8f73f]
+- Updated dependencies [2f8f73f]
+- Updated dependencies [2f8f73f]
+  - @orpc-agent/core@2.0.0
+
 ## 1.1.0
 
 ### Minor Changes

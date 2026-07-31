@@ -1,6 +1,6 @@
 {
   "name": "@orpc-agent/postgres",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Postgres reference implementations of the oRPC Agent approval coordinator and audit sink. Independent community project, not affiliated with or endorsed by the oRPC maintainers.",
   "license": "MIT",
   "author": "Paolo Barbato",
