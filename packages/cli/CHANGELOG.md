@@ -1,5 +1,14 @@
 # @orpc-agent/cli
 
+## 2.0.0
+
+### Patch Changes
+
+- Updated dependencies [2f8f73f]
+- Updated dependencies [2f8f73f]
+- Updated dependencies [2f8f73f]
+  - @orpc-agent/core@2.0.0
+
 ## 1.0.0
 
 ### Minor Changes

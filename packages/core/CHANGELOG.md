@@ -1,5 +1,53 @@
 # @orpc-agent/core
 
+## 2.0.0
+
+### Major Changes
+
+- 2f8f73f: **BREAKING:** `capabilities.discovered` carries constant-size data (ADR-017).
+
+  `data` was `{ capabilityIds: string[] }`. It is now `{ count, surface, digest }`, and the id list moves behind an explicit verbose audit level:
+
+  ```ts
+  // before
+  sink: (e) => {
+    if (e.type === "capabilities.discovered")
+      report(e.data.capabilityIds.length);
+  };
+
+  // after — no configuration change needed
+  sink: (e) => {
+    if (e.type === "capabilities.discovered") report(e.data.count);
+  };
+
+  // after — if you genuinely need the ids
+  createAgentRuntime({ governance, audit: { sinks: [sink], verbose: true } }); // restores data.capabilityIds
+  ```
+
+  Why it is worth a major rather than a deprecation cycle: at 300 capabilities the id array was ~6 KB emitted on **every** discovery — per step, per turn, per concurrent user — and consumers forwarding audit events to a client carried it over the wire each time. Deprecating the field instead would have preserved that cost for a whole major cycle while shipping two payload shapes at once, which is the thing this event's size problem _is_.
+
+  `digest` hashes the sorted id list, so equal digests mean equal catalogs — enough to answer "did this actor's visible surface change" without carrying it. The algorithm is not part of the contract: compare digests, never parse one, reconstruct ids from one, or store one as a durable identifier.
+
+### Minor Changes
+
+- 2f8f73f: `describe` accepts a scope, applied before any discovery policy runs (ADR-017).
+
+  ```ts
+  runtime.describe("aiSdk", { actor, context, scope: { tags: ["devices"] } });
+  ```
+
+  - `tags` matches capabilities carrying ANY listed tag; `ids` selects exactly; both given, the union. An untagged capability matches no `tags` scope, and `scope: {}` does not narrow.
+  - The filter sits between the exposure filter and the discovery-phase policies. After the policies it would save tokens; before them it saves the evaluations, the schema conversions, and the clones for everything the caller was about to discard.
+  - **Not an authority boundary.** `invoke` does not consult scope, in this or any later release: a capability outside the requested scope stays fully invocable by an authorized actor, exactly as adapter-level `filter` behaves. Use exposure or a policy to make one unreachable (SI-2).
+  - Purely additive — omitting `scope` returns the 1.0 result, in the same order. `@orpc-agent/testing`'s `describe` forwards it too.
+
+- 2f8f73f: Discovery-phase policies evaluate concurrently, under a budget for the whole `describe` (ADR-017).
+
+  - `defaults.policyConcurrency` (default 16) bounds how many capabilities' policy batches evaluate at once. Within one capability nothing changes: same order, same shared batch deadline, and a policy error still excludes exactly its own capability (SI-7). Descriptor order stays registry order.
+  - `defaults.discoveryBudgetMs` (default 30_000) bounds the whole discovery, where `policyTimeoutMs` only ever bounded one capability's batch — worst case at 300 capabilities was 300 × `policyTimeoutMs`.
+  - On expiry `describe` rejects with `CapabilityError` (`TIMEOUT` @ `discovery`) instead of returning a short catalog: a silently truncated listing is indistinguishable from "this actor lost access".
+  - Discovery policies should stay synchronous or memoized; batch unavoidable lookups into context construction, not per capability.
+
 ## 1.0.0
 
 ### Minor Changes

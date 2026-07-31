@@ -1,5 +1,14 @@
 # @orpc-agent/mcp
 
+## 2.0.0
+
+### Patch Changes
+
+- Updated dependencies [2f8f73f]
+- Updated dependencies [2f8f73f]
+- Updated dependencies [2f8f73f]
+  - @orpc-agent/core@2.0.0
+
 ## 1.1.0
 
 ### Patch Changes
