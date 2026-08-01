@@ -1,6 +1,6 @@
 # Guide: capability exposure
 
-> **Status:** Stable — 1.0. Concepts: [ADR-004](../architecture/decisions.md#adr-004-exposure-is-explicit-and-surface-specific), SI-1/SI-2/SI-8.
+> Concepts: [ADR-004](../architecture/decisions.md#adr-004-exposure-is-explicit-and-surface-specific), SI-1/SI-2/SI-8.
 
 Exposure answers one question per surface: *is this capability reachable here at all?* It is the outermost gate (pipeline stage 4) and the easiest one to reason about — a static map you can review in a diff.
 

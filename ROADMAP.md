@@ -1,6 +1,6 @@
 # Roadmap
 
-> **Status:** **2.0.0 published to npm** — semver applies strictly from here ([release process](docs/contributing/release-process.md)). The lines below record how it got here and what is next; scope commitments are firm.
+> **2.0.0 published to npm** — semver applies strictly ([release process](docs/contributing/release-process.md)). What is next, and how it got here. Scope commitments are firm; dates are not promised.
 
 ## Now — after 2.0
 
@@ -11,7 +11,7 @@
 
 ## Shipped — 2.0 "Discovery at scale"
 
-Driven by the second production consumer (a dashboard host at ~300 capabilities across six tag groups), and sequenced in [the plan](docs/implementation/plan-1.1.md), which named it 1.1. It shipped as 2.0 for two independent reasons: one increment is breaking and semver from 1.0 is strict ([ADR-017](docs/architecture/decisions.md#adr-017-discovery-takes-a-scope-and-a-budget)), and 1.1 went out meanwhile with different contents.
+Driven by a dashboard host at ~300 capabilities across six tag groups. Breaking, so it is a major ([ADR-017](docs/architecture/decisions.md#adr-017-discovery-takes-a-scope-and-a-budget)); upgrading is [one field read](docs/migration/1-to-2.md).
 
 - `describe` takes a `scope` (`{ tags?, ids? }`), applied **before** any discovery policy runs, so a route-scoped catalog stops paying for what it discards. Discovery shaping, never an authority boundary — `invoke` does not consult it (SI-2). `@orpc-agent/ai-sdk` forwards it; `filter` still shapes what survives
 - **Breaking:** `capabilities.discovered` carries `{ count, surface, digest }` instead of the full id list, which at 300 capabilities was ~6 KB on every discovery. `audit: { verbose: true }` restores it. Migration: `data.capabilityIds.length` becomes `data.count`
@@ -42,7 +42,7 @@ Runtime-level policies become part of the recorded contract ([ADR-016](docs/arch
 Driven by the first production consumer (an ~85-capability finance app):
 
 - `@orpc-agent/postgres` — reference `ApprovalCoordinator` + `AuditSink` over a driver-agnostic query seam; DDL as exported strings; the shared coordinator contract suite runs against in-memory, pglite, and a real server incl. a two-connection consumption race ([Q8](docs/open-questions.md#q8) resolved via [ADR-013](docs/architecture/decisions.md#adr-013-postgres-reference-persistence-package))
-- Core: startup footgun warnings, schema-conversion cache invalidation + descriptor isolation ([ADR-014](docs/architecture/decisions.md#adr-014-as-built-api-deltas-for-v02))
+- Core: startup footgun warnings, schema-conversion cache invalidation + descriptor isolation ([ADR-014](docs/architecture/decisions.md#adr-014-further-api-surface-decisions))
 - MCP: `session.authInfo` typed as the SDK's `AuthInfo`
 - Guides: [headless invocations](docs/guides/headless-invocations.md), [workflow steps](docs/guides/workflow-steps.md), [MCP authentication](docs/guides/mcp-authentication.md) (Better Auth worked example), host-loop approval interop ([ai-sdk adapter](docs/adapters/ai-sdk.md))
 
@@ -56,8 +56,6 @@ The smallest coherent release proving the thesis: *define a capability once, exp
 - `@orpc-agent/opentelemetry` — tracing adapter
 - `@orpc-agent/mcp` — MCP server adapter *(final increment; slips to 0.2 rather than delaying the release)*
 - `examples/customer-support` — the reference application (one read flow, one approval-gated write flow, and the full governance suite)
-
-Definition of done: the [acceptance criteria](docs/implementation/brief.md#acceptance-criteria). Increment plan: [milestones](docs/implementation/milestones.md).
 
 ## Later — exploratory (no commitment)
 

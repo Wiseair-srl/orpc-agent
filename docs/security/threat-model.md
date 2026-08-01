@@ -1,6 +1,6 @@
 # Threat model
 
-> **Status:** Stable — 1.0. Scope: the framework's own layers (adapter → runtime → capability). Application infrastructure (network, OS, database, identity provider) and model-provider security are out of scope here but not out of your responsibility.
+> Scope: the framework's own layers (adapter → runtime → capability). Application infrastructure (network, OS, database, identity provider) and model-provider security are out of scope here but not out of your responsibility.
 
 ## Assets
 
@@ -26,8 +26,8 @@
 | T1 | Injected content steers model into unauthorized *invocation* (ADV1 → A1) | SI-1 exposure allowlist; SI-2 execution-time checks; middleware authority (ADR-008); approvals on high-impact ops (SI-4/5); deterministic policies (SI-7) | Steering *within* the actor's legitimate authority — bounded, not eliminated; see [prompt-injection.md](prompt-injection.md) |
 | T2 | Injected content steers model into *exfiltration* via outputs (ADV1 → A1) | `redact.output`; minimal output schemas; SI-9 error concealment; SI-10 payload-free evidence | Data legitimately returned to the model can still be misused by it; output design is the control |
 | T3 | External client invokes capabilities not shown to it (ADV2 → A1) | SI-2 (discovery ≠ authorization); SI-8 concealment; per-session actor from transport auth (SI-3) | None beyond app-auth strength — by design the hidden/shown distinction carries no security weight |
-| T4 | Client probes for hidden capabilities (ADV2 → A6) | SI-8: unknown/unexposed/hidden indistinguishable; probing visible in audit (`capability.denied`, reason recorded) | Timing side channels not addressed in v0.1 (accepted; noted in [open-questions](../open-questions.md#q10)) |
-| T5 | Model or client floods retries / expensive calls (ADV4, ADV2 → A5) | SI-11 no auto-retry for writes; SI-12 timeouts; audit visibility of re-invocations | **Rate limiting is not in v0.1** — deploy app-level limits in middleware; framework-level quotas are an open question |
+| T4 | Client probes for hidden capabilities (ADV2 → A6) | SI-8: unknown/unexposed/hidden indistinguishable; probing visible in audit (`capability.denied`, reason recorded) | Timing side channels are not normalized (accepted risk; [Q10](../open-questions.md#q10)) |
+| T5 | Model or client floods retries / expensive calls (ADV4, ADV2 → A5) | SI-11 no auto-retry for writes; SI-12 timeouts; audit visibility of re-invocations | **The framework has no rate limiting** — deploy app-level limits in middleware; framework-level quotas remain an open question ([Q9](../open-questions.md#q9)) |
 | T6 | Model manufactures its own approval (ADV4 → A3) | SI-4: decision path bypasses the model entirely; no decide-capability exposed to model surfaces; self-approval rejected | Social engineering of the human approver — mitigated only by readable approval UIs and culture |
 | T7 | Input mutated between approval and execution (any → A3) | SI-5 hash binding; atomic consumption; re-validation at resume | Compromise of the coordinator store itself → detected by hash mismatch, not prevented |
 | T8 | Approval replayed for repeated execution (any → A3) | Single-use consumption (`APPROVAL_CONSUMED`); expiry | Multi-process coordinators must implement `markConsumed` atomically — an implementation obligation, stated in the interface contract |

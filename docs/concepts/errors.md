@@ -1,24 +1,20 @@
 # Errors
 
-> **Status:** Stable — 1.0. Contract tables live in [reference/errors.md](../reference/errors.md).
+> Why errors have two faces. The closed code table and the contract live in [reference/errors.md](../reference/errors.md).
 
 Error design is security design here. A stack trace that helps you debug also teaches a manipulated model your table names. oRPC Agent therefore separates every failure into a **model-safe face** and a **private diagnostic body**, and never lets adapters see the latter.
 
 ## The two-face principle
 
+Every failure normalizes to a `CapabilityError` whose fields split along that line:
+
 ```ts
-class CapabilityError extends Error {
-  code: ErrorCode;            // stable, machine-readable
-  stage: FailureStage;        // where the pipeline failed
-  publicMessage: string;      // written for models and end users
-  retryable: boolean;         // could an identical request succeed later?
-  exposeToModel: boolean;     // may code+publicMessage cross the adapter boundary?
-  details?: unknown;          // model-safe structured data (validation issues)
-  cause?: unknown;            // the real error — logs only, never serialized outward
-}
+publicMessage   // the model-safe face — written for models and end users
+exposeToModel   // may code + publicMessage cross the adapter boundary at all?
+cause           // the real error — logs only, never serialized outward
 ```
 
-A model client can only ever receive two shapes: `{ code, message: publicMessage, retryable }` when `exposeToModel`, or the generic `{ code: "INTERNAL_ERROR", message: "The operation failed." }` otherwise (SI-9). Your logs get everything — `stage`, `cause`, stack — via audit events and tracing.
+A model client can therefore only ever receive two shapes: `{ code, message: publicMessage, retryable }` when `exposeToModel`, or the generic `{ code: "INTERNAL_ERROR", message: "The operation failed." }` otherwise (SI-9). Your logs get everything — `stage`, `cause`, stack — via audit events and tracing. Full type and the closed code table: [reference/errors](../reference/errors.md).
 
 ## Why stages matter
 

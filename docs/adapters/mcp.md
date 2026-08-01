@@ -1,6 +1,6 @@
 # Adapter: MCP
 
-> **Status:** Stable — 1.0. Package: `@orpc-agent/mcp`. Peer: `@modelcontextprotocol/sdk`, `@orpc-agent/core`.
+> Package: `@orpc-agent/mcp`. Peer: `@modelcontextprotocol/sdk`, `@orpc-agent/core`.
 
 Exposes a runtime as a Model Context Protocol server. Surface id: **`mcp`**. This is the highest-exposure surface — callers are external processes you don't ship — so its docs lean harder on identity than any other adapter's.
 
@@ -31,7 +31,7 @@ await mcp.connect(transport);   // stdio, Streamable HTTP — the app picks and 
 
 | Option | Required | Notes |
 |---|---|---|
-| `createContext` | yes | Session → `{ actor, context }`. The adapter refuses to serve sessions where it returns nothing — there is no anonymous default; model anonymity explicitly (`kind: "anonymous"`) if you truly mean it. `session.authInfo` is the MCP SDK's `AuthInfo` (typed since v0.2) — `token`, `clientId`, `scopes` as real fields. Wiring an authorization server: [guides/mcp-authentication.md](../guides/mcp-authentication.md) |
+| `createContext` | yes | Session → `{ actor, context }`. The adapter refuses to serve sessions where it returns nothing — there is no anonymous default; model anonymity explicitly (`kind: "anonymous"`) if you truly mean it. `session.authInfo` is the MCP SDK's `AuthInfo` — `token`, `clientId`, `scopes` as real fields. Wiring an authorization server: [guides/mcp-authentication.md](../guides/mcp-authentication.md) |
 | `serverInfo` | no | Defaults to `{ name: "orpc-agent", version: <pkg> }` |
 | `filter` | no | Listing-shaping only, not authorization (SI-2) |
 | `toolNaming` | no | Default `.`→`_`; `meta.adapters.mcp.toolName` overrides; collisions throw |
@@ -40,10 +40,10 @@ await mcp.connect(transport);   // stdio, Streamable HTTP — the app picks and 
 
 | MCP request | Behavior |
 |---|---|
-| `tools/list` | `runtime.describe("mcp", sessionIdentity)` → tool declarations: name (mapped), description (+ `" Requires approval."` when flagged), `inputSchema` (JSON Schema). Per-session: two clients with different actors can see different lists. Static within a session in v0.1 (`list_changed` is Planned) |
+| `tools/list` | `runtime.describe("mcp", sessionIdentity)` → tool declarations: name (mapped), description (+ `" Requires approval."` when flagged), `inputSchema` (JSON Schema). Per-session: two clients with different actors can see different lists. The list is static within a session — dynamic `list_changed` is not implemented |
 | `tools/call` | Name → capability id, then `runtime.invoke(id, args, { actor, context, surface: "mcp", signal })`. Raw arguments — the runtime validates (stage 5) |
 | cancellation | MCP cancellation notifications abort the in-flight invocation's signal (SI-12) |
-| resources / prompts | Not served in v0.1 (Planned consideration, not committed) |
+| resources / prompts | Not served, and not committed to |
 
 `meta.adapters.mcp.annotations` passes through to the tool declaration (e.g., MCP's `readOnlyHint`/`destructiveHint` style annotations) — hints for clients, never governance.
 
@@ -59,7 +59,7 @@ MCP tool results carry a JSON content block with the **same envelope** as the AI
 
 Concealment holds on this surface above all: unknown tool, unexposed capability, and policy-hidden capability are byte-identical `error` envelopes with `CAPABILITY_NOT_FOUND` (SI-8); `details`/`cause` never serialize (SI-9).
 
-Approval over MCP is necessarily asynchronous: the client is told a decision is pending; deciding and resuming happen in **your** application (dashboard, worker), never via an MCP call from the same client — no "decide approval" capability should ever be exposed to `mcp` (SI-4). MCP elicitation as a confirmation channel is under evaluation (Planned, [open-questions](../open-questions.md#q4)).
+Approval over MCP is necessarily asynchronous: the client is told a decision is pending; deciding and resuming happen in **your** application (dashboard, worker), never via an MCP call from the same client — no "decide approval" capability should ever be exposed to `mcp` (SI-4). MCP elicitation as a confirmation channel is under evaluation ([Q4](../open-questions.md#q4)).
 
 ## Identity is the whole game here
 

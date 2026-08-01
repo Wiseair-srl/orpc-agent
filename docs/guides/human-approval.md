@@ -1,6 +1,6 @@
 # Guide: human approval
 
-> **Status:** Stable — 1.0. Semantics: [concepts/approvals.md](../concepts/approvals.md). This guide wires the full loop: gate → surface → decide → resume — plus the inline variant.
+> Semantics: [concepts/approvals.md](../concepts/approvals.md). This guide wires the full loop: gate → surface → decide → resume — plus the inline variant.
 
 ## 1. Gate the capability
 
@@ -67,7 +67,7 @@ switch (final.status) {
 }
 ```
 
-Resume runs as the **original requester** with integrity checks (hash match, single-use consumption, fresh execution-phase policies) — [the lifecycle walkthrough](../concepts/lifecycle.md#act-4--resumption-with-integrity) shows each check firing.
+Resume runs as the **original requester** with integrity checks (hash match, single-use consumption, fresh execution-phase policies) — [the lifecycle walkthrough](../concepts/lifecycle.md#act-4-resumption-with-integrity) shows each check firing.
 
 Close the loop back to the conversation: post the outcome into the chat thread (your app's job — the adapter can't, the model call is long gone).
 

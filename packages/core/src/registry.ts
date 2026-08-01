@@ -90,7 +90,7 @@ function walk(
 
     if (isLazy(value)) {
       problems.push(
-        `"${id}": lazy routers/procedures are not supported by the registry in v0.1 — ` +
+        `"${id}": lazy routers/procedures are not supported by the registry — ` +
           "resolve them (unlazyRouter) before registering",
       );
       continue;
@@ -109,7 +109,7 @@ function walk(
 
       if (isEventIteratorSchema(def.outputSchema) || isEventIteratorSchema(def.inputSchema)) {
         problems.push(
-          `"${id}": event-iterator (streaming) procedures cannot be capabilities in v0.1 — ` +
+          `"${id}": event-iterator (streaming) procedures cannot be capabilities — ` +
             "capabilities must return complete values",
         );
         continue;

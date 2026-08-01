@@ -1,67 +1,81 @@
 # Open design questions
 
-> **Status:** Living document. Every unresolved decision lives here — not scattered through the docs. Each entry states the decision needed, options, a recommendation, and implications. **Q1 and Q2** were resolved by the v0.1 release, **Q8** by v0.2; the rest are open and none blocks a release.
+> Every decision still open, in one place rather than scattered through the docs. Each entry states what has to be decided, the options, and the current answer. **None of them blocks a release.**
 
-## Q1 — Final npm scope <a id="q1"></a>
-**Status: RESOLVED (2026-07-27).** Option (a) confirmed: npm org `orpc-agent` registered (owner: pbwise), all five packages published at 0.1.0 under `@orpc-agent/*` with the independence disclaimer in every description and README. Release flow: changesets (linked lockstep across `@orpc-agent/*`), `pnpm release` locally or the CI release job on main (needs `NPM_TOKEN` + `RELEASE_TOKEN` secrets). Courtesy note to oRPC maintainers still pending.
-
-## Q2 — oRPC peer version range <a id="q2"></a>
-**Status: RESOLVED (v0.1).** Pinned `@orpc/server ^1.14.10`; the runtime uses the `call` utility (middleware chain runs unchanged); stage-5 validation is runtime-side (governance needs the value pre-execution) while the handler's value comes from oRPC's own in-call parse; output validation is delegated to oRPC's in-call validation and mapped to `OUTPUT_INVALID`. Full findings: [ADR-001 addendum](architecture/decisions.md#adr-001-orpc-procedures-are-the-source-of-truth).
+Resolved questions keep their number so existing citations still land: [Q2](#q2) and [Q8](#q8) are recorded at the bottom, with pointers to the decision records that answered them.
 
 ## Q3 — JSON Schema conversion beyond Zod v4 <a id="q3"></a>
-**Decision.** Adopt a community Standard-Schema→JSON-Schema converter as a default fallback, or stay registry-only (built-in Zod v4, everything else user-registered)?
-**Options.** Registry-only (explicit, predictable); bundle a community converter (broader out-of-box, variable fidelity).
-**Recommendation.** Registry-only for v0.1 (ADR-009); re-evaluate at 0.2 with real user data.
-**Implications.** Valibot/ArkType users write one line more; failure modes stay loud and early.
-**Blocking?** No.
+
+**Decision needed.** Adopt a community Standard-Schema→JSON-Schema converter as a default fallback, or stay registry-only (Zod v4 built in, everything else registered by the application)?
+
+**Options.** Registry-only — explicit and predictable. Bundle a community converter — broader out of the box, variable fidelity.
+
+**Current answer.** Registry-only ([ADR-009](architecture/decisions.md#adr-009-standard-schema-interoperability-lives-in-core)). Valibot and ArkType users write one line more, and failure modes stay loud and early. Revisit as the converters mature.
 
 ## Q4 — MCP approval UX (elicitation) <a id="q4"></a>
-**Decision.** Should the MCP adapter use MCP elicitation to relay human-confirmation approvals through the *client's* UI?
-**Options.** (a) v0.1 behavior only (pending-approval envelope; decisions in your app); (b) elicitation-based confirmation for `human-confirmation` types where clients support it.
-**Recommendation.** (a) for v0.1; prototype (b) behind a flag in 0.2 — elicitation support across clients is still uneven, and confirmation-via-the-requesting-client needs a careful SI-4 analysis (the confirming human must be the *authenticated principal*, not whoever holds the client window).
-**Blocking?** No (MCP ships with (a)).
+
+**Decision needed.** Should the MCP adapter use MCP elicitation to relay human-confirmation approvals through the *client's* UI?
+
+**Options.** (a) Today's behaviour — a pending-approval envelope, decided in your application. (b) Elicitation-based confirmation for `human-confirmation` types where clients support it.
+
+**Current answer.** (a). Elicitation support across clients is still uneven, and confirmation-via-the-requesting-client needs a careful SI-4 analysis: the confirming human must be the *authenticated principal*, not whoever holds the client window. A prototype behind a flag is the next step.
 
 ## Q5 — Session-scoped approvals <a id="q5"></a>
-**Decision.** May one approval cover N identical (same hash) executions within a bounded window ("approve refunds like this for the next hour")?
-**Options.** Single-use only (current, SI-5 strict); counted/windowed approvals (`uses: 3`, `windowMs`).
-**Recommendation.** Single-use in v0.1. Revisit only with concrete demand, as an explicit extension of the record schema — never a default.
-**Implications.** Windowed approvals weaken input-binding's audit clarity; if added, each consumption must still be individually audited.
-**Blocking?** No.
+
+**Decision needed.** May one approval cover N identical (same-hash) executions within a bounded window — "approve refunds like this for the next hour"?
+
+**Options.** Single-use only (today, SI-5 strict); counted or windowed approvals (`uses: 3`, `windowMs`).
+
+**Current answer.** Single-use. Revisit only with concrete demand, as an explicit extension of the record schema — never a default. Windowed approvals weaken input-binding's audit clarity; if they ever land, each consumption must still be individually audited.
 
 ## Q6 — Policy-driven input constraints <a id="q6"></a>
-**Decision.** Provide a safe mechanism for policies to *constrain* (not rewrite) inputs — e.g., clamp `limit ≤ 25` for `mcp` surface?
-**Options.** (a) None — deny with a message (current, SI-6); (b) declarative bounded overrides in the decision (`{ type: "allow", constraints: { limit: { max: 25 } } }`) applied *before* validation and visible in audit.
-**Recommendation.** (a) for v0.1. If (b) ever lands, constraints must be declarative (no arbitrary functions), pre-validation, audited, and reflected in discovery schemas — a full design, not a patch.
-**Blocking?** No.
+
+**Decision needed.** Should policies be able to *constrain* (not rewrite) inputs — clamp `limit ≤ 25` on the `mcp` surface, say?
+
+**Options.** (a) None — deny with a message (today, SI-6). (b) Declarative bounded overrides in the decision (`{ type: "allow", constraints: { limit: { max: 25 } } }`) applied *before* validation and visible in audit.
+
+**Current answer.** (a). If (b) ever lands, constraints must be declarative (no arbitrary functions), pre-validation, audited, and reflected in discovery schemas — a full design, not a patch.
 
 ## Q7 — First workflow adapter target <a id="q7"></a>
-**Decision.** Which engine gets the reference `workflow`-surface adapter (post-0.1): Temporal, Inngest, or Trigger.dev?
-**Recommendation.** Decide by user demand at 0.2 planning; design the adapter against the conformance contract so the choice isn't architectural.
-**Update (0.2).** [Mastra](https://mastra.ai) joined the candidate list and currently leads it: first-production-consumer demand, and its app-process suspend/resume workflow model is the cheapest conformant target — the integration may reduce to the [workflow-steps recipe](guides/workflow-steps.md) plus a thin step wrapper. Decision still deferred until the pattern is proven in a real application; the recipe is engine-agnostic on purpose.
-**Blocking?** No (Deferred scope).
 
-## Q8 — Reference persistent stores <a id="q8"></a>
-**Status: RESOLVED (0.2).** Ship **one** reference package, `@orpc-agent/postgres`, exporting both `createPgApprovalCoordinator` and `createPgAuditSink` — superseding the earlier two-package placeholder names: both are dependency-free SQL glue over the same query seam, and the "smallest coherent architecture" argument of [ADR-009](architecture/decisions.md#adr-009-standard-schema-interoperability-lives-in-core) applies. The demand signal the 0.1 recommendation waited for arrived with the first production consumer. Bounds pinned in [ADR-013](architecture/decisions.md#adr-013-postgres-reference-persistence-package): driver-agnostic query seam, DDL as exported strings (no migrations framework), JS-injected clock, batching never voids strict audit. The hand-rolled recipes in [human-approval](guides/human-approval.md#production-coordinator) and [auditing](guides/auditing.md#minimal-wiring) remain the custom-store path.
+**Decision needed.** Which engine gets the reference `workflow`-surface adapter: Temporal, Inngest, Trigger.dev, or [Mastra](https://mastra.ai)?
 
-## Q9 — Rate limiting / quotas <a id="q9"></a>
-**Decision.** Does the framework grow first-class per-actor/per-capability rate limits (threat T5), or stay app-level (middleware) forever?
-**Options.** App-level only (current); a `limits` meta block + runtime enforcement with audit events.
-**Recommendation.** App-level for 0.1–0.2; the clean seam exists (a policy with a counter in context), and premature quota machinery in core violates the storage-neutral stance.
-**Blocking?** No.
+**Current answer.** Mastra leads the list — production demand, and its app-process suspend/resume model is the cheapest conformant target, possibly reducing to the [workflow-steps recipe](guides/workflow-steps.md) plus a thin step wrapper. Deferred until the pattern is proven in a real application; the recipe stays engine-agnostic on purpose, and the adapter is designed against the [conformance contract](architecture/adapter-model.md) so the choice is not architectural.
+
+## Q9 — Rate limiting and quotas <a id="q9"></a>
+
+**Decision needed.** Does the framework grow first-class per-actor/per-capability rate limits (threat [T5](security/threat-model.md)), or stay app-level forever?
+
+**Options.** App-level middleware only (today); a `limits` meta block with runtime enforcement and audit events.
+
+**Current answer.** App-level. The clean seam already exists — a policy with a counter in context — and premature quota machinery in core would violate the storage-neutral stance.
 
 ## Q10 — Discovery timing side channels <a id="q10"></a>
-**Decision.** Should concealment (SI-8) also normalize *response timing* between unknown / unexposed / hidden outcomes?
-**Recommendation.** Accepted risk for v0.1 (noted in threat model T4); measure real deltas during M3 and add jitter/normalization only if they're distinguishable in practice.
-**Blocking?** No.
+
+**Decision needed.** Should concealment (SI-8) also normalize *response timing* between unknown, unexposed, and hidden outcomes?
+
+**Current answer.** Accepted risk, noted as [T4](security/threat-model.md). Measure real deltas before adding jitter or normalization; the mitigation is only worth its cost if the difference is distinguishable in practice.
 
 ## Q11 — Streaming outputs <a id="q11"></a>
-**Decision.** Governance semantics for oRPC event-iterator procedures: what do output validation (stage 12), redaction (stage 13), and audit mean per-chunk? Do adapters stream tool results?
-**Recommendation.** Out of v0.1 (capabilities return complete values; the registry rejects event-iterator outputs with a clear error). Design doc required before 0.3.
-**Implications.** Excludes long-running incremental reads from v0.1 capability sets.
-**Blocking?** No.
+
+**Decision needed.** What do output validation (stage 12), redaction (stage 13), and audit mean *per chunk* for oRPC event-iterator procedures? Do adapters stream tool results?
+
+**Current answer.** Out of scope. Capabilities return complete values, and the registry rejects event-iterator outputs with a clear error. A design document comes before any implementation. This excludes long-running incremental reads from capability sets today.
 
 ## Q12 — `scope` on the MCP adapter <a id="q12"></a>
-**Decision.** Should [`describe`'s `scope`](reference/runtime.md#scope-discovery-shaping-never-an-authority-boundary) reach `@orpc-agent/mcp`, where a large catalog has the same discovery cost that motivated it ([ADR-017](architecture/decisions.md#adr-017-discovery-takes-a-scope-and-a-budget))?
+
+**Decision needed.** Should [`describe`'s `scope`](reference/runtime.md#scope-discovery-shaping-never-an-authority-boundary) reach `@orpc-agent/mcp`, where a large catalog has the same discovery cost that motivated it ([ADR-017](architecture/decisions.md#adr-017-discovery-takes-a-scope-and-a-budget))?
+
 **Options.** A per-server construction option (`createMCPServer(runtime, { scope })`); a per-session value derived in `createContext`; nothing, leaving MCP clients to receive the full catalog.
-**Recommendation.** Deferred past 1.1 deliberately. `tools/list` is driven by the protocol rather than by a per-step host decision, so the shape is server configuration rather than a per-call argument — a different design question, and one worth a real MCP consumer's demand signal first. The AI SDK adapter needed neither, because its caller already composes per request.
-**Blocking?** No.
+
+**Current answer.** Nothing, deliberately. `tools/list` is driven by the protocol rather than by a per-step host decision, so the natural shape is server configuration rather than a per-call argument — a different design question, and one worth a real MCP consumer's demand signal first. The AI SDK adapter needed neither, because its caller already composes per request.
+
+---
+
+## Resolved
+
+**Q2 — oRPC peer version range** <a id="q2"></a>
+Pinned `@orpc/server ^1.14.10`; the runtime invokes procedures through oRPC's `call` utility so the middleware chain runs unchanged. Full findings: [ADR-001](architecture/decisions.md#adr-001-orpc-procedures-are-the-source-of-truth).
+
+**Q8 — Reference persistent stores** <a id="q8"></a>
+One package, `@orpc-agent/postgres`, exporting both `createPgApprovalCoordinator` and `createPgAuditSink` over a driver-agnostic query seam. Bounds: [ADR-013](architecture/decisions.md#adr-013-postgres-reference-persistence-package). The hand-rolled recipes in [human approval](guides/human-approval.md#production-coordinator) and [auditing](guides/auditing.md#minimal-wiring) remain the custom-store path.

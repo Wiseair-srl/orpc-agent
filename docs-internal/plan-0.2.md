@@ -1,6 +1,6 @@
 # Implementation plan — v0.2 "Durability seams"
 
-> **Status:** **Executed** — N1–N7 implemented; kept as the record of how v0.2 was sequenced (like [milestones](milestones.md) for v0.1). One deviation from the letter of the plan: `toJsonSchema` turned out to be memoized since 0.1, so N5a narrowed to cache invalidation on `registerSchemaConverter` + descriptor isolation via cloning (recorded in [ADR-014](../architecture/decisions.md#adr-014-as-built-api-deltas-for-v02)). Scope was fixed by the 2026-07 gap review (driven by the first production consumer: an ~85-capability finance app on Mastra + Postgres).
+> **Status:** **Executed** — N1–N7 implemented; kept as the record of how v0.2 was sequenced (like [milestones](milestones.md) for v0.1). One deviation from the letter of the plan: `toJsonSchema` turned out to be memoized since 0.1, so N5a narrowed to cache invalidation on `registerSchemaConverter` + descriptor isolation via cloning (recorded in [ADR-014](../architecture/decisions.md#adr-014-further-api-surface-decisions)). Scope was fixed by the 2026-07 gap review (driven by the first production consumer: an ~85-capability finance app on Mastra + Postgres).
 
 ## Release definition
 

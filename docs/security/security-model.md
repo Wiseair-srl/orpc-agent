@@ -1,6 +1,6 @@
 # Security model
 
-> **Status:** Stable — 1.0. The invariants below are **binding**. oRPC Agent provides controls that reduce the impact of agent misbehavior; it does not make an unsafe application safe, and it requires application-level authorization to exist and remain enforced.
+> The invariants below are **binding**. oRPC Agent provides controls that reduce the impact of agent misbehavior; it does not make an unsafe application safe, and it requires application-level authorization to exist and remain enforced.
 
 ## Threat posture
 
@@ -19,14 +19,14 @@ Everything left of the boundary can *request*; only things right of it can *deci
 
 ## Security invariants (SI-1 … SI-12)
 
-The implementation must never violate these. Tests asserting each are part of the required test matrix ([implementation brief](../implementation/brief.md#security-invariants)).
+The implementation must never violate these, and each ships with named tests (tagged `SI-n`) that may not be weakened without a superseding ADR.
 
 - **SI-1 — Deny by default.** No capability is reachable on any surface without explicit `expose.<surface>: true`. Absent metadata, absent surface key, or `false` all deny.
 - **SI-2 — Enforcement at execution time.** Discovery filtering and adapter tool lists are UX. Exposure, policies, middleware, and approvals are evaluated on **every** invocation regardless of what any client was shown.
 - **SI-3 — The model is never the actor.** Actor identity derives from authenticated application credentials. Nothing a model writes — arguments, prompts, retrieved text — can create, change, or elevate identity.
 - **SI-4 — No self-approval.** Approval decisions originate from trusted humans, deterministic policy, or external authorized systems. The approver must differ from the requesting actor (default-enforced). A model can at most *trigger* an approval flow; it cannot decide one.
 - **SI-5 — Approval binds the exact operation.** Capability id + requesting actor + SHA-256 of canonical validated input. Any change → new approval. One execution per approval (atomic consumption).
-- **SI-6 — What was validated is what executes.** No stage may mutate input after schema validation; policies cannot rewrite it (v0.1 has no rewrite mechanism by design).
+- **SI-6 — What was validated is what executes.** No stage may mutate input after schema validation; policies cannot rewrite it (there is no rewrite mechanism, by design).
 - **SI-7 — Fail closed.** Policy errors and policy timeouts deny (`POLICY_FAILED`). Unresolvable state never resolves to allow.
 - **SI-8 — Concealment.** Unknown, unexposed, and policy-hidden capabilities are externally indistinguishable (`CAPABILITY_NOT_FOUND` with identical shape). Audit records the true reason internally.
 - **SI-9 — Internal details never reach models.** Only `publicMessage` of errors marked `exposeToModel` crosses the adapter boundary; `cause`, `stage`, stacks, and non-exposed messages do not.
@@ -65,7 +65,7 @@ Stated plainly, because security tools that overclaim are dangerous:
 | Over-broad capabilities | Narrow verbs, strict schemas ([capabilities](../concepts/capabilities.md#granularity-guidance)) |
 | Sensitive outputs entering model context | `redact.output`, minimal output schemas ([sensitive-data.md](sensitive-data.md)) |
 | Approver fatigue (rubber-stamping) | Meaningful thresholds, readable `redact.approvalInput`, few but real approvals |
-| Cost/abuse via legitimate calls | Rate limiting in middleware (Planned framework support: [open-questions](../open-questions.md#q9)) |
+| Cost/abuse via legitimate calls | Rate limiting in your middleware — the framework has none, and whether it grows any is [Q9](../open-questions.md#q9) |
 | Compromised application identity | Your session/token security — the framework trusts your authentication |
 
 ## Reading path

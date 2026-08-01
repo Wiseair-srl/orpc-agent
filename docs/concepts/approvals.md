@@ -1,6 +1,6 @@
 # Approvals
 
-> **Status:** Stable — 1.0 — normative approval semantics.
+> Normative approval semantics. The end-to-end wiring is in [guides/human-approval.md](../guides/human-approval.md).
 
 An **approval** is a trusted decision required before a capability executes. It is a *lifecycle*, not a boolean: requested, pending, decided, expiring, consumed — each transition attributable and audited.
 
@@ -84,7 +84,7 @@ const final = await runtime.resume(approvalId, { context: freshContext });
 
 Resume runs as the **original actor** (identity is bound in the record; no re-attribution), with the approver recorded in `context.agent.approval`. The caller supplies fresh application context — live handles are not serializable, and stale context is exactly what execution-phase policies exist to catch.
 
-Failure modes are precise: `APPROVAL_PENDING`, `APPROVAL_REJECTED`, `APPROVAL_EXPIRED`, `APPROVAL_CONSUMED`, `APPROVAL_INPUT_MISMATCH`, `APPROVAL_SELF_APPROVAL` ([reference/errors.md](../reference/errors.md)).
+Every way this can fail has its own code — pending, rejected, expired, already consumed, input mismatch, self-approval — so the caller never has to guess which check refused ([reference/errors](../reference/errors.md)).
 
 ## Two operating modes
 
@@ -99,7 +99,7 @@ approvals: {
 }
 ```
 
-**Coordinator + resume** — the durable shape: `invoke` returns `approval-required`; the app persists, notifies, collects the decision, and later calls `resume`. v0.1 ships `createInMemoryApprovalCoordinator` (dev/test only — records die with the process); production implements `ApprovalCoordinator` over your database. The interface is the durability seam ([ADR-007](../architecture/decisions.md#adr-007-durable-execution-is-adapter-based)); workflow-engine-backed coordinators are the planned path for long-lived, restart-surviving approvals.
+**Coordinator + resume** — the durable shape: `invoke` returns `approval-required`; the app persists, notifies, collects the decision, and later calls `resume`. Core ships `createInMemoryApprovalCoordinator` (dev/test only — records die with the process); `@orpc-agent/postgres` ships the reference persistent one, and any other store implements `ApprovalCoordinator` directly. The interface is the durability seam ([ADR-007](../architecture/decisions.md#adr-007-durable-execution-is-adapter-based)); workflow-engine-backed coordinators are the planned path for long-lived, restart-surviving approvals.
 
 ## Input integrity mechanics
 
@@ -110,5 +110,5 @@ approvals: {
 
 ## Related
 
-- Guide: [human-approval.md](../guides/human-approval.md) (end-to-end wiring) · Reference: [runtime.md](../reference/runtime.md#runtimeapprovals)
+- Guide: [human-approval.md](../guides/human-approval.md) (end-to-end wiring) · Reference: [runtime.md](../reference/runtime.md#runtime-approvals)
 - Security: [security-model.md](../security/security-model.md) · Example: [customer-support-agent.md](../examples/customer-support-agent.md)

@@ -1,8 +1,10 @@
 # CLI
 
-> **Status:** Stable — 1.0 · package `@orpc-agent/cli` · binary `orpc-agent` · [ADR-015](../architecture/decisions.md#adr-015-a-developer-cli-with-capability-inventory-as-its-first-command)
+> Package: `@orpc-agent/cli`. Binary: `orpc-agent`. Design bounds: [ADR-015](../architecture/decisions.md#adr-015-a-developer-cli-with-capability-inventory-as-its-first-command).
 
 A developer tool, not an adapter: it exposes nothing to an agent and hardcodes no surface value. It answers *what can an agent reach from this repository*, and *did that change in this pull request*.
+
+Setting it up for the first time? [A drift gate in CI](../guides/ci-drift-gate.md) is the task-first version of this page.
 
 ```bash
 pnpm add -D @orpc-agent/cli
@@ -152,7 +154,7 @@ Three are counter-intuitive and deliberate:
 
 ### Runtime policies
 
-Removing an entry from `createAgentRuntime({ policies: [...] })` is **widening**, and it is why the snapshot records the runtime at all. It is the one edit that can strip a conditional approval gate from every capability at once while leaving every per-capability field byte-identical:
+Removing an entry from `defineGovernance({ policies: [...] })` is **widening**, and it is why the snapshot records the runtime at all. It is the one edit that can strip a conditional approval gate from every capability at once while leaving every per-capability field byte-identical:
 
 ```
 WIDENING — the agent gained reach, or a control weakened

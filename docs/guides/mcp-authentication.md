@@ -1,8 +1,8 @@
 # Guide: MCP authentication
 
-> **Status:** Integration guide for the `createContext` seam (typed `authInfo`). oRPC Agent ships **no authorization server** — that is a permanent non-goal ([package boundaries](../architecture/package-boundaries.md#orpc-agentmcp), roadmap non-goals). This page shows how to put one in front of the MCP adapter.
+> Integration guide for the `createContext` seam (typed `authInfo`). oRPC Agent ships **no authorization server** — that is a permanent non-goal ([package boundaries](../architecture/package-boundaries.md#orpc-agent-mcp), roadmap non-goals). This page shows how to put one in front of the MCP adapter.
 
-The adapter's contract is one function: `createContext(session)` receives the transport's **authenticated** session and returns `{ actor, context }` — or nothing, and the session is refused ([adapters/mcp](../adapters/mcp.md)). Everything on this page happens before or inside that function. Since v0.2, `session.authInfo` is the MCP SDK's `AuthInfo` type (`token`, `clientId`, `scopes`, `expiresAt`), so verification code works with real fields.
+The adapter's contract is one function: `createContext(session)` receives the transport's **authenticated** session and returns `{ actor, context }` — or nothing, and the session is refused ([adapters/mcp](../adapters/mcp.md)). Everything on this page happens before or inside that function. `session.authInfo` is the MCP SDK's `AuthInfo` type (`token`, `clientId`, `scopes`, `expiresAt`), so verification code works with real fields.
 
 ## The shape, per the MCP authorization spec
 

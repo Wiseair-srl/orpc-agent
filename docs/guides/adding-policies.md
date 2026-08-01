@@ -1,6 +1,6 @@
 # Guide: adding policies
 
-> **Status:** Stable — 1.0. Semantics: [concepts/policies.md](../concepts/policies.md). This guide is the practical path: which policy to write, where to attach it, how to keep it testable.
+> Semantics: [concepts/policies.md](../concepts/policies.md). This guide is the practical path: which policy to write, where to attach it, how to keep it testable.
 
 ## Start from the sentence
 
@@ -80,7 +80,7 @@ export const governance = defineGovernance({
 const runtime = createAgentRuntime({ governance, approvals: { coordinator } });
 ```
 
-Point `--entry` at that export and [`orpc-agent`](../reference/cli.md) records the list, classifying a removal as *widening*. It works whether or not the serving runtime is reachable, which matters because runtimes are usually built inside a factory and the CLI reads values rather than calling functions ([ADR-016](../architecture/decisions.md#adr-016-runtime-policies-are-part-of-the-governance-contract)).
+Point `--entry` at that export and [`orpc-agent`](ci-drift-gate.md) records the list, classifying a removal as *widening*. It works whether or not the serving runtime is reachable, which matters because runtimes are usually built inside a factory and the CLI reads values rather than calling functions ([ADR-016](../architecture/decisions.md#adr-016-runtime-policies-are-part-of-the-governance-contract)).
 
 The tool records that a policy exists, never what it decides. Which capabilities it gates depends on actor, surface, input and context, and is only knowable by evaluating it.
 
@@ -119,7 +119,7 @@ Full patterns: [testing-capabilities.md](testing-capabilities.md).
 
 ## Pitfalls
 
-- **Slow policies tax every call.** A policy awaiting an uncached HTTP call adds that latency to *all* invocations. Precompute into context, or move the check into middleware where it already lives.
+- **Slow policies tax every call.** A policy awaiting an uncached HTTP call adds that latency to *all* invocations — and at discovery phase, once *per capability* ([what that costs](../reference/performance.md#the-multiplier-that-actually-hurts)). Precompute into context, or move the check into middleware where it already lives.
 - **Nondeterminism** (clock/randomness inside the function) makes audit records unexplainable — inject time via context if a rule is time-based.
 - **Rewriting input is not available** (SI-6): clamp-style rules become `deny` with a message telling the model the legal range — the model adjusts and retries; nothing silently executed something the model didn't ask for.
 - **Policy sprawl**: if every capability grows bespoke policies, push the recurring ones into classifications (`risk`, `tags`) + one classification-driven policy.

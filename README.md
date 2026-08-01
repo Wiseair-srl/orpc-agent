@@ -16,7 +16,7 @@
 Your application UI, an AI runtime, an MCP client, a workflow, and your tests can all call the same typed oRPC procedures, under one set of validation rules, permissions, approvals, execution policies, and observability.
 
 > [!NOTE]
-> **Published to npm** under `@orpc-agent/*`: [`core`](https://www.npmjs.com/package/@orpc-agent/core), [`ai-sdk`](https://www.npmjs.com/package/@orpc-agent/ai-sdk), [`mcp`](https://www.npmjs.com/package/@orpc-agent/mcp), [`postgres`](https://www.npmjs.com/package/@orpc-agent/postgres), [`opentelemetry`](https://www.npmjs.com/package/@orpc-agent/opentelemetry), [`testing`](https://www.npmjs.com/package/@orpc-agent/testing) and [`cli`](https://www.npmjs.com/package/@orpc-agent/cli), all at **1.0.0** (`postgres` arrived in 0.2, `cli` in 0.3). The design documentation in [`docs/`](docs) is normative; CI runs the governance suite on every push (336 tests across 27 files, plus a real-Postgres pass) and gates the examples' committed capability snapshots. Progress lives in the [ROADMAP](ROADMAP.md).
+> **Published to npm** at **2.0.0** under `@orpc-agent/*`: [`core`](https://www.npmjs.com/package/@orpc-agent/core), [`ai-sdk`](https://www.npmjs.com/package/@orpc-agent/ai-sdk), [`mcp`](https://www.npmjs.com/package/@orpc-agent/mcp), [`postgres`](https://www.npmjs.com/package/@orpc-agent/postgres), [`opentelemetry`](https://www.npmjs.com/package/@orpc-agent/opentelemetry), [`testing`](https://www.npmjs.com/package/@orpc-agent/testing), and [`cli`](https://www.npmjs.com/package/@orpc-agent/cli). Upgrading from 1.x is [one field read, if that](docs/migration/1-to-2.md). CI runs the governance suite on every push (plus a real-Postgres pass) and gates the examples' committed capability snapshots.
 
 ```bash
 pnpm add @orpc-agent/core @orpc/server
@@ -162,7 +162,7 @@ Your oRPC middleware stays the authoritative authorization layer on every call. 
 | `@orpc-agent/testing` | Deterministic governance testing |
 | `@orpc-agent/cli` | `orpc-agent` — capability inventory and CI drift gate ([reference](docs/reference/cli.md)) |
 
-Boundaries and rules: [package-boundaries](docs/architecture/package-boundaries.md). The scope name is a placeholder pending registration ([ADR-011](docs/architecture/decisions.md#adr-011-npm-scope-and-project-independence)).
+Boundaries and rules: [package-boundaries](docs/architecture/package-boundaries.md).
 
 ## Catching exposure changes in review
 
@@ -197,11 +197,11 @@ No agent loop, planner, prompts, or memory. No workflow engine, though durable e
 
 ## Roadmap
 
-**1.0 is published**, and semver applies strictly from here: a breaking change means a major, never a minor with migration notes ([release process](docs/contributing/release-process.md)). Getting here took three lines — v0.1 "Governed core" (runtime, four adapters, reference example), v0.2 "Durability seams" (`@orpc-agent/postgres`, startup warnings, headless/workflow/MCP-auth recipes), v0.3 (`@orpc-agent/cli`, the capability inventory and CI drift gate). Next: the workflow-engine adapter, MCP dynamic listings, streaming capabilities, quotas. Details and open questions in [ROADMAP.md](ROADMAP.md) and [docs/open-questions.md](docs/open-questions.md).
+Semver applies strictly: a breaking change means a major, never a minor with migration notes ([release process](docs/contributing/release-process.md)). **2.0 "Discovery at scale"** added `scope` on `describe`, bounded discovery concurrency, and a constant-size discovery audit event — the one breaking part is [a single field read](docs/migration/1-to-2.md). Next: the workflow-engine adapter, MCP dynamic listings, streaming capabilities, quotas. Details and open questions in [ROADMAP.md](ROADMAP.md) and [docs/open-questions.md](docs/open-questions.md).
 
 ## Contributing
 
-Design review, security analysis, and doc fixes are the most useful contributions right now. Implementation proceeds milestone by milestone. Start with [CONTRIBUTING.md](CONTRIBUTING.md), report security issues via [SECURITY.md](SECURITY.md), follow the [Code of Conduct](CODE_OF_CONDUCT.md), and see [GOVERNANCE.md](GOVERNANCE.md) for how decisions get made.
+Design review, security analysis, and doc fixes are the most useful contributions. Start with [CONTRIBUTING.md](CONTRIBUTING.md), report security issues via [SECURITY.md](SECURITY.md), follow the [Code of Conduct](CODE_OF_CONDUCT.md), and see [GOVERNANCE.md](GOVERNANCE.md) for how decisions get made.
 
 ## License and independence
 

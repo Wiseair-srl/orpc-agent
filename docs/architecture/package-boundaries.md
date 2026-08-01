@@ -1,6 +1,6 @@
 # Package boundaries
 
-> **Status:** Stable — 1.0. the package layout as built. Published to npm at 1.0.0 under the `@orpc-agent` scope ([ADR-011](decisions.md#adr-011-npm-scope-and-project-independence)).
+> Seven packages published under the `@orpc-agent` scope ([ADR-011](decisions.md#adr-011-npm-scope-and-project-independence)), and the dependency rules that keep them apart.
 
 ## Monorepo layout
 
@@ -10,14 +10,17 @@ orpc-agent/
 │   ├── core/            -> @orpc-agent/core
 │   ├── ai-sdk/          -> @orpc-agent/ai-sdk
 │   ├── mcp/             -> @orpc-agent/mcp
+│   ├── postgres/        -> @orpc-agent/postgres
 │   ├── opentelemetry/   -> @orpc-agent/opentelemetry
-│   └── testing/         -> @orpc-agent/testing
+│   ├── testing/         -> @orpc-agent/testing
+│   └── cli/             -> @orpc-agent/cli
 ├── examples/
-│   └── customer-support/
+│   ├── customer-support/
+│   └── mastra-task-board/
 └── docs/
 ```
 
-pnpm workspaces; TypeScript strict; ESM-first with CJS compatibility left to the build tool. There is **no** separate schema package: Standard Schema support lives in core under the `@orpc-agent/core/schema` subpath ([ADR-009](decisions.md#adr-009-standard-schema-interoperability-lives-in-core)).
+pnpm workspaces; TypeScript strict; **ESM only** (`type: module`, Node ≥ 20.19 — no CJS build ships). There is **no** separate schema package: Standard Schema support lives in core under the `@orpc-agent/core/schema` subpath ([ADR-009](decisions.md#adr-009-standard-schema-interoperability-lives-in-core)).
 
 ## Dependency direction
 
@@ -26,21 +29,21 @@ pnpm workspaces; TypeScript strict; ESM-first with CJS compatibility left to the
                     \                 /
                      v               v
                    @orpc-agent/core
-                  ^      ^      ^      ^
-                  |      |      |      |
-        ai-sdk ---+      |      |      +--- testing
-     (peer: ai@^5||^6)   |      |           (no protocol deps)
-                         |      |
-        mcp -------------+      +--- opentelemetry
-        (peer: @modelcontextprotocol/sdk)   (peer: @opentelemetry/api)
+        ^     ^     ^       ^      ^        ^
+        |     |     |       |      |        |
+   ai-sdk   mcp   postgres  otel  testing  cli
+   (peer:   (peer: (no      (peer: (no      (peer:
+   ai@^5    mcp    driver)  otel   protocol core —
+   ||^6)    sdk)            api)   deps)    one instance)
 ```
 
 Rules (binding):
 
-- Core depends on **no** model provider, no `ai`, no MCP SDK, no OpenTelemetry.
+- Core depends on **no** model provider, no `ai`, no MCP SDK, no OpenTelemetry, no database driver.
 - Adapters depend on core plus exactly their protocol SDK, always as a **peer dependency** so the application controls the version.
 - No adapter depends on another adapter. The MCP package is never required by the AI SDK package and vice versa.
 - Testing depends only on core; it must run without any LLM, network, or protocol SDK.
+- The CLI takes core as a **peer**: the requirement is one *module instance*, not one version ([ADR-016](decisions.md#adr-016-runtime-policies-are-part-of-the-governance-contract) §8).
 - Examples may depend on everything.
 
 ## @orpc-agent/core
@@ -50,12 +53,14 @@ Rules (binding):
 **Public exports.**
 
 ```text
-agentProcedure, createCapabilityRegistry, createAgentRuntime,
-definePolicy, composePolicies, allow, deny, hide, requireApproval,
-unwrap, createInMemoryApprovalCoordinator, CapabilityError
-types: AgentMeta, AgentCapability, CapabilityRegistry, AgentRuntime,
-  Actor, AgentInvocationInfo, ExecutionRequest, ExecutionResult,
-  ExecutionOptions, CapabilityDescriptor, AgentPolicy, PolicyDecision,
+agentProcedure, createCapabilityRegistry, defineGovernance,
+createAgentRuntime, definePolicy, composePolicies,
+allow, deny, hide, requireApproval, unwrap, defaultToolName,
+createInMemoryApprovalCoordinator, CapabilityError
+types: AgentMeta, AgentCapability, CapabilityRegistry, AgentGovernance,
+  AgentRuntime, AgentRuntimeOptions, Actor, AgentInvocationInfo,
+  ExecutionRequest, ExecutionResult, ExecutionOptions,
+  CapabilityDescriptor, DescribeScope, AgentPolicy, PolicyDecision,
   PolicyPhase, PolicyRequest, ApprovalRequest, ApprovalRecord,
   ApprovalDecision, ApprovalCoordinator, AgentAuditEvent, AuditSink,
   TracingAdapter, SpanHandle, ExposureSurface, SideEffect, RiskLevel,
@@ -66,8 +71,6 @@ subpath @orpc-agent/core/schema: toJsonSchema, registerSchemaConverter
 **Dependencies.** Peer: `@orpc/server`. Type-only: `@standard-schema/spec`. Runtime deps: none beyond the platform (Web Crypto for hashing, `AbortSignal`).
 
 **Non-responsibilities.** No persistence (the in-memory approval coordinator is for development and tests), no HTTP server, no model calls, no OpenTelemetry objects (only the neutral `TracingAdapter` interface), no scheduling.
-
-**Maturity.** Stable at 1.0.
 
 ## @orpc-agent/ai-sdk
 
@@ -81,8 +84,6 @@ subpath @orpc-agent/core/schema: toJsonSchema, registerSchemaConverter
 
 **Relationship.** Pure consumer of `runtime.describe("aiSdk", …)` and `runtime.invoke(…, { surface: "aiSdk" })` per the [adapter model](adapter-model.md).
 
-**Maturity.** Stable at 1.0.
-
 ## @orpc-agent/mcp
 
 **Purpose.** Expose a runtime as an MCP server: `tools/list` from discovery, `tools/call` through the runtime, per-session actor/context construction from transport authentication.
@@ -91,9 +92,7 @@ subpath @orpc-agent/core/schema: toJsonSchema, registerSchemaConverter
 
 **Dependencies.** `@orpc-agent/core`; peer `@modelcontextprotocol/sdk`.
 
-**Non-responsibilities.** No OAuth server (the app authenticates and hands the adapter a verified identity), no resource/prompt MCP features in v0.1, no dynamic `list_changed` in v0.1 (Planned).
-
-**Maturity.** Stable at 1.0.
+**Non-responsibilities.** No OAuth server (the app authenticates and hands the adapter a verified identity), no MCP resource or prompt features, no dynamic `list_changed`.
 
 ## @orpc-agent/opentelemetry
 
@@ -103,9 +102,7 @@ subpath @orpc-agent/core/schema: toJsonSchema, registerSchemaConverter
 
 **Dependencies.** `@orpc-agent/core`; peer `@opentelemetry/api`.
 
-**Non-responsibilities.** No exporter/SDK setup (the app owns its OTel SDK), no metrics in v0.1, no log correlation.
-
-**Maturity.** Stable at 1.0.
+**Non-responsibilities.** No exporter/SDK setup (the app owns its OTel SDK), no metrics, no log correlation.
 
 ## @orpc-agent/postgres
 
@@ -117,8 +114,6 @@ subpath @orpc-agent/core/schema: toJsonSchema, registerSchemaConverter
 
 **Non-responsibilities.** No migrations framework (DDL ships as strings; the app owns its schema lifecycle), no connection pooling, no retention/pruning policy.
 
-**Maturity.** Stable at 1.0 (added in 0.2).
-
 ## @orpc-agent/cli
 
 **Purpose.** Developer tooling, not an adapter: it exposes nothing to an agent and hardcodes no surface value. Binary `orpc-agent`, first command family `inspect` / `snapshot` / `check` — the capability inventory and the CI drift gate. Bounds: [ADR-015](decisions.md#adr-015-a-developer-cli-with-capability-inventory-as-its-first-command).
@@ -129,8 +124,6 @@ subpath @orpc-agent/core/schema: toJsonSchema, registerSchemaConverter
 
 **Non-responsibilities.** Does not evaluate policies (declarations, not reachability — see ADR-005), does not invoke application code (a function export is refused, never called), does not judge new capabilities that have no snapshot baseline.
 
-**Maturity.** Stable at 1.0 (added in 0.3).
-
 ## @orpc-agent/testing
 
 **Purpose.** Deterministic verification of governance without a model: direct invocation with fake actors, policy decision assertions, approval probes (auto-approve / auto-reject / manual), captured audit events, fake clock, handler overrides.
@@ -140,8 +133,6 @@ subpath @orpc-agent/core/schema: toJsonSchema, registerSchemaConverter
 **Dependencies.** `@orpc-agent/core` only.
 
 **Non-responsibilities.** Not a test framework (works inside Vitest/Jest/node:test), no snapshot management, no LLM simulation.
-
-**Maturity.** Stable at 1.0, co-developed with core (core's own tests use it).
 
 ## Boundary tests (implementation must enforce)
 

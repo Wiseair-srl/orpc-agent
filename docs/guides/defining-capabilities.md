@@ -1,6 +1,6 @@
 # Guide: defining capabilities
 
-> **Status:** Stable — 1.0. Assumes an existing oRPC app. Concepts: [capabilities](../concepts/capabilities.md); contract: [reference/metadata.md](../reference/metadata.md).
+> Assumes an existing oRPC app. Concepts: [capabilities](../concepts/capabilities.md); contract: [reference/metadata.md](../reference/metadata.md).
 
 ## 1. Create an agent-typed base once
 

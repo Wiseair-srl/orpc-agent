@@ -1,7 +1,5 @@
 # Capability registry
 
-> **Status:** Stable — 1.0.
-
 The **registry** is the typed collection that turns annotated procedures into addressable capabilities. It answers: *what capabilities exist, what are they called, and which subset applies here?*
 
 ## Identity comes from structure
@@ -59,7 +57,7 @@ const supportRuntime = createAgentRuntime({
 | `filter(query \| fn)` | Purpose-specific runtimes |
 | `inspect()` | Review: what's in, what's out, why |
 
-A recommended practice (recommended, not enforced; the reference example ships one as a test snapshot): snapshot `ids()` plus each capability's `{ sideEffect, risk, expose }` in a checked-in file, so any change to the governed surface shows up in diff review.
+Commit that inventory. `orpc-agent snapshot` writes `ids()` plus each capability's classification and exposure to a deterministic file, and `orpc-agent check` fails CI when the governed surface moves — so widening the agent's reach shows up in diff review instead of in production ([how to set it up](../guides/ci-drift-gate.md)).
 
 ## Multiple registries
 

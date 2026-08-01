@@ -1,6 +1,6 @@
 # Policies
 
-> **Status:** Stable — 1.0 — normative policy semantics.
+> Normative policy semantics. The practical path — which policy to write, where to attach it — is in [guides/adding-policies.md](../guides/adding-policies.md).
 
 A **policy** is a deterministic function that evaluates an execution request and returns one of four decisions. Policies are the governance layer's programmable part — small, composable, auditable — and deliberately *not* a general plugin system.
 
@@ -44,7 +44,7 @@ This phase model implements the discovery / invocation / execution separation of
 
 A discovery policy runs **once per candidate capability**, not once per call. An invocation policy that does a permission lookup costs one round trip; the same policy at discovery phase costs one per capability — at 300 capabilities, on every `describe`, for every step of every turn.
 
-The runtime bounds the damage rather than hiding it: discovery evaluates `defaults.policyConcurrency` capabilities at a time (16), and `defaults.discoveryBudgetMs` (30 s) fails the whole `describe` rather than returning a short catalog. Neither makes the lookups free.
+The runtime bounds the damage rather than hiding it: discovery evaluates `defaults.policyConcurrency` capabilities at a time (16), and `defaults.discoveryBudgetMs` (30 s) fails the whole `describe` rather than returning a short catalog. Neither makes the lookups free — the [measured numbers](../reference/performance.md#discovery-and-why-it-has-knobs) show what they cost.
 
 - Read from already-resolved state — `actor.attributes`, a field on `context` — and stay synchronous.
 - If a lookup is unavoidable, **do it once in context construction** and have the policy read the result. One batched query per request beats N per discovery.
@@ -55,24 +55,16 @@ The runtime bounds the damage rather than hiding it: discovery evaluates `defaul
 1. **Order.** Runtime-level `policies` array in declaration order, then the capability's `meta.policies` in order.
 2. **All policies evaluate.** No short-circuiting on the first deny — the audit record captures every policy's stance (`policyDecisions`), which is worth the marginal cost of evaluating deterministic functions.
 3. **Precedence.** `deny` > `hide` > `require-approval` > `allow`. Deny always wins; conservative conflict resolution.
-4. **Approval merging.** Multiple `require-approval` decisions merge into **one** approval request: all reasons, all types, the minimum expiry. One human decision satisfies the merged requirement; if your domain needs two *distinct* sign-offs, model it as a policy that inspects `approval` metadata and re-requires (documented pattern, v0.1 keeps single-request semantics).
+4. **Approval merging.** Multiple `require-approval` decisions merge into **one** approval request: all reasons, all types, the minimum expiry. One human decision satisfies the merged requirement; if your domain needs two *distinct* sign-offs, model it as a policy that inspects `approval` metadata and re-requires — the runtime itself keeps single-request semantics.
 5. **Fail closed.** A policy that throws, rejects, or exceeds `defaults.policyTimeoutMs` produces `POLICY_FAILED`, treated as deny (SI-7). Never fail open.
-6. **No input rewriting.** Policies cannot modify the validated input (SI-6). A "safe rewrite" mechanism (e.g., clamping limits) is deliberately absent from v0.1 — silent mutation of what the model asked for is a debugging and audit nightmare; deny with a clear message instead ([open-questions](../open-questions.md#q6)).
+6. **No input rewriting.** Policies cannot modify the validated input (SI-6). A "safe rewrite" mechanism (e.g., clamping limits) is deliberately absent — silent mutation of what the model asked for is a debugging and audit nightmare; deny with a clear message instead ([Q6](../open-questions.md#q6)).
 7. **Determinism expectation.** Same request + same context ⇒ same decision. Read from `actor`/`context`/`input`; avoid clocks (inject via context if time matters), randomness, and network calls. Async is permitted (a membership lookup against a request-scoped loader is fine) but slow or flaky policies degrade every invocation — heavyweight authorization belongs in middleware or precomputed context.
 
 ## What policies see
 
-```ts
-type PolicyRequest = {
-  phase: PolicyPhase;
-  capability: { id: string; meta: AgentMeta };   // classifications to target: sideEffect, risk, tags
-  surface: ExposureSurface;
-  actor: Actor;
-  context: unknown;                              // your app context (type it in your own helpers)
-  input?: unknown;                               // validated; undefined at discovery
-  approval?: ApprovalRecord;                     // present on resumed executions
-};
-```
+A `PolicyRequest` carries the phase, the capability's id and metadata, the surface, the actor, your application context, the validated input (`undefined` at discovery), and the approval record on resumed executions. Full type: [reference/core](../reference/core.md#definepolicy).
+
+The two fields worth designing around are `capability.meta` — target by `sideEffect`, `risk`, or `tags` rather than by id — and `surface`, which is how one rule can be strict for `mcp` and permissive for `direct`.
 
 Patterns that compose well:
 

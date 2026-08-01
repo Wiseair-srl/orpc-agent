@@ -1,6 +1,6 @@
 # Architecture overview
 
-> **Status:** Stable — 1.0. describes the architecture as built. Packages are published to npm at 1.0.0.
+> The normative starting point: the system's thesis, its layers, and the boundaries between them. Every other page assumes this model.
 
 This document is the normative starting point for understanding oRPC Agent. It defines the system's thesis, its layers, and the boundaries between them. Every other document assumes the model described here.
 
@@ -120,12 +120,10 @@ Core is provider-neutral ([ADR-003](decisions.md#adr-003-core-is-provider-neutra
 - Not an auth system, database, vector store, or UI framework.
 - Not a replacement for oRPC — it consumes oRPC procedures and would be pointless without them.
 
-## Reading order for implementers
+## Where to go next
 
-1. This overview.
-2. [execution-pipeline.md](execution-pipeline.md) — the normative runtime lifecycle.
-3. [package-boundaries.md](package-boundaries.md) and [adapter-model.md](adapter-model.md).
-4. [decisions.md](decisions.md) — the ADRs.
-5. The [reference](../reference/core.md) section — proposed API contracts.
-6. [security/security-model.md](../security/security-model.md) — binding invariants.
-7. [implementation/brief.md](../implementation/brief.md) — the build order.
+- **The runtime, precisely** — [execution-pipeline.md](execution-pipeline.md), the normative lifecycle every other page cites by stage number.
+- **The boundaries** — [package-boundaries.md](package-boundaries.md) and [adapter-model.md](adapter-model.md).
+- **The reasoning** — [decisions.md](decisions.md).
+- **The API** — the [reference](../reference/core.md) section.
+- **The invariants** — [security/security-model.md](../security/security-model.md).

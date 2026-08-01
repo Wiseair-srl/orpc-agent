@@ -1,6 +1,6 @@
 # Guide: migrating existing tools
 
-> **Status:** Stable — 1.0. For teams with hand-written AI SDK tools (or similar) moving to governed capabilities — incrementally, tool by tool.
+> For teams with hand-written AI SDK tools (or similar) moving to governed capabilities — incrementally, tool by tool.
 
 ## Where you are
 

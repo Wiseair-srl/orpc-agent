@@ -1,7 +1,5 @@
 # Reference: core
 
-> **Status:** Stable — 1.0. Stability: stable unless noted.
-
 Package: `@orpc-agent/core`. This page covers the definition-side API: `agentProcedure`, the registry, policies, decision helpers, and schema utilities. The execution-side API (`createAgentRuntime`, `invoke`, `describe`, `resume`, approvals) is in [runtime.md](runtime.md); errors in [errors.md](errors.md); events in [events.md](events.md).
 
 ---
@@ -97,12 +95,12 @@ type AgentGovernance = {
 
 **Purpose.** Declares an application's governed surface — what an agent may reach, and what is evaluated before it does — as one value, separate from the per-instance wiring (`approvals`, `audit`, `tracing`, `now`) that [`createAgentRuntime`](runtime.md) also takes.
 
-**Why it is separate.** Two reasons, both structural rather than stylistic.
+**Why it is separate.** Two structural properties, both argued in [ADR-016](../architecture/decisions.md#adr-016-runtime-policies-are-part-of-the-governance-contract):
 
-1. **Runtimes cannot disagree about what is governed.** An application legitimately builds several over one surface — a coordinator-backed runtime for its dashboard, an inline-confirm one for chat. Passing a governance leaves no `policies` key to append to, so every runtime built from it evaluates exactly the published list.
-2. **Tooling can read it without a runtime instance.** Runtimes are usually built inside a factory, for per-request context or an injected clock, and [`@orpc-agent/cli`](cli.md) reads values rather than calling functions. A governance is safe at module scope: construction is pure and does no I/O.
+1. **Runtimes cannot disagree about what is governed.** An application legitimately builds several over one surface — coordinator-backed for its dashboard, inline-confirm for chat. A runtime built from a governance has no `policies` key to append to, so every one of them evaluates exactly the published list.
+2. **Tooling reads it without a runtime instance.** Construction is pure and does no I/O, so a governance is safe at module scope — which is where [`@orpc-agent/cli`](cli.md) can see it.
 
-**`manifest`** is the statically knowable identity of the policies — name and phases, composites flattened to match what the pipeline evaluates and audit records. It is what governance tooling reads; `evaluate` is deliberately not reachable from it, since a decision is only meaningful inside the pipeline. Recording a removal from this list is how `orpc-agent check` catches a deleted gate ([ADR-016](../architecture/decisions.md#adr-016-runtime-policies-are-part-of-the-governance-contract)).
+**`manifest`** is the statically knowable identity of those policies: name and phases, composites flattened to match what the pipeline evaluates and audit records. `evaluate` is deliberately not reachable from it. Recording a removal from this list is how `orpc-agent check` catches a deleted gate.
 
 ```ts
 export const governance = defineGovernance({
@@ -114,7 +112,7 @@ const dashboard = createAgentRuntime({ governance, approvals: { coordinator } })
 const chat = createAgentRuntime({ governance, approvals: { coordinator, handler } });
 ```
 
-Frozen on return, and the **only** thing `createAgentRuntime` accepts: there is no `registry`/`policies` pair, because that is the shape where a runtime evaluates a list no exported value names — precisely what tooling then cannot check.
+Frozen on return, and the **only** thing `createAgentRuntime` accepts.
 
 ## `defaultToolName`
 
@@ -201,17 +199,7 @@ function requireApproval(opts: { reason: string; approvalType?: string; expiresI
 
 Pure constructors for the four decision shapes. `deny`'s `message` becomes the public message of the resulting `POLICY_DENIED` error — write it for a model to read, leak nothing. `hide` outside the discovery phase acts as a concealing deny (SI-8).
 
-**Example.**
-
-```ts
-export const refundLimit = definePolicy("refund-limit", ({ capability, input }) => {
-  if (capability.id !== "orders.refund") return allow();
-  const { amount } = input as { amount: number };
-  return amount > 500
-    ? requireApproval({ reason: `Refund of $${amount} exceeds the $500 limit`, approvalType: "manager" })
-    : allow();
-});
-```
+Worked examples, including the `refund-limit` policy the docs use throughout: [concepts/policies](../concepts/policies.md) and [guides/adding-policies](../guides/adding-policies.md).
 
 ---
 
@@ -225,7 +213,7 @@ Convenience for direct/workflow callers: returns `output` for `completed`, throw
 
 ---
 
-## Schema utilities — `@orpc-agent/core/schema`
+## Schema utilities
 
 ```ts
 function toJsonSchema(schema: StandardSchemaV1): JsonSchemaObject;

@@ -1,7 +1,5 @@
 # FAQ
 
-> **Status:** Stable — 1.0.
-
 ## Positioning
 
 **Why not just define AI SDK tools by hand?**
@@ -14,7 +12,7 @@ No. It has no loop, no planner, no memory, no prompts. It is the layer *under* y
 oRPC owns contracts and transports; this project adds agent-specific governance (exposure, policies, approvals, audit) as a separate, independent layer. If oRPC ships overlapping integrations, ours remain a governance wrapper over the same procedures. This is **not** an official oRPC project (ADR-011).
 
 **Does it work with tRPC / plain functions?**
-Not in v0.1 — the design leans on oRPC's meta, context, middleware-in-call-path, and Standard Schema support. The *concepts* port; the code targets oRPC deliberately (narrow and coherent beats broad and vague).
+No. The design leans on oRPC's meta, context, middleware-in-call-path, and Standard Schema support. The *concepts* port; the code targets oRPC deliberately (narrow and coherent beats broad and vague).
 
 **Which model providers are supported?**
 Any the Vercel AI SDK supports, and anything speaking MCP. Core never touches a provider (ADR-003). "Works with every provider" is not claimed — adapters are tested against specific SDK major versions (peer ranges in each package).
@@ -51,9 +49,12 @@ One naming truth. Ids feed approvals, audit, policies, tool names — an alias l
 Storage requirements (retention, residency, compliance) diverge too much; interfaces + your store beat a bundled database you'd fight (ADR-010, ADR-007). In-memory implementations ship for dev/test.
 
 **Streaming outputs?**
-Deferred. oRPC supports event iterators, but governed streaming (validate/redact/audit *chunks*?) needs design work — [open-questions Q11](open-questions.md#q11). v0.1 capabilities return complete values.
+Deferred. oRPC supports event iterators, but governed streaming (validate/redact/audit *chunks*?) needs design work — [open-questions Q11](open-questions.md#q11). Capabilities return complete values; the registry rejects event-iterator outputs with a clear error.
 
 ## Practical
+
+**What does the governance layer cost at runtime?**
+About 65 µs per invocation over a raw oRPC call, and three policies plus an audit sink add nothing measurable on top — policies are deterministic synchronous functions and audit emission is off the critical path. Discovery is the part that scales with catalog size, and `scope` is the knob. Measured figures and the two things that genuinely cost: [cost and performance](reference/performance.md).
 
 **What's the minimum viable adoption?**
 One procedure annotated, one registry, one runtime, `toAISDKTools` — ~20 lines over what you have ([getting-started](getting-started.md)). Policies, approvals, audit, MCP are additive later.
@@ -64,5 +65,5 @@ Yes — `surface: "direct"` gives UI actions the same audit trail and policy eva
 **What happens to my existing oRPC middleware?**
 It runs, unchanged, on every governed invocation — inside the procedure call, as always, and it remains the authoritative authorization layer (ADR-008).
 
-**When is v0.1?**
-v0.1 is implemented in-repo — the [implementation brief](implementation/brief.md)'s acceptance criteria all pass. What remains before an npm release is scope registration ([Q1](open-questions.md#q1)); scope is fixed ([ROADMAP](../ROADMAP.md)) and release dates are still not promised.
+**I'm on 1.x — what does upgrading to 2.0 cost?**
+One field read, if you consume the `capabilities.discovered` audit event; nothing otherwise. Full instructions: [migrating 1.x → 2.0](migration/1-to-2.md).

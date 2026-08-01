@@ -1,6 +1,6 @@
 # Glossary
 
-> **Status:** Stable — 1.0. This vocabulary is enforced across all documentation and code. When two terms are listed as "not interchangeable", the distinction is load-bearing — using one for the other has caused real design bugs elsewhere.
+> This vocabulary is enforced across all documentation and code. When two terms are listed as "not interchangeable", the distinction is load-bearing — using one for the other has caused real design bugs elsewhere.
 
 ## Core terms
 
@@ -64,4 +64,4 @@
 
 ## Shorthands used in these docs
 
-**SI-n** — Security invariant n ([security-model](security/security-model.md#security-invariants-si-1--si-12)). **ADR-nnn** — Architecture decision record ([decisions](architecture/decisions.md)). **Stage n** — Pipeline stage ([execution-pipeline](architecture/execution-pipeline.md)). **Tn** — Threat ([threat-model](security/threat-model.md)). **Mn** — Milestone increment ([milestones](implementation/milestones.md)).
+**SI-n** — Security invariant n ([security-model](security/security-model.md#security-invariants-si-1-si-12)). **ADR-nnn** — Architecture decision record ([decisions](architecture/decisions.md)). **Stage n** — Pipeline stage ([execution-pipeline](architecture/execution-pipeline.md)). **Tn** — Threat ([threat-model](security/threat-model.md)). **Qn** — Open design question ([open-questions](open-questions.md)).
