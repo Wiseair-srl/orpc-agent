@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Acceptance criterion 7: public exports of every package equal the
- * Required-public-APIs list (docs/implementation/brief.md). Checks runtime
+ * Public exports of every package must equal what the reference pages document
+ * (docs/architecture/package-boundaries.md, docs/reference/*). Checks runtime
  * (value) exports against built dist and type exports against the .d.ts.
  * Run after `pnpm build`.
  */

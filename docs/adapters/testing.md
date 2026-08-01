@@ -1,6 +1,6 @@
 # Adapter: testing
 
-> **Status:** Stable — 1.0. Package: `@orpc-agent/testing`. Depends only on `@orpc-agent/core` — no model, no network, no protocol SDKs.
+> Package: `@orpc-agent/testing`. Depends only on `@orpc-agent/core` — no model, no network, no protocol SDKs.
 
 Governance you can't test deterministically is governance you don't have. This package makes exposure, policies, approvals, redaction, and audit behavior assertable in plain unit tests — **without invoking an LLM**. Surface id defaults to **`test`**, overridable per call to simulate any surface.
 
@@ -96,7 +96,7 @@ expect(t.audit.events().map(e => e.type)).toEqual(expect.arrayContaining([
 
 ## Adapter conformance
 
-A conformance checklist, implemented as a describe-block factory, that every adapter package runs against a shared fixture registry. As built in v0.1 it ships as in-repo test infrastructure (`test-fixtures/conformance.ts`, exercised by both `@orpc-agent/ai-sdk` and `@orpc-agent/mcp`) rather than a public export — see [ADR-012](../architecture/decisions.md#adr-012-as-built-api-deltas-for-v01). The checks:
+A conformance checklist, implemented as a describe-block factory, that every adapter package runs against a shared fixture registry. It ships as in-repo test infrastructure (`test-fixtures/conformance.ts`, exercised by both `@orpc-agent/ai-sdk` and `@orpc-agent/mcp`) rather than as a public export ([ADR-012](../architecture/decisions.md#adr-012-supplementary-api-surface-decisions)). The checks:
 
 1. Discovery lists exactly the exposed, non-hidden capabilities for the adapter's surface.
 2. Raw arguments reach the runtime unvalidated (a schema-invalid call yields `INPUT_INVALID` *from the runtime*).
@@ -108,7 +108,7 @@ A conformance checklist, implemented as a describe-block factory, that every ada
 
 - **Test policies as functions** first (`refundLimit({ ...request })` returns a decision — they're pure), then **as wired** through `t.invoke` (ordering, precedence, fail-closed behavior).
 - **Use overrides for governance tests, real handlers for contract tests.** Governance tests shouldn't need a database; handler tests shouldn't need policies in the way (`policies: []`).
-- **Every SI invariant has a test shape above** — the required test matrix in the [implementation brief](../implementation/brief.md#required-test-matrix) is written in this package's vocabulary.
+- **Every SI invariant has a test shape above** — the framework's own invariant suite is written in this package's vocabulary, so yours can be too.
 
 ## Related
 

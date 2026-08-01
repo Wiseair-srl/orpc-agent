@@ -1,8 +1,8 @@
 # Getting started
 
-> **Status:** Stable — 1.0, published to npm. Install the packages from npm (`pnpm add @orpc-agent/core @orpc/server`); inside this repository the walkthrough below also works as written against the workspace packages, and the [customer-support example](examples/customer-support-agent.md) runs it end to end.
+> From an existing oRPC app to a governed AI-SDK tool call in six steps. The [customer-support example](examples/customer-support-agent.md) runs the finished version end to end.
 
-Goal: from an existing oRPC app to a governed AI-SDK tool call in five steps — then the one-line paths to everything else.
+Nothing in your existing application changes. You annotate procedures you already have, register them, and get a governed path to them alongside the ungoverned one your UI already uses.
 
 ## Prerequisites
 
@@ -69,7 +69,31 @@ export const runtime = createAgentRuntime({
 
 Startup validates every capability's metadata and fails loudly on problems.
 
-## 4. Hand tools to your model loop
+## 4. Prove it works, before any model is involved
+
+The runtime is callable directly. This is the whole governed pipeline — exposure, validation, policies, your middleware — with `direct` as the surface:
+
+```ts
+const result = await runtime.invoke(
+  "orders.search",
+  { query: "alice@example.com" },
+  { actor: { id: "u_1", kind: "user" }, context: await createAppContext(session) },
+);
+
+console.log(result.status);   // "completed"
+console.log(result.output);   // { orders: [...] }
+```
+
+Now break it on purpose — pass `{ query: "" }`, which the schema forbids:
+
+```ts
+{ status: "failed", executionId: "exe_…",
+  error: { code: "INPUT_INVALID", stage: "input-validation", retryable: false, … } }
+```
+
+No exception. `invoke` returns one of four statuses — `completed`, `approval-required`, `failed`, `cancelled` — and governed failures are values, not throws ([the result envelope](concepts/runtime.md#the-result-envelope)).
+
+## 5. Hand tools to your model loop
 
 ```ts
 // src/api/chat.ts
@@ -89,9 +113,9 @@ export async function POST(req: Request) {
 }
 ```
 
-The model can now call `orders_search`. Input is validated by your schema, your middleware runs, errors come back model-safe, and every call is traceable.
+The model can now call `orders_search`. Same pipeline as step 4 — only the surface changes, from `direct` to `aiSdk`, which is why exposure is declared per surface.
 
-## 5. Verify without a model
+## 6. Lock it down with a test
 
 ```bash
 pnpm add -D @orpc-agent/testing
@@ -122,6 +146,9 @@ Each next need is one addition, not a rewrite — the simple path and the govern
 | Traces in your APM | `tracing: createOpenTelemetryTracing()` | [adapters/opentelemetry](adapters/opentelemetry.md) |
 | External MCP clients | `@orpc-agent/mcp` + per-session identity | [adapters/mcp](adapters/mcp.md) |
 | Hide fields from models | `redact.output` | [sensitive-data](security/sensitive-data.md) |
+| Catch exposure changes in review | `orpc-agent check` in CI | [a drift gate in CI](guides/ci-drift-gate.md) |
 | Migrate hand-written tools | one tool at a time | [migrating-existing-tools](guides/migrating-existing-tools.md) |
 
 Recommended reading order after this page: [concepts/capabilities](concepts/capabilities.md) → [concepts/lifecycle](concepts/lifecycle.md) → [security/security-model](security/security-model.md) → the [customer-support example](examples/customer-support-agent.md).
+
+Something not working? [Troubleshooting](guides/troubleshooting.md) is indexed by what you saw.

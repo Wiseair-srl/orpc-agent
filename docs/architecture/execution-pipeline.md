@@ -1,6 +1,6 @@
 # Execution pipeline
 
-> **Status:** Stable — 1.0 — the normative specification for the runtime. The implementation must follow the stage ordering and semantics defined here.
+> The normative specification for the runtime. Other pages cite these stages by number; the implementation follows the ordering and semantics defined here.
 
 This document specifies the canonical lifecycle of every capability invocation. Other documents cite these stages by number ("stage 7"). Do not reorder stages in the implementation without an ADR.
 

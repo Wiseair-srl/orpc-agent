@@ -1,6 +1,6 @@
 # Example: Mastra task board
 
-> **Status:** Implemented — a thin full-stack app under `examples/mastra-task-board/` in the repository. `pnpm --filter mastra-task-board-example demo` prints the end-to-end flow below deterministically (no key, no network); `pnpm --filter mastra-task-board-example dev` serves the real thing.
+> A thin full-stack app under `examples/mastra-task-board/` in the repository. `pnpm --filter mastra-task-board-example demo` prints the end-to-end flow below deterministically (no key, no network); `… dev` serves the real thing.
 
 Where the [customer-support agent](customer-support-agent.md) is the exhaustive reference, this example is the minimal *full-stack* one: a React task board, a [Mastra](https://mastra.ai) agent, and four capabilities shared between them. It exists to show two things concretely:
 

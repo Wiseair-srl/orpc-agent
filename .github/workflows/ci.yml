@@ -48,6 +48,10 @@ jobs:
       - run: pnpm test
       - run: pnpm check:docs
       - run: pnpm docs:build
+      # docs:build validates link targets but not their #fragments; this reads
+      # the rendered ids back, so a heading rename cannot silently break a
+      # deep link.
+      - run: pnpm check:anchors
 
   # @orpc-agent/ai-sdk declares `ai: ^5.0.0 || ^6.0.0`, so the suite has to
   # hold on both majors — the `test` job above only covers v5 (the primary

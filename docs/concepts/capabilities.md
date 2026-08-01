@@ -1,7 +1,5 @@
 # Capabilities
 
-> **Status:** Stable — 1.0.
-
 A **capability** is a governed application operation derived from an oRPC procedure. It is the central abstraction of oRPC Agent — not "tool", which is only how one adapter represents a capability on one surface ([ADR-002](../architecture/decisions.md#adr-002-capability-is-the-internal-abstraction)).
 
 ## Why not just call procedures?

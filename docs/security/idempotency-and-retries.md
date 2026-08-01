@@ -1,6 +1,6 @@
 # Idempotency and retries
 
-> **Status:** Stable — 1.0. This page states guarantees precisely, including the ones the framework does **not** make.
+> This page states guarantees precisely, including the ones the framework does **not** make.
 
 ## What the framework guarantees — and what it doesn't
 
@@ -30,7 +30,7 @@ AND meta.retry.retryOn?.(error) !== false
 
 Defaults: **zero retries for everything.** Reads opt in with one line; writes opt in only by *also* declaring `idempotent: true` — a reviewable claim that repeating the call with identical input is safe because the handler deduplicates. Destructive/external operations follow the same rule; the registry rejects `retry` config without the `idempotent` declaration for all three write-like classes ([reference/metadata.md](../reference/metadata.md#validation-at-registry-build)).
 
-Retry mechanics: exponential backoff from `backoffMs` (default 250), same `executionId`, `capability.retried` event per re-attempt with the previous error code, attempt count on the final event. Approval is **not** re-requested between attempts — the consumed record covers the execution it authorized, retries included. The execution timeout arms per attempt (so a timed-out *read* with retry config genuinely retries under a fresh timer); the caller's cancellation signal spans the whole execution and is always terminal ([ADR-012](../architecture/decisions.md#adr-012-as-built-api-deltas-for-v01)).
+Retry mechanics: exponential backoff from `backoffMs` (default 250), same `executionId`, `capability.retried` event per re-attempt with the previous error code, attempt count on the final event. Approval is **not** re-requested between attempts — the consumed record covers the execution it authorized, retries included. The execution timeout arms per attempt (so a timed-out *read* with retry config genuinely retries under a fresh timer); the caller's cancellation signal spans the whole execution and is always terminal ([ADR-012](../architecture/decisions.md#adr-012-supplementary-api-surface-decisions)).
 
 ## Retry vs replay vs re-invocation (terminology that prevents incidents)
 
@@ -73,4 +73,4 @@ timeout timer ───┘
 
 ## Related
 
-- [security-model.md](security-model.md) (SI-5, SI-11, SI-12) · [reference/metadata.md](../reference/metadata.md#retry--idempotent) · [concepts/approvals.md](../concepts/approvals.md)
+- [security-model.md](security-model.md) (SI-5, SI-11, SI-12) · [reference/metadata.md](../reference/metadata.md#retry-idempotent) · [concepts/approvals.md](../concepts/approvals.md)

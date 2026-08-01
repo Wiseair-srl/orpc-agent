@@ -17,20 +17,20 @@ Thanks for your interest. v0.1 is **implemented in-repo but unpublished**: the d
 | Security analysis | Issues for design-level concerns (referencing [threat-model](docs/security/threat-model.md) rows); [SECURITY.md](SECURITY.md) for exploitable specifics |
 | Answers to open questions | Comment on the tracking issue for the [open question](docs/open-questions.md); PRs that resolve one must update that file + any affected ADR |
 | Docs fixes (inconsistencies, unclear passages) | Direct PR; see [docs style](docs/contributing/documentation.md) |
-| Implementation | Claim a milestone-scoped issue (M1 first — see [dependency order](docs/implementation/milestones.md#dependency-graph)); read the [implementation brief](docs/implementation/brief.md) fully before writing code |
+| Implementation | Claim an issue, then read the normative pages it touches before writing code: the [execution pipeline](docs/architecture/execution-pipeline.md), the relevant [reference](docs/reference/core.md) page, and the [security model](docs/security/security-model.md) |
 
 ## Working agreements
 
 1. **Docs lead, code follows.** A change to public API, lifecycle order, policy semantics, error codes, event names, or security behavior lands as a docs PR (and an ADR when architectural) before or with the code. Silent drift between docs and code is treated as a bug in whichever moved without the other.
 2. **Terminology is enforced.** Use the [glossary](docs/glossary.md); reviewers will flag "tool" for capability, "user" for actor, etc.
 3. **Security invariants are load-bearing.** Tests tagged `SI-*` may not be deleted or weakened without an ADR ([security-model](docs/security/security-model.md)).
-4. **Small PRs.** One increment, one concern. Anything touching two milestones splits.
+4. **Small PRs.** One concern each; anything touching two packages for unrelated reasons splits.
 
 ## Development quickstart
 
 ```bash
 pnpm install
-pnpm build          # turbo/workspace build (scaffolding lands in M1)
+pnpm build          # workspace build
 pnpm test           # vitest across packages
 pnpm lint           # eslint + boundary checks (core must not import adapters)
 ```

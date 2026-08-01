@@ -1,6 +1,6 @@
 # Guide: headless invocations (cron jobs and scripts)
 
-> **Status:** Recipe over the stable 1.0 API — nothing here is new machinery. Surface semantics: [adapter model](../architecture/adapter-model.md#surface-identity); actor guidance: [authorization](../security/authorization.md#service-accounts-and-automations).
+> Recipe over the stable API — nothing here is new machinery. Surface semantics: [adapter model](../architecture/adapter-model.md#surface-identity); actor guidance: [authorization](../security/authorization.md#service-accounts-and-automations).
 
 A scheduled job that runs one capability — a nightly bank sync, a weekly report — needs no adapter and no framework support: `direct` **is** the intended surface for server-side code calling `runtime.invoke` itself, and a cron process is server-side code. The whole runner is ~30 lines.
 

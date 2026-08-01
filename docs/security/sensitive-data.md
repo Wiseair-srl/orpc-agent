@@ -1,7 +1,5 @@
 # Sensitive data
 
-> **Status:** Stable — 1.0.
-
 Five places want to see execution data, with five different trust levels. The design principle: **each consumer gets the minimum it needs, and the defaults assume data is sensitive** (SI-9, SI-10). Redaction is subtractive work you opt out of, not protective work you must remember to add — with one honest exception: model-visible *outputs*, which only you can shape.
 
 ## The five lenses

@@ -1,6 +1,6 @@
 # Reference: errors
 
-> **Status:** Stable — 1.0. Codes are stable: additions allowed, meanings never repurposed.
+> Codes are stable: additions allowed, meanings never repurposed. Looking one up because you just saw it? [Troubleshooting](../guides/troubleshooting.md) is indexed by symptom.
 
 Package: `@orpc-agent/core`. Concepts and rationale: [concepts/errors.md](../concepts/errors.md).
 

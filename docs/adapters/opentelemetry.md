@@ -1,6 +1,6 @@
 # Adapter: OpenTelemetry
 
-> **Status:** Stable — 1.0. Package: `@orpc-agent/opentelemetry`. Peer: `@opentelemetry/api`, `@orpc-agent/core`.
+> Package: `@orpc-agent/opentelemetry`. Peer: `@opentelemetry/api`, `@orpc-agent/core`.
 
 Implements core's neutral `TracingAdapter` interface with real OpenTelemetry spans. Core stays OTel-free ([ADR-003](../architecture/decisions.md#adr-003-core-is-provider-neutral)); this package is ~a page of mapping code plus conventions, which is exactly the point.
 
@@ -48,20 +48,13 @@ The safe set from [reference/events.md](../reference/events.md#recommended-attri
 
 Span status: `ok` for `completed` and `approval-required` (a suspension is not an error), `error` with the error code for `failed`/`cancelled`.
 
-## Tracing vs audit (don't merge them)
+## Don't merge traces and audit
 
-| | Traces | Audit events |
-|---|---|---|
-| Question | Why was it slow / where did it fail? | Who did what, when, with what decision? |
-| Consumer | Engineers, APM | Security, compliance, product |
-| Retention | Days–weeks, sampled | Long, complete |
-| Sampling | Yes — and that's fine | Never — completeness is the product |
-
-Same `executionId` appears in both, so you can pivot from an audit record to its trace. Emitting audit events *as* span events would subject them to sampling and trace retention — that's why the two channels are separate ([ADR-010](../architecture/decisions.md#adr-010-audit-events-are-structured-and-storage-neutral), [guides/auditing.md](../guides/auditing.md)).
+The same `executionId` appears in both, so you can pivot from an audit record to its trace. Do not go further and emit audit events *as* span events: that subjects a compliance record to trace sampling and trace retention, which is exactly what the two channels are separated to avoid ([the four telemetry channels](../guides/auditing.md#audit-vs-tracing-vs-logs-vs-metrics)).
 
 ## Metrics
 
-Not in v0.1. The audit stream is a sufficient source to derive counters (completions, denials, approval latency) in your pipeline; native OTel metrics are a Planned consideration.
+Not emitted. The audit stream is a sufficient source to derive counters (completions, denials, approval latency) in your pipeline; native OTel metrics remain under consideration.
 
 ## Related
 

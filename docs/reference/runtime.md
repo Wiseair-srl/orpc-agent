@@ -1,7 +1,5 @@
 # Reference: runtime
 
-> **Status:** Stable — 1.0.
-
 Package: `@orpc-agent/core`. The runtime is the governed execution engine; every surface funnels through it. Behavior is normatively specified by the [execution pipeline](../architecture/execution-pipeline.md) — this page defines the API contract.
 
 ---
@@ -37,23 +35,23 @@ type ApprovalsConfig = {
 
 **Construction behavior.** Pure and synchronous: wires configuration, verifies the registry's schemas are convertible for exposed schema-consuming surfaces, and returns. No I/O.
 
-**A governance is the only accepted form.** There is no `registry`/`policies` pair: that would let a runtime evaluate a policy list no exported value names, which is exactly what tooling then cannot check. Build one with [`defineGovernance`](core.md#definegovernance).
+**`governance` is the only accepted form** — there is no `registry`/`policies` pair. Build one with [`defineGovernance`](core.md#definegovernance), which explains why.
 
-**No `warnings` flag.** The startup warnings fire only where a decision was left implicit, and each is answered by making it — naming `approvals.coordinator` (including `createInMemoryApprovalCoordinator()`, a legitimate answer) or naming an audit sink (including `audit: () => {}`, which states deliberately that nothing is recorded). A mute switch would be a second way to say the same thing, global and invisible to review.
+**Startup warnings** fire for two statically detectable footguns: approval-gated capabilities on the restart-amnesiac default coordinator, and write-capable capabilities on model surfaces with no audit sink. They are never fatal and cannot be muted — each is answered by making the implicit choice explicit ([configuration](configuration.md#runtime-createagentruntime)).
 
 **`runtime.governance`.** The governed surface this runtime executes. Identical by reference across every runtime built from the same governance.
 
-**`runtime.registry`.** The runtime exposes its registry read-only. Adapters read capability meta from it for protocol concerns descriptors deliberately omit (tool-name overrides, MCP annotations) — see [ADR-012](../architecture/decisions.md#adr-012-as-built-api-deltas-for-v01).
+**`runtime.registry`.** Read-only. Adapters read capability meta from it for protocol concerns descriptors deliberately omit — tool-name overrides, MCP annotations ([ADR-012](../architecture/decisions.md#adr-012-supplementary-api-surface-decisions)).
 
-**`runtime.governance.manifest`.** The identity of the runtime-level policies, in evaluation order, composites flattened, frozen:
+**`runtime.governance.manifest`.** The runtime-level policies' identity, in evaluation order, composites flattened, frozen:
 
 ```ts
 readonly manifest: readonly { name: string; phases: readonly PolicyPhase[] }[];
 ```
 
-Name and phases only — never `evaluate`. A decision is meaningful only inside the pipeline (shared batch deadline, fail-closed on throw, audit record), so the closure is not handed out; a policy evaluated outside it would produce an answer that looks authoritative and is not. The names are the same ones audit events already record in `PolicyDecisionRecord.policy`.
+Name and phases only — never `evaluate`, since a decision is meaningful only inside the pipeline (shared batch deadline, fail-closed on throw, audit record). The names are the ones audit events already record in `PolicyDecisionRecord.policy`.
 
-This is the configuration, not its effect. **Governance tooling may report that these policies exist; it may not conclude which capabilities they gate** — that depends on the actor, surface, input and context of a real invocation. [`@orpc-agent/cli`](cli.md) records this list so that removing a runtime policy registers as drift ([ADR-016](../architecture/decisions.md#adr-016-runtime-policies-are-part-of-the-governance-contract)) — though it normally reads the governance value directly, since that needs no runtime instance.
+This is the configuration, not its effect. **Tooling may report that these policies exist; it may not conclude which capabilities they gate** — that depends on the actor, surface, input, and context of a real invocation.
 
 ---
 
@@ -130,7 +128,7 @@ type CapabilityDescriptor = {
 
 Descriptors are advisory for the *client*; every later `invoke` re-checks everything (SI-2).
 
-### `scope` — discovery shaping, never an authority boundary
+### Scope: discovery shaping, never an authority boundary
 
 **`invoke` does not consult scope, in this or any later release.** A capability left out of a scoped `describe` remains fully invocable by an authorized actor, exactly as adapter-level `filter` behaves. To make one *unreachable*, use exposure (`meta.expose`) or a policy that returns `deny`/`hide` — those are the authority mechanisms, and scope is not one of them (SI-2, [ADR-017](../architecture/decisions.md#adr-017-discovery-takes-a-scope-and-a-budget)).
 
@@ -165,7 +163,7 @@ resume<O = unknown>(
 
 No `actor` parameter by design: the requesting identity is bound in the record; resumption must not re-attribute the execution. The caller supplies fresh `context` because application context (db handles, loaders) is not serializable.
 
-**Failure codes.** `APPROVAL_PENDING`, `APPROVAL_REJECTED`, `APPROVAL_EXPIRED`, `APPROVAL_CONSUMED`, `APPROVAL_INPUT_MISMATCH`, `APPROVAL_SELF_APPROVAL`, plus anything stages 9–15 produce.
+**Failure codes.** The six `APPROVAL_*` codes in [errors.md](errors.md#error-codes), plus anything stages 9–15 produce.
 
 ---
 

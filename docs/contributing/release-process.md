@@ -1,6 +1,6 @@
 # Contributing: release process
 
-> **Status:** Stable — 1.0. Applies from the first published release onward.
+> How a release is cut, and what a major, minor, and patch each mean here.
 
 ## Versioning
 

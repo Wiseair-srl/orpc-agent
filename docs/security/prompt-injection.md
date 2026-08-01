@@ -1,7 +1,5 @@
 # Prompt injection
 
-> **Status:** Stable — 1.0.
-
 Prompt injection is untrusted content steering a model into actions its operator didn't intend — instructions hidden in a customer email, a webpage, a document, a tool output. **oRPC Agent does not solve prompt injection.** No capability layer can: the vulnerability lives in the model's inability to reliably separate instructions from data. What a capability layer can do is bound the *impact* of a steered model, and that is the design goal here.
 
 ## The impact equation

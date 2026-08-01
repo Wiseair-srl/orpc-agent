@@ -1,6 +1,6 @@
 # Reference: events and tracing
 
-> **Status:** Stable — 2.0. Event names are stable and are never repurposed. Fields may be **added** in a minor; removing or changing the meaning of one is a breaking change and ships only in a major (`capabilities.discovered` in 2.0 is the first and so far only instance — [ADR-017](../architecture/decisions.md#adr-017-discovery-takes-a-scope-and-a-budget)).
+> Event names are stable and are never repurposed. Fields may be **added** in a minor; removing one, or changing what it means, is a breaking change that ships only in a major — it has happened once, to `capabilities.discovered` ([migration](../migration/1-to-2.md)).
 
 Package: `@orpc-agent/core` (emission, types); `@orpc-agent/opentelemetry` (span implementation). Distinctions between audit, tracing, logs, and metrics: [guides/auditing.md](../guides/auditing.md#audit-vs-tracing-vs-logs-vs-metrics).
 

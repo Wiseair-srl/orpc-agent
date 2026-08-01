@@ -1,6 +1,6 @@
 # Contributing: development
 
-> **Status:** Stable — 1.0. describes the dev environment as scaffolded (pnpm workspace, TypeScript strict, Vitest, boundary/API/docs checks in CI).
+> The dev environment: pnpm workspace, TypeScript strict, Vitest, boundary/API/docs checks in CI.
 
 ## Setup
 
@@ -16,35 +16,47 @@ pnpm test
 ## Repository layout
 
 ```text
-packages/core | ai-sdk | mcp | opentelemetry | testing    # see docs/architecture/package-boundaries.md
-examples/customer-support
-docs/                                                     # the source of truth
+packages/    core · ai-sdk · mcp · postgres · opentelemetry · testing · cli
+examples/    customer-support · mastra-task-board
+docs/        the published site
 ```
 
-Per-package scripts: `build`, `test`, `test:watch`, `lint`, `typecheck` — all runnable from the root via the workspace runner (`pnpm -r test` or filtered: `pnpm --filter @orpc-agent/core test`).
+Boundaries and per-package responsibilities: [package-boundaries](../architecture/package-boundaries.md).
+
+## The checks
+
+Tests run from the root (one Vitest project across the workspace). The rest are the gates CI enforces:
+
+```bash
+pnpm test                  # the whole suite
+pnpm typecheck             # every package
+pnpm check:boundaries      # no core→adapter, no adapter→adapter, no forbidden runtime dep
+pnpm check:api             # public exports match the reference pages
+pnpm check:docs            # symbols, error codes, event names, spans agree with the source
+pnpm check:capabilities    # the examples' committed capability snapshots still match
+pnpm docs:build            # the site builds; fails on any dead link
+```
 
 ## Conventions
 
-- **TypeScript strict**, ESM-first. No default exports on public surfaces.
-- **Tests**: Vitest. Governance/security tests use `@orpc-agent/testing` (from M5 onward — core's own suites get retrofitted). Security-invariant tests carry `SI-n` in the test name and may not be weakened without an ADR.
-- **Boundaries in CI**: dependency-cruiser rules fail the build if core imports an adapter, an adapter imports another adapter, or a forbidden runtime dep appears in a manifest ([package-boundaries](../architecture/package-boundaries.md#boundary-tests-implementation-must-enforce)).
-- **Public API discipline**: api-extractor (or equivalent) report checked in per package; a diff = a deliberate, doc-synced change.
-- **Commits**: Conventional Commits (`feat(core): …`, `fix(mcp): …`, `docs: …`); changesets drive versioning ([release-process](release-process.md)).
-- **Determinism**: no `Date.now()`/`Math.random()` in runtime logic paths — clocks are injected (`now`), randomness has no place in governance.
+- **TypeScript strict**, ESM only. No default exports on public surfaces.
+- **Tests**: Vitest. Governance and security tests use `@orpc-agent/testing` — including core's own. Security-invariant tests carry `SI-n` in the test name and may not be weakened without an ADR.
+- **Public API discipline**: a change to a package's exports is a deliberate, doc-synced change; `check:api` fails otherwise.
+- **Commits**: Conventional Commits (`feat(core): …`, `fix(mcp): …`, `docs: …`); changesets drive versioning ([release process](release-process.md)).
+- **Determinism**: no `Date.now()`/`Math.random()` in runtime logic paths — clocks are injected (`now`), and randomness has no place in governance.
 
-## Implementing against the docs
+## Making a change
 
-1. Pick the current milestone issue ([milestones](../implementation/milestones.md) — respect the dependency graph).
-2. Read the referenced normative sections *first*: [pipeline](../architecture/execution-pipeline.md), relevant [reference](../reference/core.md) pages, the [brief](../implementation/brief.md).
-3. Where reality diverges from the docs (an oRPC API differs, a type can't be expressed), **stop and file the divergence** — a docs PR/ADR addendum accompanies the code; you don't get to pick silently.
-4. PR checklist: tests for new behavior · SI tests untouched or ADR-justified · api-report clean or doc-synced · terminology per [glossary](../glossary.md) · docs updated in the same PR.
+1. Read the normative pages first: [execution pipeline](../architecture/execution-pipeline.md), the relevant [reference](../reference/core.md) page, [security model](../security/security-model.md).
+2. Where reality diverges from the docs (an oRPC API differs, a type cannot be expressed), **file the divergence** rather than choosing silently — a docs PR or an ADR accompanies the code.
+3. PR checklist: tests for new behaviour · SI tests untouched or ADR-justified · `check:api` clean or doc-synced · terminology per the [glossary](../glossary.md) · docs updated in the same PR.
 
-## Running the example
+## Running the examples
 
 ```bash
-pnpm --filter customer-support dev        # seeds SQLite, serves UI + chat (mock model by default)
-pnpm --filter customer-support test       # the governance suite — the executable spec
-MODEL_PROVIDER=... pnpm --filter customer-support dev   # optional: a real provider, never required
+pnpm --filter customer-support-example demo    # the documented end-to-end flow, scripted
+pnpm --filter mastra-task-board-example dev    # board UI on :5173, server on :3000
+pnpm --filter mastra-task-board-example demo   # the same flow without a model key
 ```
 
-CI runs the example only in mock-model mode — no network, no provider keys, deterministic.
+CI runs both in scripted mode — no network, no provider keys, deterministic.

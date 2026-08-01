@@ -1,6 +1,6 @@
 # Guide: long-running jobs as workflow steps
 
-> **Status:** Recipe over the stable 1.0 API — the `workflow` surface is reserved for a future adapter but usable today from workflow glue code ([adapter model](../architecture/adapter-model.md#surface-identity)). Streaming governance remains out of scope until designed ([Q11](../open-questions.md#q11)); first-adapter choice remains open ([Q7](../open-questions.md#q7)).
+> Recipe over the stable API — the `workflow` surface is reserved for a future adapter but usable today from workflow glue code ([adapter model](../architecture/adapter-model.md#surface-identity)). Streaming governance remains out of scope until designed ([Q11](../open-questions.md#q11)); first-adapter choice remains open ([Q7](../open-questions.md#q7)).
 
 A bank sync that runs for six minutes does not fit one governed invocation — nor should it: one opaque six-minute call gives governance nothing to see. The blessed interim (and arguably the better end state) is to **slice the job into per-batch capabilities and let a workflow engine drive them as steps**, each step a normal governed invoke.
 

@@ -1,6 +1,6 @@
 # Lifecycle walkthrough
 
-> **Status:** Stable — 1.0. This is the narrative companion to the normative [execution pipeline](../architecture/execution-pipeline.md); stage numbers below refer to that document.
+> This is the narrative companion to the normative [execution pipeline](../architecture/execution-pipeline.md); stage numbers below refer to that document.
 
 Follow one real request end to end: a support agent asks the assistant to refund order `ord_42` for **$649**. The capability `orders.refund` is exposed to `aiSdk`, classified `write`/`high`, and a policy requires manager approval above $500.
 
@@ -39,7 +39,7 @@ await runtime.approvals.decide("apr_9", { status: "approved", approver: { id: "u
 
 `capability.approved` is emitted. Approving executed nothing — deciding and executing are separate acts.
 
-## Act 4 — Resumption with integrity
+## Act 4: resumption with integrity
 
 The dashboard (or a worker) resumes:
 

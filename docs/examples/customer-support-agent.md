@@ -1,8 +1,8 @@
 # Example: customer-support agent
 
-> **Status:** Implemented — the flagship reference application, runnable under `examples/customer-support/` in the repository. Its test suite is the executable version of this document; `pnpm --filter customer-support-example demo` prints the end-to-end flow below.
+> The flagship reference application, runnable under `examples/customer-support/` in the repository. Its test suite is the executable version of this page; `pnpm --filter customer-support-example demo` prints the end-to-end flow below.
 
-One application, three clients of the same nine capabilities: a support dashboard (UI), an AI assistant in that dashboard (AI SDK), and an MCP endpoint for read-only external tooling. It exercises every v0.1 feature: authenticated context, org isolation, reads and writes, visibility, execution-time authorization, approval, audit, tracing, structured errors, cancellation, and deterministic tests.
+One application, three clients of the same nine capabilities: a support dashboard (UI), an AI assistant in that dashboard (AI SDK), and an MCP endpoint for read-only external tooling. It exercises the whole framework: authenticated context, org isolation, reads and writes, visibility, execution-time authorization, approval, audit, tracing, structured errors, cancellation, and deterministic tests.
 
 ## Architecture
 
@@ -150,7 +150,7 @@ export async function POST(req: Request) {
 
 // src/api/mcp.ts — external, read-only in effect
 export const mcp = createMCPServer(runtime, {
-  serverInfo: { name: "acme-support", version: "0.1.0" },
+  serverInfo: { name: "acme-support", version: "1.0.0" },
   createContext: async (mcpSession) => {
     const principal = await verifyOAuth(mcpSession.authInfo);
     return { actor: { id: principal.sub, kind: "user", attributes: { orgId: principal.orgId } }, context: await createAppContextForUser(principal.sub) };
@@ -192,4 +192,4 @@ The example's suite is the executable version of this document — exposure snap
 
 ## What this example does not show
 
-Durable approval resumption across restarts with a workflow engine (Deferred, [ADR-007](../architecture/decisions.md#adr-007-durable-execution-is-adapter-based)); streaming outputs; rate limiting (app-level, [threat T5](../security/threat-model.md)); multi-agent orchestration (out of scope entirely).
+Approval resumption driven by a workflow engine ([ADR-007](../architecture/decisions.md#adr-007-durable-execution-is-adapter-based) — the [workflow-steps pattern](../guides/workflow-steps.md) shows the shape); streaming outputs; rate limiting, which is app-level ([T5](../security/threat-model.md)); multi-agent orchestration, which is out of scope entirely.

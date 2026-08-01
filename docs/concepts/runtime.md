@@ -1,7 +1,5 @@
 # Agent runtime
 
-> **Status:** Stable — 1.0.
-
 The **runtime** is the governed execution engine. Every capability invocation — from the AI SDK adapter, an MCP client, a workflow step, a test, or your own server code — funnels through it. There is exactly one execution path, so there is exactly one place where governance is enforced.
 
 ```ts

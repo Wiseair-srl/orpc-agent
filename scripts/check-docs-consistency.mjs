@@ -113,9 +113,50 @@ for (const reason of ["unknown", "not-exposed", "hidden", "policy-denied", "poli
   }
 }
 
+// 7. No version string inside a status blockquote. Package versions live in the
+//    README and on the home page; a per-page copy drifts on the first release
+//    that forgets one.
+const docPaths = [...walk("docs", ".md")];
+for (const path of docPaths) {
+  const first = read(path)
+    .split("\n")
+    .find((line) => line.startsWith(">"));
+  if (!first) continue;
+  const match = first.match(/(?:^|[\s—·(])v?\d+\.\d+(?:\.\d+)?(?=[\s.,—·)]|$)/);
+  if (match && !/^docs\/(roadmap|migration\/|index)/.test(path)) {
+    failures.push(`${path}: version string "${match[0].trim()}" in the status blockquote`);
+  }
+}
+
+// 8. Cross-reference shorthands stay inside the range the owning page defines,
+//    so a citation cannot outlive (or outrun) what it points at.
+const maxOf = (text, pattern) =>
+  Math.max(0, ...[...text.matchAll(pattern)].map((m) => Number(m[1])));
+
+const ranges = [
+  { label: "SI", max: maxOf(read("docs/security/security-model.md"), /\*\*SI-(\d+)\b/g), cite: /\bSI-(\d+)\b/g },
+  { label: "ADR", max: maxOf(read("docs/architecture/decisions.md"), /^## ADR-(\d+):/gm), cite: /\bADR-(\d+)\b/g },
+  { label: "T", max: maxOf(read("docs/security/threat-model.md"), /^\| T(\d+) \|/gm), cite: /\bT(\d+)\b(?![\w-])/g },
+  { label: "Q", max: maxOf(read("docs/open-questions.md"), /^## Q(\d+) /gm), cite: /\bQ(\d+)\b/g },
+  { label: "stage", max: 15, cite: /\bstages? (\d+)\b/gi },
+];
+for (const { label, max, cite } of ranges) {
+  if (max === 0) {
+    failures.push(`could not determine the highest ${label}-n — the owning page changed shape`);
+    continue;
+  }
+  for (const path of docPaths) {
+    for (const m of read(path).matchAll(cite)) {
+      if (Number(m[1]) > max) failures.push(`${path}: cites ${m[0]}, but the highest is ${label}-${max}`);
+    }
+  }
+}
+
 if (failures.length > 0) {
   console.error("Docs consistency check failed:");
   for (const failure of failures) console.error(`  - ${failure}`);
   process.exit(1);
 }
-console.log("Docs consistency OK — symbols, error codes, events, spans, and surfaces align");
+console.log(
+  "Docs consistency OK — symbols, error codes, events, spans, surfaces, banners, and cross-references align",
+);

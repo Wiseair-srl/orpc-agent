@@ -1,7 +1,5 @@
 # Reference: capability metadata
 
-> **Status:** Stable — 1.0.
-
 Package: `@orpc-agent/core`. The `AgentMeta` object is the declaration that turns an oRPC procedure into a capability. It lives in the procedure's ordinary oRPC metadata under the `agent` key and is validated when `createCapabilityRegistry` builds the registry.
 
 ## Type
@@ -91,7 +89,7 @@ Exposure governs only the **agent runtime path**. The same procedure mounted in 
 
 ### `risk` (required)
 
-Independent of `sideEffect` — a read of salary data is `read`/`high`. Risk drives nothing automatically in v0.1; it exists so policies, approval routing, and audit filters have a stable, reviewed classification to target (`req.capability.meta.risk === "critical"`). Requiring it forces the classification conversation at definition time.
+Independent of `sideEffect` — a read of salary data is `read`/`high`. Risk drives nothing automatically; it exists so policies, approval routing, and audit filters have a stable, reviewed classification to target (`req.capability.meta.risk === "critical"`). Requiring it forces the classification conversation at definition time.
 
 ### `retry` + `idempotent`
 

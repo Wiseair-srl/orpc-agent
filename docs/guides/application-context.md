@@ -1,6 +1,6 @@
 # Guide: application context
 
-> **Status:** Stable — 1.0. Concepts: [context and actors](../concepts/context.md).
+> The rule: agent invocations reuse the oRPC context your application already builds. Semantics: [context and actors](../concepts/context.md).
 
 The rule of this guide: **agent invocations reuse your existing oRPC context, built by your existing factory, from authenticated data.** No parallel context system.
 
