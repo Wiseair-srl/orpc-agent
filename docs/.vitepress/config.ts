@@ -38,6 +38,7 @@ function rewriteRepoLinks(md: MarkdownIt): void {
 }
 
 const SITE_URL = "https://orpc-agent.dev";
+const REPO_URL = "https://github.com/Wiseair-srl/orpc-agent";
 
 export default defineConfig({
   title: "oRPC Agent",
@@ -83,6 +84,13 @@ export default defineConfig({
     },
 
     outline: { level: [2, 3], label: "On this page" },
+
+    socialLinks: [{ icon: "github", link: REPO_URL, ariaLabel: "oRPC Agent on GitHub" }],
+
+    editLink: {
+      pattern: `${REPO_URL}/edit/main/docs/:path`,
+      text: "Edit this page on GitHub",
+    },
 
     nav: [
       { text: "Guide", link: "/getting-started", activeMatch: "^/(getting-started|guides)" },

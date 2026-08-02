@@ -54,7 +54,7 @@
     "url": "https://github.com/Wiseair-srl/orpc-agent.git",
     "directory": "packages/core"
   },
-  "homepage": "https://github.com/Wiseair-srl/orpc-agent/tree/main/packages/core",
+  "homepage": "https://orpc-agent.dev/reference/core",
   "bugs": {
     "url": "https://github.com/Wiseair-srl/orpc-agent/issues"
   },
