@@ -1,10 +1,18 @@
-import type { CapabilitySnapshot, Change, ChangeKind, EntrySource } from "./types";
+import type { CapabilityEntry, CapabilitySnapshot, Change, ChangeKind, EntrySource } from "./types";
 
 /**
  * Plain writes, no rendering framework. This module is what `check` prints on
  * every CI run: keeping it dependency-free keeps the gate's install surface
  * to the package itself.
  */
+
+/**
+ * How much of the inventory the human renderers show. `normal` is the table;
+ * `min` stops at the headline; `detail` adds each capability's description
+ * and declared execution metadata under its row. Shared vocabulary with the
+ * sibling `agent-surface` CLI, so the two tools read alike.
+ */
+export type Verbosity = "min" | "normal" | "detail";
 
 const KIND_ORDER: ChangeKind[] = ["widening", "narrowing", "neutral"];
 
@@ -21,39 +29,96 @@ const ANSI: Record<string, string> = {
   dim: "\u001b[2m",
   bold: "\u001b[1m",
   red: "\u001b[31m",
+  green: "\u001b[32m",
+  yellow: "\u001b[33m",
+  magenta: "\u001b[35m",
   cyan: "\u001b[36m",
+  gray: "\u001b[90m",
 };
 
 export function supportsColor(stream: { isTTY?: boolean }): boolean {
-  return Boolean(stream.isTTY) && !process.env.NO_COLOR && process.env.TERM !== "dumb";
+  return (
+    Boolean(stream.isTTY) && !process.env.CI && !process.env.NO_COLOR && process.env.TERM !== "dumb"
+  );
 }
 
 function paint(text: string, style: string, mode: ColorMode): string {
   return mode.color ? `${ANSI[style] ?? ""}${text}${ANSI.reset}` : text;
 }
 
+/** One hue per fact, mirrored by the Ink view (ui/theme.tsx). */
+const RISK_STYLE: Record<string, string> = {
+  low: "green",
+  medium: "yellow",
+  high: "red",
+  critical: "magenta",
+};
+
+const SIDE_EFFECT_STYLE: Record<string, string> = {
+  none: "gray",
+  read: "cyan",
+  write: "yellow",
+  destructive: "red",
+  external: "magenta",
+};
+
+export function inventoryHeadline(snapshot: CapabilitySnapshot, entrySource: EntrySource): string {
+  const exposedCount = snapshot.capabilities.filter((c) => c.expose.length > 0).length;
+  const approvalCount = snapshot.capabilities.filter((c) => c.approval?.required).length;
+  // The headline is the line that gets pasted somewhere on its own, so it has
+  // to carry its own qualification: the count is of DECLARED gates, and whether
+  // runtime-level policies were even in scope is part of the headline fact.
+  const parts = [
+    `${snapshot.capabilities.length} capabilities`,
+    `${exposedCount} exposed`,
+    `${approvalCount} approval-gated (declared)`,
+    runtimeHeadline(snapshot, entrySource),
+  ];
+  if (snapshot.unexposed.length > 0) parts.push(`${snapshot.unexposed.length} unexposed`);
+  if (snapshot.excluded.length > 0) parts.push(`${snapshot.excluded.length} excluded`);
+  return parts.join(" · ");
+}
+
+/**
+ * The declared execution metadata a row has no room for, one dim line per
+ * capability under `detail` verbosity. Only present facts are printed.
+ */
+export function capabilityMeta(capability: CapabilityEntry): string[] {
+  const parts: string[] = [];
+  if (capability.tags.length > 0) parts.push(capability.tags.map((tag) => `#${tag}`).join(" "));
+  if (capability.toolNames && Object.keys(capability.toolNames).length > 0) {
+    parts.push(
+      `tools ${Object.entries(capability.toolNames)
+        .map(([surface, name]) => `${surface}=${name}`)
+        .join(", ")}`,
+    );
+  }
+  if (capability.approval?.type) parts.push(`approval type ${capability.approval.type}`);
+  if (capability.idempotent) parts.push("idempotent");
+  if (capability.retry) parts.push(`retry ×${capability.retry.maxAttempts}`);
+  if (capability.timeoutMs !== undefined) parts.push(`timeout ${capability.timeoutMs}ms`);
+  if (capability.redact) {
+    const redacted = [
+      capability.redact.output ? "output" : undefined,
+      capability.redact.approvalInput ? "approval input" : undefined,
+    ].filter(Boolean);
+    if (redacted.length > 0) parts.push(`redacts ${redacted.join(" + ")}`);
+  }
+  const lines = [capability.description, parts.length > 0 ? parts.join(" · ") : undefined];
+  return lines.filter((line): line is string => Boolean(line));
+}
+
 export function renderInventory(
   snapshot: CapabilitySnapshot,
   mode: ColorMode,
   entrySource: EntrySource = "registry",
+  verbosity: Verbosity = "normal",
 ): string {
-  const lines: string[] = [];
-  const exposedCount = snapshot.capabilities.filter((c) => c.expose.length > 0).length;
-  const approvalCount = snapshot.capabilities.filter((c) => c.approval?.required).length;
+  const lines: string[] = [paint(inventoryHeadline(snapshot, entrySource), "bold", mode)];
+  if (verbosity === "min") return lines.join("\n");
+  lines.push("");
 
-  // The header is the line that gets pasted somewhere on its own, so it has to
-  // carry its own qualification: the count is of DECLARED gates, and whether
-  // runtime-level policies were even in scope is part of the headline fact.
-  lines.push(
-    paint(
-      `${snapshot.capabilities.length} capabilities · ${exposedCount} exposed · ` +
-        `${approvalCount} approval-gated (declared) · ${runtimeHeadline(snapshot, entrySource)}`,
-      "bold",
-      mode,
-    ),
-    "",
-  );
-
+  const headers = ["CAPABILITY", "SIDE EFFECT", "RISK", "EXPOSE", "APPROVAL", "POLICIES"];
   const rows = snapshot.capabilities.map((capability) => [
     capability.id,
     capability.sideEffect,
@@ -62,7 +127,30 @@ export function renderInventory(
     capability.approval?.required ? "required" : "—",
     capability.policies.join(", ") || "—",
   ]);
-  lines.push(...table(["CAPABILITY", "SIDE EFFECT", "RISK", "EXPOSE", "APPROVAL", "POLICIES"], rows, mode));
+  const widths = headers.map((header, index) =>
+    Math.max(header.length, ...rows.map((row) => (row[index] ?? "").length)),
+  );
+  const cell = (text: string, index: number) =>
+    index === headers.length - 1 ? text : text.padEnd(widths[index] ?? 0);
+  lines.push(paint(headers.map(cell).join("  ").trimEnd(), "dim", mode));
+  snapshot.capabilities.forEach((capability, rowIndex) => {
+    const row = rows[rowIndex]!;
+    lines.push(
+      [
+        cell(row[0] ?? "", 0),
+        paint(cell(row[1] ?? "", 1), SIDE_EFFECT_STYLE[capability.sideEffect] ?? "", mode),
+        paint(cell(row[2] ?? "", 2), RISK_STYLE[capability.risk] ?? "", mode),
+        cell(row[3] ?? "", 3),
+        paint(cell(row[4] ?? "", 4), capability.approval?.required ? "green" : "dim", mode),
+        row[5] === "—" ? paint(cell(row[5] ?? "", 5), "dim", mode) : cell(row[5] ?? "", 5),
+      ]
+        .join("  ")
+        .trimEnd(),
+    );
+    if (verbosity === "detail") {
+      lines.push(...capabilityMeta(capability).map((line) => paint(`  ${line}`, "dim", mode)));
+    }
+  });
   lines.push("", ...renderRuntimeSection(snapshot, entrySource, mode));
 
   if (snapshot.unexposed.length > 0) {
@@ -134,7 +222,7 @@ function renderRuntimeSection(
   ];
 }
 
-export function renderChanges(changes: Change[], mode: ColorMode): string {
+export function renderChanges(changes: Change[], mode: ColorMode, verbosity: Verbosity = "normal"): string {
   if (changes.length === 0) return paint("No capability drift.", "bold", mode);
 
   const widening = changes.filter((c) => c.kind === "widening").length;
@@ -146,6 +234,17 @@ export function renderChanges(changes: Change[], mode: ColorMode): string {
       mode,
     ),
   ];
+
+  // The counts are the point of `min`; the rows are the evidence for them.
+  if (verbosity === "min") {
+    const counts = KIND_ORDER.map(
+      (kind) => [kind, changes.filter((c) => c.kind === kind).length] as const,
+    )
+      .filter(([, count]) => count > 0)
+      .map(([kind, count]) => `${kind} ${count}`)
+      .join(" · ");
+    return [lines[0], counts].join("\n");
+  }
 
   for (const kind of KIND_ORDER) {
     const group = changes.filter((c) => c.kind === kind);
@@ -207,14 +306,3 @@ function escapePipes(text: string): string {
   return text.replace(/\|/g, "\\|");
 }
 
-function table(headers: string[], rows: string[][], mode: ColorMode): string[] {
-  const widths = headers.map((header, index) =>
-    Math.max(header.length, ...rows.map((row) => (row[index] ?? "").length)),
-  );
-  const line = (cells: string[]) =>
-    cells
-      .map((cell, index) => (index === cells.length - 1 ? cell : cell.padEnd(widths[index] ?? 0)))
-      .join("  ")
-      .trimEnd();
-  return [paint(line(headers), "dim", mode), ...rows.map(line)];
-}

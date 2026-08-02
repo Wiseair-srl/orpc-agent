@@ -47,6 +47,37 @@ describeBuilt("orpc-agent", () => {
     expect(stdout).toContain("Excluded");
   });
 
+  it("scales the inventory with --verbosity", async () => {
+    const entry = ["--entry", join(apps, "app.ts")];
+    const min = await run(["inspect", "--verbosity", "min", ...entry]);
+    expect(min.code).toBe(0);
+    expect(min.stdout).toContain("2 capabilities");
+    // The excluded procedure still counts in the headline; the table does not print.
+    expect(min.stdout).toContain("1 excluded");
+    expect(min.stdout).not.toContain("CAPABILITY");
+
+    const detail = await run(["inspect", "--verbosity", "detail", ...entry]);
+    expect(detail.code).toBe(0);
+    expect(detail.stdout).toContain("Refund an order.");
+
+    // --detail is the shorthand; the default table carries no descriptions.
+    const alias = await run(["inspect", "--detail", ...entry]);
+    expect(alias.stdout).toBe(detail.stdout);
+    const normal = await run(["inspect", ...entry]);
+    expect(normal.stdout).not.toContain("Refund an order.");
+  });
+
+  it("treats --format json and markdown as the spellings of --json and md", async () => {
+    const entry = ["--entry", join(apps, "app.ts")];
+    const json = await run(["inspect", "--format", "json", ...entry]);
+    expect(json.code).toBe(0);
+    expect((JSON.parse(json.stdout) as CapabilitySnapshot).version).toBe(2);
+
+    const bad = await run(["inspect", "--format", "nope", ...entry]);
+    expect(bad.code).toBe(2);
+    expect(bad.stderr).toContain("--format must be human, json, md, markdown or github");
+  });
+
   it("emits a snapshot that round-trips and is stable across runs", async () => {
     const first = await run(["snapshot", "--entry", join(apps, "app.ts"), "-o", "-"]);
     const second = await run(["snapshot", "--entry", join(apps, "app.ts"), "-o", "-"]);
@@ -76,6 +107,21 @@ describeBuilt("orpc-agent", () => {
 
     expect(code).toBe(0);
     expect(stdout).toContain("No capability drift");
+
+    // The reason to ask a gate for detail is to read what it gated.
+    const detail = await run([
+      "check",
+      "--entry",
+      join(apps, "app.ts"),
+      "--snapshot",
+      path,
+      "--verbosity",
+      "detail",
+    ]);
+    expect(detail.code).toBe(0);
+    expect(detail.stdout).toContain("No capability drift");
+    expect(detail.stdout).toContain("CAPABILITY");
+    expect(detail.stdout).toContain("Refund an order.");
   });
 
   it("fails with exit 1 and names the widening when the app gained exposure", async () => {

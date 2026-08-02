@@ -111,7 +111,7 @@ Losing sight of them is widening as well: if a snapshot recorded runtime policie
 
 Exit codes are part of the contract: **0** clean · **1** drift · **2** could not run. CI has to tell "the inventory changed" apart from "the tool never loaded the app", because the second one passing silently is how a gate rots.
 
-Useful flags: `--fail-on widening` (let narrowing changes through), `--format github` (annotations) or `--format md` (PR comment), `--export <name>` when a module exports several registries, `--no-descriptions`, `--timeout`, `--import <module>`, `--plain`.
+Useful flags: `--verbosity min|normal|detail` (`min` stops at the headline; `detail` adds descriptions and declared metadata per row, and makes `check` print the inventory it gated; `--detail` is the shorthand), `--fail-on widening` (let narrowing changes through), `--format github` (annotations) or `--format md` (PR comment), `--export <name>` when a module exports several registries, `--no-descriptions`, `--timeout`, `--import <module>`, `--plain`.
 
 ## Terminal output
 

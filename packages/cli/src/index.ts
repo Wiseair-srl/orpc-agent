@@ -19,3 +19,4 @@ export type { LoadOptions } from "./load";
 
 // ---- Rendering ----
 export { renderChanges, renderGithub, renderInventory, renderMarkdown } from "./render";
+export type { Verbosity } from "./render";

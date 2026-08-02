@@ -83,7 +83,9 @@ It **refuses rather than degrades** without a terminal: a wizard with no keyboar
 | `--snapshot <path>` | snapshot file (default `capabilities.snapshot.json`) |
 | `-o, --out <path>` | snapshot output path; `-` for stdout |
 | `--fail-on <any\|widening>` | which drift fails `check` (default `any`) |
-| `--format <human\|md\|github>` | `check` report format |
+| `--format <human\|md\|github>` | `check` report format; `markdown` and `json` are accepted spellings of `md` and `--json` |
+| `--verbosity <min\|normal\|detail>` | how much the human views show (default `normal`) |
+| `--detail` | alias for `--verbosity detail` |
 | `--json` | `inspect`: emit the snapshot instead of a table |
 | `--plain` | never use the interactive renderer |
 | `--no-descriptions` | omit descriptions from the snapshot |
@@ -182,6 +184,14 @@ policies are configured and NOT covered by this gate yet. Run: orpc-agent snapsh
 ## Terminal output
 
 `inspect` renders a richer view when attached to a terminal — colour-coded side effect and risk, and the runtime-policy state as a panel rather than a trailing line, because that is the fact most easily skimmed past. It falls back to the plain renderer, byte for byte, when output is piped or redirected, `CI` or `NO_COLOR` is set, `--plain` is passed, or the optional UI dependencies are absent.
+
+`--verbosity` scales the same view rather than swapping layouts, in both renderers:
+
+- `min` — the headline alone: counts, gates, whether runtime policies were observed, and any unexposed or excluded procedures.
+- `normal` — the default: headline, table, runtime-policy state, unexposed and excluded lists.
+- `detail` — adds each capability's description and its declared execution metadata under the row: tags, per-surface tool names, approval type, idempotency, retry, timeout, redaction. `--detail` is the shorthand. On `check`, detail also prints the inventory the gate compared, after the drift report — the reason to ask a gate for detail is to read what it gated — while `--verbosity min` keeps only the drift headline and per-kind counts.
+
+The same flag, levels and colour vocabulary drive the sibling [agent-surface CLI](https://agent-surface.dev), so a reader who knows one tool can skim the other.
 
 `check` is **always** plain. Its output is a report pasted into pull requests and read out of CI logs; stable text is the feature. No module `check` reaches imports a rendering framework, even optionally.
 
