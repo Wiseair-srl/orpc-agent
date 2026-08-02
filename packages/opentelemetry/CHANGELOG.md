@@ -1,5 +1,13 @@
 # @orpc-agent/opentelemetry
 
+## 2.0.2
+
+### Patch Changes
+
+- d45f8db: Docs links in package metadata and READMEs now point at the documentation site, orpc-agent.dev, instead of GitHub blob URLs — `homepage` is the package's own docs page. `repository` and `bugs` still point at GitHub.
+- Updated dependencies [d45f8db]
+  - @orpc-agent/core@2.0.2
+
 ## 2.0.0
 
 ### Patch Changes

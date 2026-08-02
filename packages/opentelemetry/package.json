@@ -1,6 +1,6 @@
 {
   "name": "@orpc-agent/opentelemetry",
-  "version": "2.0.0",
+  "version": "2.0.2",
   "description": "OpenTelemetry TracingAdapter for oRPC Agent runtimes. Independent community project, not affiliated with or endorsed by the oRPC maintainers.",
   "license": "MIT",
   "author": "Paolo Barbato",
