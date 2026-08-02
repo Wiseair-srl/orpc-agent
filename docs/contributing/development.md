@@ -7,7 +7,7 @@
 Requirements: Node ≥ 20, pnpm ≥ 9, git.
 
 ```bash
-git clone <repo-url> && cd orpc-agent
+git clone https://github.com/Wiseair-srl/orpc-agent.git && cd orpc-agent
 pnpm install
 pnpm build
 pnpm test

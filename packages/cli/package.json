@@ -47,7 +47,7 @@
     "url": "https://github.com/Wiseair-srl/orpc-agent.git",
     "directory": "packages/cli"
   },
-  "homepage": "https://github.com/Wiseair-srl/orpc-agent/tree/main/packages/cli",
+  "homepage": "https://orpc-agent.dev/reference/cli",
   "bugs": {
     "url": "https://github.com/Wiseair-srl/orpc-agent/issues"
   },

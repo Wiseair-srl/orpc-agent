@@ -8,15 +8,18 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%E2%89%A520.19-brightgreen.svg)](package.json)
 [![npm](https://img.shields.io/npm/v/%40orpc-agent%2Fcore?label=npm&color=cb3837)](https://www.npmjs.com/package/@orpc-agent/core)
+[![Docs](https://img.shields.io/badge/docs-orpc--agent.dev-0d9488)](https://orpc-agent.dev)
 
-[Getting started](docs/getting-started.md) · [Architecture](docs/architecture/execution-pipeline.md) · [Security model](docs/security/security-model.md) · [Examples](docs/examples/customer-support-agent.md) · [Roadmap](ROADMAP.md)
+**Documentation: [orpc-agent.dev](https://orpc-agent.dev)**
+
+[Getting started](https://orpc-agent.dev/getting-started) · [Architecture](https://orpc-agent.dev/architecture/execution-pipeline) · [Security model](https://orpc-agent.dev/security/security-model) · [Examples](https://orpc-agent.dev/examples/customer-support-agent) · [Roadmap](https://orpc-agent.dev/roadmap)
 
 </div>
 
 Your application UI, an AI runtime, an MCP client, a workflow, and your tests can all call the same typed oRPC procedures, under one set of validation rules, permissions, approvals, execution policies, and observability.
 
 > [!NOTE]
-> **Published to npm** at **2.0.0** under `@orpc-agent/*`: [`core`](https://www.npmjs.com/package/@orpc-agent/core), [`ai-sdk`](https://www.npmjs.com/package/@orpc-agent/ai-sdk), [`mcp`](https://www.npmjs.com/package/@orpc-agent/mcp), [`postgres`](https://www.npmjs.com/package/@orpc-agent/postgres), [`opentelemetry`](https://www.npmjs.com/package/@orpc-agent/opentelemetry), [`testing`](https://www.npmjs.com/package/@orpc-agent/testing), and [`cli`](https://www.npmjs.com/package/@orpc-agent/cli). Upgrading from 1.x is [one field read, if that](docs/migration/1-to-2.md). CI runs the governance suite on every push (plus a real-Postgres pass) and gates the examples' committed capability snapshots.
+> **Published to npm** at **2.0.0** under `@orpc-agent/*`: [`core`](https://www.npmjs.com/package/@orpc-agent/core), [`ai-sdk`](https://www.npmjs.com/package/@orpc-agent/ai-sdk), [`mcp`](https://www.npmjs.com/package/@orpc-agent/mcp), [`postgres`](https://www.npmjs.com/package/@orpc-agent/postgres), [`opentelemetry`](https://www.npmjs.com/package/@orpc-agent/opentelemetry), [`testing`](https://www.npmjs.com/package/@orpc-agent/testing), and [`cli`](https://www.npmjs.com/package/@orpc-agent/cli). Upgrading from 1.x is [one field read, if that](https://orpc-agent.dev/migration/1-to-2). CI runs the governance suite on every push (plus a real-Postgres pass) and gates the examples' committed capability snapshots.
 
 ```bash
 pnpm add @orpc-agent/core @orpc/server
@@ -98,11 +101,11 @@ const runtime = createAgentRuntime({ governance });
 const tools = await toAISDKTools(runtime, { actor, context });
 ```
 
-Full walkthrough: [docs/getting-started.md](docs/getting-started.md).
+Full walkthrough: [orpc-agent.dev/getting-started](https://orpc-agent.dev/getting-started).
 
 ## What happens on a call
 
-Every invocation goes through the same [15 stages](docs/architecture/execution-pipeline.md), in the same order, on every surface. A refund that needs a manager looks like this:
+Every invocation goes through the same [15 stages](https://orpc-agent.dev/architecture/execution-pipeline), in the same order, on every surface. A refund that needs a manager looks like this:
 
 ```mermaid
 sequenceDiagram
@@ -128,7 +131,7 @@ sequenceDiagram
 
 ## What it gives you
 
-Procedures are the single source of truth, and a "tool" is only how an adapter represents one ([ADR-001](docs/architecture/decisions.md#adr-001-orpc-procedures-are-the-source-of-truth), [ADR-002](docs/architecture/decisions.md#adr-002-capability-is-the-internal-abstraction)). On top of that:
+Procedures are the single source of truth, and a "tool" is only how an adapter represents one ([ADR-001](https://orpc-agent.dev/architecture/decisions#adr-001-orpc-procedures-are-the-source-of-truth), [ADR-002](https://orpc-agent.dev/architecture/decisions#adr-002-capability-is-the-internal-abstraction)). On top of that:
 
 - Exposure is explicit and per surface, denied by default across `direct`, `aiSdk`, `mcp`, `workflow`, and `test`
 - One governed pipeline handles validation, policies, approvals, timeout and cancellation, retries, redaction, and error normalization
@@ -148,7 +151,7 @@ Everything model-side of the adapter is untrusted. Twelve binding invariants (SI
 - Internals never reach models. Audit records and traces carry no payloads by default
 - Writes are never auto-retried, and every execution is bounded and cancellable
 
-Your oRPC middleware stays the authoritative authorization layer on every call. What this does not claim: solving prompt injection (it bounds the impact, not the occurrence), exactly-once execution, or safety without application-level authorization. Read the [security model](docs/security/security-model.md) and the [threat model](docs/security/threat-model.md).
+Your oRPC middleware stays the authoritative authorization layer on every call. What this does not claim: solving prompt injection (it bounds the impact, not the occurrence), exactly-once execution, or safety without application-level authorization. Read the [security model](https://orpc-agent.dev/security/security-model) and the [threat model](https://orpc-agent.dev/security/threat-model).
 
 ## Packages
 
@@ -160,9 +163,9 @@ Your oRPC middleware stays the authoritative authorization layer on every call. 
 | `@orpc-agent/postgres` | Reference Postgres approval coordinator + audit sink (driver-agnostic) |
 | `@orpc-agent/opentelemetry` | Tracing adapter (spans and conventions) |
 | `@orpc-agent/testing` | Deterministic governance testing |
-| `@orpc-agent/cli` | `orpc-agent` — capability inventory and CI drift gate ([reference](docs/reference/cli.md)) |
+| `@orpc-agent/cli` | `orpc-agent` — capability inventory and CI drift gate ([reference](https://orpc-agent.dev/reference/cli)) |
 
-Boundaries and rules: [package-boundaries](docs/architecture/package-boundaries.md).
+Boundaries and rules: [package-boundaries](https://orpc-agent.dev/architecture/package-boundaries).
 
 ## Catching exposure changes in review
 
@@ -183,13 +186,13 @@ WIDENING — the agent gained reach, or a control weakened
   billing.charge  approval  approval no longer required
 ```
 
-Two classifications are deliberately counter-intuitive. A `sideEffect` change counts as widening **in both directions**, because declaring less than before silently stops every policy keyed on the old value from matching. And `idempotent: false → true` is widening, because it is the flag that lets the runtime retry a write. Full rules, and an explicit list of what the tool cannot see: [reference/cli](docs/reference/cli.md).
+Two classifications are deliberately counter-intuitive. A `sideEffect` change counts as widening **in both directions**, because declaring less than before silently stops every policy keyed on the old value from matching. And `idempotent: false → true` is widening, because it is the flag that lets the runtime retry a write. Full rules, and an explicit list of what the tool cannot see: [reference/cli](https://orpc-agent.dev/reference/cli).
 
 ## Examples
 
-**Customer-support agent** (flagship). A dashboard UI, an AI assistant, and an MCP endpoint share nine governed capabilities. Refunds over $500 need manager approval, bound to the input hash and usable once. Sending a customer message needs human confirmation. Refunds are not exposed over MCP at all. PII is redacted from model-visible output, and every step lands in the audit trail. Narrative, code, and failure branches: [docs/examples/customer-support-agent.md](docs/examples/customer-support-agent.md).
+**Customer-support agent** (flagship). A dashboard UI, an AI assistant, and an MCP endpoint share nine governed capabilities. Refunds over $500 need manager approval, bound to the input hash and usable once. Sending a customer message needs human confirmation. Refunds are not exposed over MCP at all. PII is redacted from model-visible output, and every step lands in the audit trail. Narrative, code, and failure branches: [orpc-agent.dev/examples/customer-support-agent](https://orpc-agent.dev/examples/customer-support-agent).
 
-**Mastra task board** (full-stack). A React board on plain typed oRPC, plus a [Mastra](https://mastra.ai) chat agent that reaches the same four capabilities through the governed runtime, with approvals in the UI, redaction, and a live audit ledger. Model-agnostic via OpenRouter. Run it with `pnpm --filter mastra-task-board-example dev` (needs Node 22.13 or later). Walkthrough: [docs/examples/mastra-task-board.md](docs/examples/mastra-task-board.md).
+**Mastra task board** (full-stack). A React board on plain typed oRPC, plus a [Mastra](https://mastra.ai) chat agent that reaches the same four capabilities through the governed runtime, with approvals in the UI, redaction, and a live audit ledger. Model-agnostic via OpenRouter. Run it with `pnpm --filter mastra-task-board-example dev` (needs Node 22.13 or later). Walkthrough: [orpc-agent.dev/examples/mastra-task-board](https://orpc-agent.dev/examples/mastra-task-board).
 
 ## Non-goals
 
@@ -197,7 +200,7 @@ No agent loop, planner, prompts, or memory. No workflow engine, though durable e
 
 ## Roadmap
 
-Semver applies strictly: a breaking change means a major, never a minor with migration notes ([release process](docs/contributing/release-process.md)). **2.0 "Discovery at scale"** added `scope` on `describe`, bounded discovery concurrency, and a constant-size discovery audit event — the one breaking part is [a single field read](docs/migration/1-to-2.md). Next: the workflow-engine adapter, MCP dynamic listings, streaming capabilities, quotas. Details and open questions in [ROADMAP.md](ROADMAP.md) and [docs/open-questions.md](docs/open-questions.md).
+Semver applies strictly: a breaking change means a major, never a minor with migration notes ([release process](https://orpc-agent.dev/contributing/release-process)). **2.0 "Discovery at scale"** added `scope` on `describe`, bounded discovery concurrency, and a constant-size discovery audit event — the one breaking part is [a single field read](https://orpc-agent.dev/migration/1-to-2). Next: the workflow-engine adapter, MCP dynamic listings, streaming capabilities, quotas. Details and open questions in [ROADMAP.md](ROADMAP.md) and [orpc-agent.dev/open-questions](https://orpc-agent.dev/open-questions).
 
 ## Contributing
 
@@ -205,4 +208,4 @@ Design review, security analysis, and doc fixes are the most useful contribution
 
 ## License and independence
 
-MIT. oRPC Agent is an independent community project, not affiliated with, endorsed by, or maintained by the oRPC project. It builds on oRPC with respect and gratitude, and if the oRPC maintainers ever want this work closer to home, the door is open ([ADR-011](docs/architecture/decisions.md#adr-011-npm-scope-and-project-independence)).
+MIT. oRPC Agent is an independent community project, not affiliated with, endorsed by, or maintained by the oRPC project. It builds on oRPC with respect and gratitude, and if the oRPC maintainers ever want this work closer to home, the door is open ([ADR-011](https://orpc-agent.dev/architecture/decisions#adr-011-npm-scope-and-project-independence)).

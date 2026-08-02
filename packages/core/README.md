@@ -18,7 +18,7 @@ pnpm add @orpc-agent/core @orpc/server
 import { agentProcedure, createCapabilityRegistry, createAgentRuntime } from "@orpc-agent/core";
 ```
 
-Docs: [getting started](https://github.com/Wiseair-srl/orpc-agent/blob/main/docs/getting-started.md) · [architecture](https://github.com/Wiseair-srl/orpc-agent/blob/main/docs/architecture/execution-pipeline.md) · [repository](https://github.com/Wiseair-srl/orpc-agent)
+Docs: [getting started](https://orpc-agent.dev/getting-started) · [architecture](https://orpc-agent.dev/architecture/execution-pipeline) · [API reference](https://orpc-agent.dev/reference/core) · [repository](https://github.com/Wiseair-srl/orpc-agent)
 
 ## License
 

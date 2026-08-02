@@ -173,4 +173,6 @@ Guarding against *new* code that is wrong from the start is a different job from
 
 ---
 
+Docs: [CLI reference](https://orpc-agent.dev/reference/cli) · [a drift gate in CI](https://orpc-agent.dev/guides/ci-drift-gate) · [repository](https://github.com/Wiseair-srl/orpc-agent)
+
 MIT · Independent community project, not affiliated with or endorsed by the oRPC maintainers.

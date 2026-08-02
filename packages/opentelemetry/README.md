@@ -1,6 +1,6 @@
 # @orpc-agent/opentelemetry
 
-OpenTelemetry `TracingAdapter` for [oRPC Agent](https://github.com/Wiseair-srl/orpc-agent) runtimes: one span per pipeline stage, governance outcomes as attributes.
+OpenTelemetry `TracingAdapter` for [oRPC Agent](https://orpc-agent.dev) runtimes: one span per pipeline stage, governance outcomes as attributes.
 
 > Independent community project, not affiliated with or endorsed by the oRPC maintainers.
 
@@ -10,7 +10,7 @@ OpenTelemetry `TracingAdapter` for [oRPC Agent](https://github.com/Wiseair-srl/o
 pnpm add @orpc-agent/opentelemetry @orpc-agent/core @opentelemetry/api
 ```
 
-Docs: [OpenTelemetry adapter guide](https://github.com/Wiseair-srl/orpc-agent/blob/main/docs/adapters/opentelemetry.md) · [repository](https://github.com/Wiseair-srl/orpc-agent)
+Docs: [OpenTelemetry adapter guide](https://orpc-agent.dev/adapters/opentelemetry) · [repository](https://github.com/Wiseair-srl/orpc-agent)
 
 ## License
 

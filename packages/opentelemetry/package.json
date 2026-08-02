@@ -47,7 +47,7 @@
     "url": "https://github.com/Wiseair-srl/orpc-agent.git",
     "directory": "packages/opentelemetry"
   },
-  "homepage": "https://github.com/Wiseair-srl/orpc-agent/tree/main/packages/opentelemetry",
+  "homepage": "https://orpc-agent.dev/adapters/opentelemetry",
   "bugs": {
     "url": "https://github.com/Wiseair-srl/orpc-agent/issues"
   },

@@ -18,6 +18,9 @@ hero:
     - theme: alt
       text: Security model
       link: /security/security-model
+    - theme: alt
+      text: GitHub
+      link: https://github.com/Wiseair-srl/orpc-agent
 
 features:
   - icon: 🧩

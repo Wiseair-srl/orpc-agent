@@ -44,7 +44,7 @@
     "url": "https://github.com/Wiseair-srl/orpc-agent.git",
     "directory": "packages/testing"
   },
-  "homepage": "https://github.com/Wiseair-srl/orpc-agent/tree/main/packages/testing",
+  "homepage": "https://orpc-agent.dev/adapters/testing",
   "bugs": {
     "url": "https://github.com/Wiseair-srl/orpc-agent/issues"
   },
