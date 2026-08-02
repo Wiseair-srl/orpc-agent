@@ -1,5 +1,6 @@
 import React from "react";
 import { Box, Text } from "ink";
+import { capabilityMeta, type Verbosity } from "../render";
 import type { CapabilitySnapshot, EntrySource } from "../types";
 import { Badge, Callout, Heading, RISK_COLOR, SIDE_EFFECT_COLOR } from "./theme";
 
@@ -12,9 +13,11 @@ import { Badge, Callout, Heading, RISK_COLOR, SIDE_EFFECT_COLOR } from "./theme"
 export function Inventory({
   snapshot,
   entrySource,
+  verbosity = "normal",
 }: {
   snapshot: CapabilitySnapshot;
   entrySource: EntrySource;
+  verbosity?: Verbosity;
 }) {
   const exposed = snapshot.capabilities.filter((c) => c.expose.length > 0).length;
   const gated = snapshot.capabilities.filter((c) => c.approval?.required).length;
@@ -27,6 +30,11 @@ export function Inventory({
     expose: Math.max(6, ...snapshot.capabilities.map((c) => c.expose.join(", ").length)),
     approval: 8,
   };
+
+  const headlineTail = [
+    snapshot.unexposed.length > 0 ? `${snapshot.unexposed.length} unexposed` : undefined,
+    snapshot.excluded.length > 0 ? `${snapshot.excluded.length} excluded` : undefined,
+  ].filter(Boolean);
 
   return (
     <Box flexDirection="column">
@@ -52,63 +60,84 @@ export function Inventory({
             runtime policies not observed
           </Text>
         )}
+        {headlineTail.map((part) => (
+          <Text key={part}>
+            <Text dimColor> · </Text>
+            <Text bold color="yellow">
+              {part}
+            </Text>
+          </Text>
+        ))}
       </Box>
 
-      <Box marginTop={1}>
-        <Text dimColor>
-          {"CAPABILITY".padEnd(widths.id)}  {"SIDE EFFECT".padEnd(widths.effect)}{" "}
-          {"RISK".padEnd(widths.risk)} {"EXPOSE".padEnd(widths.expose)}{" "}
-          {"APPROVAL".padEnd(widths.approval)} POLICIES
-        </Text>
-      </Box>
-      {snapshot.capabilities.map((capability) => (
-        <Box key={capability.id}>
-          <Text>{capability.id.padEnd(widths.id)}</Text>
-          <Text>{"  "}</Text>
-          <Badge
-            label={capability.sideEffect.padEnd(widths.effect)}
-            color={SIDE_EFFECT_COLOR[capability.sideEffect] ?? "white"}
-          />
-          <Text>{" "}</Text>
-          <Badge
-            label={capability.risk.padEnd(widths.risk)}
-            color={RISK_COLOR[capability.risk] ?? "white"}
-          />
-          <Text>{" "}</Text>
-          <Text>{(capability.expose.join(", ") || "—").padEnd(widths.expose)}</Text>
-          <Text>{" "}</Text>
-          <Text color={capability.approval?.required ? "green" : undefined}>
-            {(capability.approval?.required ? "required" : "—").padEnd(widths.approval)}
-          </Text>
-          <Text>{" "}</Text>
-          <Text dimColor={capability.policies.length === 0}>
-            {capability.policies.join(", ") || "—"}
-          </Text>
-        </Box>
-      ))}
-
-      <RuntimePanel snapshot={snapshot} entrySource={entrySource} />
-
-      {snapshot.unexposed.length > 0 && (
+      {verbosity !== "min" && (
         <>
-          <Heading>Defined, reachable nowhere</Heading>
-          {snapshot.unexposed.map((id) => (
-            <Text key={id} dimColor>
-              {"  "}
-              {id}
+          <Box marginTop={1}>
+            <Text dimColor>
+              {"CAPABILITY".padEnd(widths.id)}  {"SIDE EFFECT".padEnd(widths.effect)}{" "}
+              {"RISK".padEnd(widths.risk)} {"EXPOSE".padEnd(widths.expose)}{" "}
+              {"APPROVAL".padEnd(widths.approval)} POLICIES
             </Text>
+          </Box>
+          {snapshot.capabilities.map((capability) => (
+            <Box key={capability.id} flexDirection="column">
+              <Box>
+                <Text>{capability.id.padEnd(widths.id)}</Text>
+                <Text>{"  "}</Text>
+                <Badge
+                  label={capability.sideEffect.padEnd(widths.effect)}
+                  color={SIDE_EFFECT_COLOR[capability.sideEffect] ?? "white"}
+                />
+                <Text>{" "}</Text>
+                <Badge
+                  label={capability.risk.padEnd(widths.risk)}
+                  color={RISK_COLOR[capability.risk] ?? "white"}
+                />
+                <Text>{" "}</Text>
+                <Text>{(capability.expose.join(", ") || "—").padEnd(widths.expose)}</Text>
+                <Text>{" "}</Text>
+                <Text color={capability.approval?.required ? "green" : undefined}>
+                  {(capability.approval?.required ? "required" : "—").padEnd(widths.approval)}
+                </Text>
+                <Text>{" "}</Text>
+                <Text dimColor={capability.policies.length === 0}>
+                  {capability.policies.join(", ") || "—"}
+                </Text>
+              </Box>
+              {verbosity === "detail" &&
+                capabilityMeta(capability).map((line) => (
+                  <Text key={line} dimColor>
+                    {"  "}
+                    {line}
+                  </Text>
+                ))}
+            </Box>
           ))}
-        </>
-      )}
-      {snapshot.excluded.length > 0 && (
-        <>
-          <Heading>Excluded — no meta.agent, on no surface</Heading>
-          {snapshot.excluded.map((path) => (
-            <Text key={path} dimColor>
-              {"  "}
-              {path}
-            </Text>
-          ))}
+
+          <RuntimePanel snapshot={snapshot} entrySource={entrySource} />
+
+          {snapshot.unexposed.length > 0 && (
+            <>
+              <Heading>Defined, reachable nowhere</Heading>
+              {snapshot.unexposed.map((id) => (
+                <Text key={id} dimColor>
+                  {"  "}
+                  {id}
+                </Text>
+              ))}
+            </>
+          )}
+          {snapshot.excluded.length > 0 && (
+            <>
+              <Heading>Excluded — no meta.agent, on no surface</Heading>
+              {snapshot.excluded.map((path) => (
+                <Text key={path} dimColor>
+                  {"  "}
+                  {path}
+                </Text>
+              ))}
+            </>
+          )}
         </>
       )}
     </Box>

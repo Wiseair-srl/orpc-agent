@@ -1,3 +1,4 @@
+import type { Verbosity } from "../render";
 import type { CapabilitySnapshot, EntrySource } from "../types";
 
 /**
@@ -25,6 +26,7 @@ async function ink(): Promise<typeof import("ink") | undefined> {
 export async function renderInventoryInk(
   snapshot: CapabilitySnapshot,
   entrySource: EntrySource,
+  verbosity: Verbosity = "normal",
 ): Promise<boolean> {
   const runtime = await ink();
   if (!runtime) return false;
@@ -32,7 +34,7 @@ export async function renderInventoryInk(
     import("react"),
     import("./Inventory.js"),
   ]);
-  const instance = runtime.render(createElement(Inventory, { snapshot, entrySource }));
+  const instance = runtime.render(createElement(Inventory, { snapshot, entrySource, verbosity }));
   await instance.waitUntilExit();
   return true;
 }

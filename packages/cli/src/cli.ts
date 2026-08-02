@@ -14,6 +14,7 @@ import {
   renderInventory,
   renderMarkdown,
   supportsColor,
+  type Verbosity,
 } from "./render";
 import type { CapabilitySnapshot, Change } from "./types";
 
@@ -43,6 +44,11 @@ OPTIONS
   -o, --out <path>     snapshot output path; "-" for stdout
   --fail-on <mode>     check: "any" (default) or "widening"
   --format <format>    check: human (default) | md | github
+  --verbosity <level>  min | normal | detail (default: normal)
+                       min: headline and counts only
+                       detail: descriptions and declared metadata per row;
+                       check also prints the inventory it gated
+  --detail             alias for --verbosity detail
   --json               inspect: print the snapshot as JSON instead of a table
   --plain              never use the interactive renderer (CI-safe output)
   --no-descriptions    omit capability descriptions from the snapshot
@@ -65,6 +71,7 @@ type Flags = {
   out?: string;
   failOn: "any" | "widening";
   format: "human" | "md" | "github";
+  verbosity: Verbosity;
   json: boolean;
   plain: boolean;
   descriptions: boolean;
@@ -80,6 +87,7 @@ function parseArgs(argv: string[]): Flags {
     command: undefined,
     failOn: "any",
     format: "human",
+    verbosity: "normal",
     json: false,
     plain: false,
     descriptions: true,
@@ -132,13 +140,31 @@ function parseArgs(argv: string[]): Flags {
         break;
       }
       case "--format": {
+        // `markdown` is what the sibling agent-surface CLI calls `md`, and
+        // `--format json` means what `--json` means; both spellings work here.
         const value = next();
-        if (value !== "human" && value !== "md" && value !== "github") {
-          throw new UsageError(`--format must be human, md or github (got "${value}")`);
+        const format = value === "markdown" ? "md" : value;
+        if (format === "json") {
+          flags.json = true;
+          break;
         }
-        flags.format = value;
+        if (format !== "human" && format !== "md" && format !== "github") {
+          throw new UsageError(`--format must be human, json, md, markdown or github (got "${value}")`);
+        }
+        flags.format = format;
         break;
       }
+      case "--verbosity": {
+        const value = next();
+        if (value !== "min" && value !== "normal" && value !== "detail") {
+          throw new UsageError(`--verbosity must be min, normal or detail (got "${value}")`);
+        }
+        flags.verbosity = value;
+        break;
+      }
+      case "--detail":
+        flags.verbosity = "detail";
+        break;
       case "--json":
         flags.json = true;
         break;
@@ -269,10 +295,10 @@ async function main(argv: string[]): Promise<number> {
     // Rich view for a human at a terminal; plain text everywhere else — piped,
     // redirected, in CI, or with the optional UI dependencies absent.
     if (!flags.plain && interactive(process.stdout)) {
-      if (await renderInventoryInk(snapshot, entrySource)) return EXIT_OK;
+      if (await renderInventoryInk(snapshot, entrySource, flags.verbosity)) return EXIT_OK;
     }
     process.stdout.write(
-      `${renderInventory(snapshot, { color: supportsColor(process.stdout) }, entrySource)}\n`,
+      `${renderInventory(snapshot, { color: supportsColor(process.stdout) }, entrySource, flags.verbosity)}\n`,
     );
     return EXIT_OK;
   }
@@ -305,7 +331,16 @@ async function main(argv: string[]): Promise<number> {
   }
 
   const changes = diffSnapshots(committed, snapshot);
-  writeReport(changes, flags.format);
+  writeReport(changes, flags.format, flags.verbosity);
+
+  // The reason to ask a gate for detail is to read what it gated. Still the
+  // plain renderer: check's output is pasted into pull requests, and no module
+  // it reaches imports a rendering framework.
+  if (flags.verbosity === "detail" && flags.format === "human") {
+    process.stdout.write(
+      `\n${renderInventory(snapshot, { color: supportsColor(process.stdout) }, entrySource, "detail")}\n`,
+    );
+  }
 
   // The committed baseline predates runtime-policy recording. That is classed
   // neutral — the application did not change, the tool started looking — so
@@ -385,7 +420,7 @@ async function runInit(flags: Flags, entry: string | undefined, snapshotPath: st
   return result.code;
 }
 
-function writeReport(changes: Change[], format: Flags["format"]): void {
+function writeReport(changes: Change[], format: Flags["format"], verbosity: Verbosity): void {
   if (format === "github") {
     if (changes.length > 0) process.stdout.write(`${renderGithub(changes)}\n`);
     return;
@@ -394,7 +429,9 @@ function writeReport(changes: Change[], format: Flags["format"]): void {
     process.stdout.write(`${renderMarkdown(changes)}\n`);
     return;
   }
-  process.stdout.write(`${renderChanges(changes, { color: supportsColor(process.stdout) })}\n`);
+  process.stdout.write(
+    `${renderChanges(changes, { color: supportsColor(process.stdout) }, verbosity)}\n`,
+  );
 }
 
 function resolveFrom(cwd: string, path: string): string {
