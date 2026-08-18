@@ -12,6 +12,7 @@ import { defaultToolName } from "@orpc-agent/core";
 import type {
   Actor,
   AgentRuntime,
+  ApprovalRecord,
   CapabilityDescriptor,
   CapabilityError,
   ExecutionResult,
@@ -47,6 +48,32 @@ export type MCPServerOptions<TContext = unknown> = {
   filter?: (descriptor: CapabilityDescriptor) => boolean;
   /** Replaces the default "." → "_" mapping. Per-capability meta overrides win. */
   toolNaming?: (capabilityId: string) => string;
+  /**
+   * Approval UX. Deciding remains impossible over MCP (SI-4): these options
+   * only route a human to YOUR approver surface, and let a session execute
+   * what that human has already approved.
+   */
+  approvals?: {
+    /**
+     * Builds an absolute URL where an authorized human can review and decide
+     * this approval — your authenticated approver UI, reachable one click
+     * from the chat. Included in approval-required envelopes as `url` and
+     * woven into the message so the model can hand it to the user. The URL
+     * is a locator, never an authority: possession must not decide anything;
+     * the decide endpoint authenticates like any privileged operation.
+     */
+    url?: (record: ApprovalRecord) => string | undefined;
+    /**
+     * Exposes one extra tool (default name "approvals_resume") that executes
+     * an operation a human has ALREADY approved, exactly once. It cannot
+     * approve, reject, or observe anyone else's approvals: the runtime
+     * resumes only records whose requester matches this session's actor
+     * (id + kind) and whose surface is "mcp"; anything else fails concealed,
+     * byte-identical to an unknown id (SI-8), and is audited as
+     * APPROVAL_RESUME_MISMATCH.
+     */
+    resumeTool?: boolean | { name?: string; description?: string };
+  };
 };
 
 export type MCPServerHandle = {
@@ -83,6 +110,20 @@ export function createMCPServer<TContext = unknown>(
     nameToId.set(name, capability.id);
     idToName.set(capability.id, name);
   }
+
+  const resumeTool = resolveResumeTool(options.approvals?.resumeTool);
+  if (resumeTool) {
+    const colliding = nameToId.get(resumeTool.name);
+    if (colliding !== undefined) {
+      throw new Error(
+        `createMCPServer: tool name collision — capability "${colliding}" and approvals.resumeTool both map to "${resumeTool.name}"`,
+      );
+    }
+  }
+  const approvalUx: ApprovalUx = {
+    ...(options.approvals?.url ? { url: options.approvals.url } : {}),
+    ...(resumeTool ? { resumeToolName: resumeTool.name } : {}),
+  };
 
   const server = new Server(options.serverInfo ?? DEFAULT_SERVER_INFO, {
     capabilities: { tools: {} },
@@ -142,21 +183,66 @@ export function createMCPServer<TContext = unknown>(
     const descriptors = await runtime.describe("mcp", { actor, context });
     const filtered = options.filter ? descriptors.filter(options.filter) : descriptors;
     return {
-      tools: filtered.map((descriptor) => {
-        const annotations = runtime.registry.get(descriptor.id)?.meta.adapters?.mcp?.annotations;
-        return {
-          name: idToName.get(descriptor.id) ?? defaultToolName(descriptor.id),
-          description:
-            descriptor.description + (descriptor.requiresApproval ? " Requires approval." : ""),
-          inputSchema: descriptor.inputSchema as { type: "object"; [key: string]: unknown },
-          ...(annotations ? { annotations } : {}),
-        };
-      }),
+      tools: [
+        ...filtered.map((descriptor) => {
+          const annotations = runtime.registry.get(descriptor.id)?.meta.adapters?.mcp?.annotations;
+          return {
+            name: idToName.get(descriptor.id) ?? defaultToolName(descriptor.id),
+            description:
+              descriptor.description + (descriptor.requiresApproval ? " Requires approval." : ""),
+            inputSchema: descriptor.inputSchema as { type: "object"; [key: string]: unknown },
+            ...(annotations ? { annotations } : {}),
+          };
+        }),
+        // Synthetic, not a capability: listed for every session when enabled
+        // (`filter` shapes capability listings only). It executes records this
+        // session's actor already owns — nothing to conceal per-actor.
+        ...(resumeTool
+          ? [
+              {
+                name: resumeTool.name,
+                description: resumeTool.description,
+                inputSchema: RESUME_TOOL_INPUT_SCHEMA,
+              },
+            ]
+          : []),
+      ],
     };
   });
 
   server.setRequestHandler(CallToolRequestSchema, async (request, extra): Promise<CallToolResult> => {
     const { actor, context } = await identityFor(extra);
+
+    if (resumeTool && request.params.name === resumeTool.name) {
+      const approvalId = (request.params.arguments as Record<string, unknown> | undefined)?.[
+        "approvalId"
+      ];
+      if (typeof approvalId !== "string" || approvalId.length === 0) {
+        return toCallToolResult({
+          status: "error",
+          error: {
+            code: "INPUT_INVALID",
+            message: "Input validation failed.",
+            retryable: false,
+            details: {
+              issues: [{ path: ["approvalId"], message: "approvalId must be a non-empty string" }],
+            },
+          },
+        });
+      }
+      // Execute-what-was-approved only: the guards bind the record to THIS
+      // session's actor and to the mcp surface; the runtime conceals any
+      // mismatch as if the id did not exist (SI-8) and audits the truth.
+      // Deciding still has no path through this connection (SI-4).
+      const result = await runtime.resume(approvalId, {
+        context,
+        expectedActor: actor,
+        expectedSurface: "mcp",
+        ...(extra.signal ? { signal: extra.signal } : {}),
+      });
+      return toCallToolResult(translateResult(result, approvalUx));
+    }
+
     // Unknown names go to the runtime AS-IS: resolution misses produce the
     // concealed CAPABILITY_NOT_FOUND and are audited (probing is a signal).
     const capabilityId = nameToId.get(request.params.name) ?? request.params.name;
@@ -166,11 +252,7 @@ export function createMCPServer<TContext = unknown>(
       surface: "mcp",
       ...(extra.signal ? { signal: extra.signal } : {}),
     });
-    const envelope = translateResult(result);
-    return {
-      content: [{ type: "text", text: JSON.stringify(envelope) }],
-      isError: envelope.status === "error",
-    };
+    return toCallToolResult(translateResult(result, approvalUx));
   });
 
   return {
@@ -199,30 +281,102 @@ function isExpired(authInfo: AuthInfo | undefined): boolean {
 
 type MCPEnvelope =
   | { status: "ok"; data: unknown }
-  | { status: "approval-required"; approvalId: string; message: string }
+  | {
+      status: "approval-required";
+      approvalId: string;
+      message: string;
+      /** ISO 8601 — when the pending decision dies. */
+      expiresAt: string;
+      /** Locator for the app's authenticated approver UI (`approvals.url`). */
+      url?: string;
+    }
   | {
       status: "error";
       error: { code: string; message: string; retryable: boolean; details?: unknown };
     };
 
-/** Same envelope as the AI SDK adapter, plus isError at the protocol level. */
-function translateResult(result: ExecutionResult<unknown>): MCPEnvelope {
+/** What the approval-required message weaves in, resolved once at startup. */
+type ApprovalUx = {
+  url?: (record: ApprovalRecord) => string | undefined;
+  resumeToolName?: string;
+};
+
+/**
+ * Same envelope as the AI SDK adapter, plus isError at the protocol level and
+ * two MCP-only fields on approval-required (`expiresAt`; `url` when
+ * `approvals.url` is configured).
+ */
+function translateResult(result: ExecutionResult<unknown>, ux: ApprovalUx = {}): MCPEnvelope {
   switch (result.status) {
     case "completed":
       return { status: "ok", data: result.output };
     case "approval-required": {
-      const reasons = result.approval.reasons;
+      const record = result.approval;
+      const url = ux.url?.(record);
+      const parts = [
+        record.reasons.length > 0
+          ? `Awaiting approval: ${record.reasons.join("; ")}.`
+          : "Awaiting approval.",
+      ];
+      if (url !== undefined) {
+        parts.push(
+          `Share this link with the user so an authorized human can review and decide: ${url}`,
+        );
+      }
+      if (ux.resumeToolName !== undefined) {
+        parts.push(`Once approved, call ${ux.resumeToolName} with this approvalId to execute.`);
+      }
       return {
         status: "approval-required",
-        approvalId: result.approval.id,
-        message:
-          reasons.length > 0 ? `Awaiting approval: ${reasons.join("; ")}.` : "Awaiting approval.",
+        approvalId: record.id,
+        message: parts.join(" "),
+        expiresAt: record.expiresAt.toISOString(),
+        ...(url !== undefined ? { url } : {}),
       };
     }
     case "failed":
     case "cancelled":
       return { status: "error", error: serializeError(result.error) };
   }
+}
+
+function toCallToolResult(envelope: MCPEnvelope): CallToolResult {
+  return {
+    content: [{ type: "text", text: JSON.stringify(envelope) }],
+    isError: envelope.status === "error",
+  };
+}
+
+const DEFAULT_RESUME_TOOL_NAME = "approvals_resume";
+
+const DEFAULT_RESUME_TOOL_DESCRIPTION =
+  "Execute an operation that a human has already approved. Pass the approvalId from an earlier " +
+  "approval-required tool result. This tool cannot approve or reject anything — decisions are " +
+  "made by humans outside this connection. It runs the approved operation exactly once, as the " +
+  "original requester, and fails while the decision is pending or after rejection, expiry, or " +
+  "prior use.";
+
+const RESUME_TOOL_INPUT_SCHEMA = {
+  type: "object",
+  properties: {
+    approvalId: {
+      type: "string",
+      description: "The approvalId from an approval-required result in this session.",
+    },
+  },
+  required: ["approvalId"],
+  additionalProperties: false,
+} as const;
+
+function resolveResumeTool(
+  option: boolean | { name?: string; description?: string } | undefined,
+): { name: string; description: string } | undefined {
+  if (option === undefined || option === false) return undefined;
+  const config = option === true ? {} : option;
+  return {
+    name: config.name ?? DEFAULT_RESUME_TOOL_NAME,
+    description: config.description ?? DEFAULT_RESUME_TOOL_DESCRIPTION,
+  };
 }
 
 /** The only two shapes a model client can ever receive (SI-9). */

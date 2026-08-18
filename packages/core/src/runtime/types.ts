@@ -177,10 +177,24 @@ export interface AgentRuntime<TContext = unknown> {
     options: DescribeOptions<TContext>,
   ): Promise<CapabilityDescriptor[]>;
 
-  /** Re-enters the pipeline at stage 8 with the approval integrity checks. */
+  /**
+   * Re-enters the pipeline at stage 8 with the approval integrity checks.
+   *
+   * `expectedActor` / `expectedSurface` are binding guards for adapter-relayed
+   * resume (a session executing its own approved operation): when set, the
+   * record's requester (id + kind) and surface must match, or the resume
+   * fails `APPROVAL_RESUME_MISMATCH` — serialized to the caller exactly like
+   * an unknown id (SI-8), recorded truthfully in audit. They never
+   * re-attribute: execution always runs as the record's actor.
+   */
   resume<O = unknown>(
     approvalId: string,
-    options: { context: TContext; signal?: AbortSignal },
+    options: {
+      context: TContext;
+      signal?: AbortSignal;
+      expectedActor?: Actor;
+      expectedSurface?: ExposureSurface;
+    },
   ): Promise<ExecutionResult<O>>;
 
   /** The configured coordinator; `decide` emits approval audit events. */

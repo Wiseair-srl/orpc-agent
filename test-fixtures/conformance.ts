@@ -9,7 +9,14 @@ import { signalObservations, EXPECTED_TOOL_NAMES } from "./registry";
 
 export type AdapterEnvelope =
   | { status: "ok"; data: unknown }
-  | { status: "approval-required"; approvalId: string; message: string }
+  | {
+      status: "approval-required";
+      approvalId: string;
+      message: string;
+      /** MCP-only extras; absent on adapters that do not emit them. */
+      expiresAt?: string;
+      url?: string;
+    }
   | {
       status: "error";
       error: { code: string; message: string; retryable: boolean; details?: unknown };

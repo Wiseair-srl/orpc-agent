@@ -35,6 +35,7 @@ await mcp.connect(transport);   // stdio, Streamable HTTP — the app picks and 
 | `serverInfo` | no | Defaults to `{ name: "orpc-agent", version: <pkg> }` |
 | `filter` | no | Listing-shaping only, not authorization (SI-2) |
 | `toolNaming` | no | Default `.`→`_`; `meta.adapters.mcp.toolName` overrides; collisions throw |
+| `approvals` | no | Approval UX: `url` (deep link to your approver UI) and `resumeTool` (execute-what-was-approved). Neither lets anything decide over MCP — [below](#closing-the-approval-loop-from-chat) |
 
 ## Protocol mapping
 
@@ -49,17 +50,49 @@ await mcp.connect(transport);   // stdio, Streamable HTTP — the app picks and 
 
 ## Result shape
 
-MCP tool results carry a JSON content block with the **same envelope** as the AI SDK adapter (`ok` / `approval-required` / `error`), plus `isError: true` on the MCP result for the `error` status so protocol-level handling works:
+MCP tool results carry a JSON content block with the **same envelope** as the AI SDK adapter (`ok` / `approval-required` / `error`), plus `isError: true` on the MCP result for the `error` status so protocol-level handling works. Two MCP-only fields ride on `approval-required`: `expiresAt` (always), and `url` when `approvals.url` is configured:
 
 ```jsonc
 // tools/call result content (application/json)
 { "status": "approval-required", "approvalId": "apr_9",
-  "message": "Awaiting approval: Refund of $649 exceeds $500." }
+  "message": "Awaiting approval: Refund of $649 exceeds $500. Share this link with the user so an authorized human can review and decide: https://acme.test/approvals/apr_9",
+  "expiresAt": "2026-08-19T10:15:00.000Z",
+  "url": "https://acme.test/approvals/apr_9" }
 ```
 
 Concealment holds on this surface above all: unknown tool, unexposed capability, and policy-hidden capability are byte-identical `error` envelopes with `CAPABILITY_NOT_FOUND` (SI-8); `details`/`cause` never serialize (SI-9).
 
-Approval over MCP is necessarily asynchronous: the client is told a decision is pending; deciding and resuming happen in **your** application (dashboard, worker), never via an MCP call from the same client — no "decide approval" capability should ever be exposed to `mcp` (SI-4). MCP elicitation as a confirmation channel is under evaluation ([Q4](../open-questions.md#q4)).
+*Deciding* over MCP stays impossible: no MCP call can approve or reject anything, and no "decide approval" capability should ever be exposed to `mcp` (SI-4). What the adapter does offer is a way to keep the *conversation* whole — next section.
+
+### Closing the approval loop from chat
+
+The decision itself always happens in **your** application, by an authenticated human. Two opt-in options remove the UX seams around it:
+
+```ts
+const mcp = createMCPServer(runtime, {
+  createContext,
+  approvals: {
+    // B: a deep link into your authenticated approver UI
+    url: (record) => `https://admin.acme.test/approvals/${record.id}`,
+    // C: let a session execute what a human has ALREADY approved
+    resumeTool: true,   // or { name, description }
+  },
+});
+```
+
+**`approvals.url` — the human is one click away.** The approval-required envelope carries `url` and the message tells the model to hand it to the user. They click, land on *your* approver surface, authenticate with *your* IdP, decide there. The URL is a **locator, never an authority**: possession must not decide anything — gate the decide endpoint like any privileged operation, exactly as before ([human-approval](../guides/human-approval.md#_3-build-the-approver-surface)). Security posture is unchanged; only the walk to the dashboard is gone.
+
+**`approvals.resumeTool` — the loop closes in-session.** Adds one synthetic tool (default `approvals_resume`; capability-name collisions throw at startup) that calls `runtime.resume` with two binding guards: `expectedActor` = the session's authenticated actor, `expectedSurface: "mcp"`. Resume is not decide — it acts only on a record already `approved`, executes exactly once (atomic consumption), as the original requester, with the input hash-bound at request time (SI-5). A model calling it can neither decide, nor change a byte, nor re-run.
+
+The guards are what make relaying safe:
+
+- **Requester-bound.** A session may execute only approvals *its own actor* requested (id + kind). Any other record — someone else's, or one requested on another surface — fails `APPROVAL_RESUME_MISMATCH`, serialized byte-identical to an unknown id (SI-8): probing with guessed ids learns nothing, and the attempt is audited under the caller's identity with the real code.
+- **Surface-bound.** Only `surface: "mcp"` records resume here. An approval suspended in your AI-SDK loop keeps its output in that loop; cross-surface delivery is deliberately not offered.
+- **Owner-visible states.** The record's own requester gets the real codes — `APPROVAL_PENDING` (retryable: the model can tell the user it's still waiting), `APPROVAL_REJECTED`, `APPROVAL_EXPIRED`, `APPROVAL_CONSUMED`.
+
+Residual risk to name in your review: an injected model in the *requester's own session* could resume an approval the human granted but meant to abandon. Expiry bounds the window (`meta.approval.expiresInMs` — keep it short where the approver is present), rejection is terminal, and every resume is audited. If that residual is unacceptable for a capability, don't enable the tool — or keep the capability off `mcp` entirely.
+
+MCP elicitation as a confirmation channel remains under evaluation ([Q4](../open-questions.md#q4)); these two options are the supported path today.
 
 ## Identity is the whole game here
 

@@ -45,6 +45,7 @@ type FailureStage =
 | `APPROVAL_INPUT_MISMATCH` | approval | no | no | Stored input no longer matches its hash — integrity failure |
 | `APPROVAL_SELF_APPROVAL` | approval | no | yes | Approver identity equals requester (SI-4) |
 | `APPROVAL_UNSERIALIZABLE_INPUT` | approval | no | no | Approval required but validated input not canonically serializable |
+| `APPROVAL_RESUME_MISMATCH` | approval | no | no | `resume()` with `expectedActor`/`expectedSurface` guards that don't match the record — concealed like an unknown id (SI-8); audit gets the real code |
 | `EXECUTION_FAILED` | execution | varies | varies | Handler threw. oRPC type-safe errors: exposeToModel=true with their message. Unexpected throws: exposeToModel=false, generic public message |
 | `OUTPUT_INVALID` | output-validation | no | no | Handler output violates output schema; output withheld |
 | `TIMEOUT` | timeout | yes | yes | Composite signal fired from the timeout timer |

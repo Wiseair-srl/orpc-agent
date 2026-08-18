@@ -271,6 +271,83 @@ describe("failure codes", () => {
   });
 });
 
+describe("resume binding guards (adapter-relayed resume)", () => {
+  const mallory: import("../src/types").Actor = { id: "u_mallory", kind: "user" };
+
+  async function approvedPending(overrides?: Parameters<typeof makeRuntime>[0]) {
+    const fixture = makeRuntime(overrides);
+    const pending = await fixture.runtime.invoke("orders.refund", REFUND_649, options);
+    if (pending.status !== "approval-required") expect.unreachable();
+    await fixture.runtime.approvals.decide(pending.approval.id, {
+      status: "approved",
+      approver: priya,
+    });
+    return { ...fixture, approvalId: pending.approval.id };
+  }
+
+  test("matching expectedActor + expectedSurface resumes normally", async () => {
+    const { runtime, approvalId } = await approvedPending();
+    const final = await runtime.resume(approvalId, {
+      context: {},
+      expectedActor: dana,
+      expectedSurface: "direct",
+    });
+    expect(final.status).toBe("completed");
+  });
+
+  test("expectedActor mismatch: concealed like an unknown id, audited with the real code and the caller's identity", async () => {
+    const { runtime, audit, approvalId } = await approvedPending();
+    const result = await runtime.resume(approvalId, { context: {}, expectedActor: mallory });
+    if (result.status !== "failed") expect.unreachable();
+    expect(result.error.code).toBe("APPROVAL_RESUME_MISMATCH");
+    // Serialized face identical to a nonexistent record (SI-8).
+    const unknown = await runtime.resume("apr_nope", { context: {} });
+    if (unknown.status !== "failed") expect.unreachable();
+    expect(result.error.exposeToModel).toBe(false);
+    expect(result.error.publicMessage).toBe(unknown.error.publicMessage);
+    expect(result.error.stage).toBe(unknown.error.stage);
+    // Audit attributes the attempt to the caller, not the record's actor.
+    const failed = audit.ofType("capability.failed")[0]!;
+    expect(failed.data.code).toBe("APPROVAL_RESUME_MISMATCH");
+    expect(failed.actor).toEqual({ id: "u_mallory", kind: "user" });
+    // The record is untouched — its owner can still execute it.
+    const final = await runtime.resume(approvalId, { context: {}, expectedActor: dana });
+    expect(final.status).toBe("completed");
+  });
+
+  test("same id, different kind is a mismatch", async () => {
+    const { runtime, approvalId } = await approvedPending();
+    const result = await runtime.resume(approvalId, {
+      context: {},
+      expectedActor: { id: "u_dana", kind: "service" },
+    });
+    if (result.status !== "failed") expect.unreachable();
+    expect(result.error.code).toBe("APPROVAL_RESUME_MISMATCH");
+  });
+
+  test("expectedSurface mismatch fails the same way", async () => {
+    const { runtime, approvalId } = await approvedPending();
+    const result = await runtime.resume(approvalId, { context: {}, expectedSurface: "mcp" });
+    if (result.status !== "failed") expect.unreachable();
+    expect(result.error.code).toBe("APPROVAL_RESUME_MISMATCH");
+  });
+
+  test("guard runs before status checks: probing a PENDING record leaks nothing", async () => {
+    const { runtime } = makeRuntime();
+    const pending = await runtime.invoke("orders.refund", REFUND_649, options);
+    if (pending.status !== "approval-required") expect.unreachable();
+    // Undecided record: the owner would get APPROVAL_PENDING (retryable) —
+    // a non-owner must not learn even that much.
+    const result = await runtime.resume(pending.approval.id, {
+      context: {},
+      expectedActor: mallory,
+    });
+    if (result.status !== "failed") expect.unreachable();
+    expect(result.error.code).toBe("APPROVAL_RESUME_MISMATCH");
+    expect(result.error.retryable).toBe(false);
+  });
+});
+
 describe("input binding (SI-5)", () => {
   test("canonical JSON is key-order independent and value-sensitive", async () => {
     expect(canonicalJson({ a: 1, b: { d: [1, 2], c: "x" } })).toBe(
