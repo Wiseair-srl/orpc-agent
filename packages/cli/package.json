@@ -1,6 +1,6 @@
 {
   "name": "@orpc-agent/cli",
-  "version": "2.1.0",
+  "version": "3.0.0",
   "description": "Capability inventory and CI drift gate for oRPC Agent applications. Independent community project, not affiliated with or endorsed by the oRPC maintainers.",
   "license": "MIT",
   "author": "Paolo Barbato",

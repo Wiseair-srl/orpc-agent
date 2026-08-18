@@ -1,5 +1,12 @@
 # @orpc-agent/postgres
 
+## 3.0.0
+
+### Patch Changes
+
+- Updated dependencies [481c0ef]
+  - @orpc-agent/core@3.0.0
+
 ## 2.0.2
 
 ### Patch Changes

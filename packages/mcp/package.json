@@ -1,6 +1,6 @@
 {
   "name": "@orpc-agent/mcp",
-  "version": "2.0.2",
+  "version": "3.0.0",
   "description": "Model Context Protocol server adapter for oRPC Agent runtimes. Independent community project, not affiliated with or endorsed by the oRPC maintainers.",
   "license": "MIT",
   "author": "Paolo Barbato",
