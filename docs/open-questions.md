@@ -18,7 +18,9 @@ Resolved questions keep their number so existing citations still land: [Q2](#q2)
 
 **Options.** (a) Today's behaviour — a pending-approval envelope, decided in your application. (b) Elicitation-based confirmation for `human-confirmation` types where clients support it.
 
-**Current answer.** (a). Elicitation support across clients is still uneven, and confirmation-via-the-requesting-client needs a careful SI-4 analysis: the confirming human must be the *authenticated principal*, not whoever holds the client window. A prototype behind a flag is the next step.
+**Current answer.** (a) for elicitation itself. Elicitation support across clients is still uneven, and confirmation-via-the-requesting-client needs a careful SI-4 analysis: the confirming human must be the *authenticated principal*, not whoever holds the client window. A prototype behind a flag is the next step.
+
+Meanwhile the adapter ships two opt-ins that close most of the UX gap without touching the trust model: `approvals.url` (deep link from the suspension envelope into the app's authenticated approver UI) and `approvals.resumeTool` (execute-what-was-approved, requester- and surface-bound). Deciding remains outside MCP ([adapter doc](adapters/mcp.md#closing-the-approval-loop-from-chat)).
 
 ## Q5 — Session-scoped approvals <a id="q5"></a>
 

@@ -33,6 +33,7 @@ export type ErrorCode =
   | "APPROVAL_INPUT_MISMATCH"
   | "APPROVAL_SELF_APPROVAL"
   | "APPROVAL_UNSERIALIZABLE_INPUT"
+  | "APPROVAL_RESUME_MISMATCH"
   | "EXECUTION_FAILED"
   | "OUTPUT_INVALID"
   | "TIMEOUT"
@@ -133,6 +134,15 @@ export const ERROR_CODE_DEFAULTS: Record<ErrorCode, CodeDefaults> = {
     publicMessage: "The approver must differ from the requesting actor.",
   },
   APPROVAL_UNSERIALIZABLE_INPUT: {
+    stage: "approval",
+    retryable: false,
+    exposeToModel: false,
+    publicMessage: "The operation failed.",
+  },
+  // Not exposed: to the caller a record bound to someone else must be
+  // indistinguishable from a record that does not exist (SI-8). Audit gets
+  // the real code.
+  APPROVAL_RESUME_MISMATCH: {
     stage: "approval",
     retryable: false,
     exposeToModel: false,

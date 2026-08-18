@@ -56,6 +56,10 @@ export type ResumeArgs = {
   approvalId: string;
   context: unknown;
   signal?: AbortSignal;
+  /** Binding guard for adapter-relayed resume: record.actor must match (id + kind). */
+  expectedActor?: Actor;
+  /** Binding guard for adapter-relayed resume: record.surface must match. */
+  expectedSurface?: ExposureSurface;
 };
 
 export function newId(prefix: string): string {
@@ -399,6 +403,32 @@ export async function resumePipeline<O>(
     finalizeFailed(frameBase, new CapabilityError({ code, stage: "approval" }));
 
   try {
+    // Binding guard (adapter-relayed resume). Runs BEFORE the status checks
+    // so a caller that is not the record's requester learns nothing about the
+    // record — not even that it exists: the failure serializes exactly like
+    // an unknown id (SI-8). The audit event carries the real code and is
+    // attributed to the caller, whose attempt this was.
+    if (
+      (args.expectedActor !== undefined &&
+        (args.expectedActor.id !== record.actor.id ||
+          args.expectedActor.kind !== record.actor.kind)) ||
+      (args.expectedSurface !== undefined && args.expectedSurface !== record.surface)
+    ) {
+      return finalizeFailed(
+        {
+          ...frameBase,
+          actor: args.expectedActor ?? record.actor,
+          surface: args.expectedSurface ?? record.surface,
+        },
+        new CapabilityError({
+          code: "APPROVAL_RESUME_MISMATCH",
+          cause: new Error(
+            `approval "${record.id}" is bound to another requester or surface`,
+          ),
+        }),
+      );
+    }
+
     // Integrity checks (SI-4, SI-5).
     if (record.status === "pending") return fail("APPROVAL_PENDING");
     if (record.status === "rejected") return fail("APPROVAL_REJECTED");

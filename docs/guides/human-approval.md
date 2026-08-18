@@ -71,6 +71,8 @@ Resume runs as the **original requester** with integrity checks (hash match, sin
 
 Close the loop back to the conversation: post the outcome into the chat thread (your app's job — the adapter can't, the model call is long gone).
 
+Over MCP the adapter can close most of this loop for you: `approvals.url` puts a deep link to this approver surface in the suspension envelope, and `approvals.resumeTool` lets the requesting session execute the operation once it's approved — deciding still happens here, never over MCP ([adapter doc](../adapters/mcp.md#closing-the-approval-loop-from-chat)).
+
 ## Inline confirmation
 
 When the human is *present* and latency is seconds, skip the suspend/resume machinery:

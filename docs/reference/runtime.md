@@ -155,7 +155,12 @@ const descriptors = await runtime.describe("aiSdk", { actor, context, scope: { t
 ```ts
 resume<O = unknown>(
   approvalId: string,
-  options: { context: TContext; signal?: AbortSignal },
+  options: {
+    context: TContext;
+    signal?: AbortSignal;
+    expectedActor?: Actor;          // binding guard: record.actor must match (id + kind)
+    expectedSurface?: ExposureSurface; // binding guard: record.surface must match
+  },
 ): Promise<ExecutionResult<O>>;
 ```
 
@@ -163,7 +168,9 @@ resume<O = unknown>(
 
 No `actor` parameter by design: the requesting identity is bound in the record; resumption must not re-attribute the execution. The caller supplies fresh `context` because application context (db handles, loaders) is not serializable.
 
-**Failure codes.** The six `APPROVAL_*` codes in [errors.md](errors.md#error-codes), plus anything stages 9–15 produce.
+**Binding guards.** `expectedActor` / `expectedSurface` are for *adapter-relayed* resume — a session executing its own approved operation (the [MCP resume tool](../adapters/mcp.md#closing-the-approval-loop-from-chat) passes the session's actor and `"mcp"`). They check **before** any status check, so a caller that is not the record's requester learns nothing — not even that the record exists: the failure is `APPROVAL_RESUME_MISMATCH`, serialized identically to an unknown id (SI-8), while audit records the real code under the caller's identity. They never re-attribute; execution still runs as the record's actor. Trusted application code resuming on its own authority simply omits them.
+
+**Failure codes.** The `APPROVAL_*` codes in [errors.md](errors.md#error-codes), plus anything stages 9–15 produce.
 
 ---
 

@@ -404,3 +404,222 @@ describe("protocol mapping details", () => {
     expect(client.getServerVersion()).toMatchObject({ name: "orpc-agent" });
   });
 });
+
+// ---------------------------------------------------------------------------
+// Approval UX: deep link + resume tool
+// ---------------------------------------------------------------------------
+
+describe("approval UX", () => {
+  const priya: Actor = { id: "u_priya", kind: "user" };
+  const base = agentProcedure(os.$context<object>());
+  const registry = createCapabilityRegistry({
+    orders: {
+      refund: base
+        .meta({
+          agent: {
+            description: "Refund an order.",
+            expose: { mcp: true, aiSdk: true },
+            sideEffect: "write",
+            risk: "high",
+            approval: { required: true, type: "human-confirmation" },
+          },
+        })
+        .input(z.object({ orderId: z.string(), amount: z.number().positive() }))
+        .handler(async ({ input }) => ({ refundId: "ref_1", amount: input.amount })),
+    },
+  });
+
+  function fixture(): AgentRuntime<object> {
+    return createAgentRuntime<object>({ governance: defineGovernance({ registry }) });
+  }
+
+  const REFUND = { orderId: "ord_42", amount: 649 };
+
+  test("approvals.url: envelope carries url + expiresAt; message hands the link to the user", async () => {
+    const runtime = fixture();
+    const { client } = await connectedClient(runtime, {
+      createContext: () => ({ actor: dana, context: {} }),
+      approvals: {
+        url: (record) => `https://approvals.acme.test/${record.id}`,
+        resumeTool: true,
+      },
+    });
+    const envelope = parseEnvelope(
+      (await client.callTool({ name: "orders_refund", arguments: REFUND })) as never,
+    );
+    if (envelope.status !== "approval-required") expect.unreachable();
+    expect(envelope.url).toBe(`https://approvals.acme.test/${envelope.approvalId}`);
+    expect(Date.parse(envelope.expiresAt!)).toBeGreaterThan(Date.now());
+    expect(envelope.message).toContain("Share this link with the user");
+    expect(envelope.message).toContain(envelope.url);
+    expect(envelope.message).toContain("call approvals_resume with this approvalId");
+  });
+
+  test("resume tool is opt-in and absent by default (SI-4 listing unchanged)", async () => {
+    const { client } = await connectedClient(fixture(), {
+      createContext: () => ({ actor: dana, context: {} }),
+    });
+    const names = (await client.listTools()).tools.map((t) => t.name);
+    expect(names).toEqual(["orders_refund"]);
+  });
+
+  test("resume tool listing: default name, execute-only description, strict input schema", async () => {
+    const { client } = await connectedClient(fixture(), {
+      createContext: () => ({ actor: dana, context: {} }),
+      approvals: { resumeTool: true },
+    });
+    const tools = (await client.listTools()).tools;
+    const resume = tools.find((t) => t.name === "approvals_resume")!;
+    expect(resume.description).toContain("cannot approve or reject");
+    expect(resume.description).toContain("exactly once");
+    expect(resume.inputSchema).toMatchObject({
+      type: "object",
+      required: ["approvalId"],
+      additionalProperties: false,
+    });
+  });
+
+  test("full in-chat loop: gated call → human decides in the app → resume tool executes once", async () => {
+    const runtime = fixture();
+    const { client } = await connectedClient(runtime, {
+      createContext: () => ({ actor: dana, context: {} }),
+      approvals: { resumeTool: true },
+    });
+
+    const pending = parseEnvelope(
+      (await client.callTool({ name: "orders_refund", arguments: REFUND })) as never,
+    );
+    if (pending.status !== "approval-required") expect.unreachable();
+
+    // Before the decision: the owner sees the real, retryable pending state.
+    const early = parseEnvelope(
+      (await client.callTool({
+        name: "approvals_resume",
+        arguments: { approvalId: pending.approvalId },
+      })) as never,
+    );
+    if (early.status !== "error") expect.unreachable();
+    expect(early.error.code).toBe("APPROVAL_PENDING");
+    expect(early.error.retryable).toBe(true);
+
+    // The decision happens in the APP (dashboard/Slack), never over MCP.
+    await runtime.approvals.decide(pending.approvalId, { status: "approved", approver: priya });
+
+    const final = parseEnvelope(
+      (await client.callTool({
+        name: "approvals_resume",
+        arguments: { approvalId: pending.approvalId },
+      })) as never,
+    );
+    if (final.status !== "ok") expect.unreachable();
+    expect(final.data).toEqual({ refundId: "ref_1", amount: 649 });
+
+    // Single-use: the consumed record refuses a second execution.
+    const again = parseEnvelope(
+      (await client.callTool({
+        name: "approvals_resume",
+        arguments: { approvalId: pending.approvalId },
+      })) as never,
+    );
+    if (again.status !== "error") expect.unreachable();
+    expect(again.error.code).toBe("APPROVAL_CONSUMED");
+  });
+
+  test("another session's actor cannot resume: byte-identical to an unknown id", async () => {
+    const runtime = fixture();
+    const danaSession = await connectedClient(runtime, {
+      createContext: () => ({ actor: dana, context: {} }),
+      approvals: { resumeTool: true },
+    });
+    const mallorySession = await connectedClient(runtime, {
+      createContext: () => ({ actor: { id: "u_mallory", kind: "user" }, context: {} }),
+      approvals: { resumeTool: true },
+    });
+
+    const pending = parseEnvelope(
+      (await danaSession.client.callTool({ name: "orders_refund", arguments: REFUND })) as never,
+    );
+    if (pending.status !== "approval-required") expect.unreachable();
+    await runtime.approvals.decide(pending.approvalId, { status: "approved", approver: priya });
+
+    const stolen = parseEnvelope(
+      (await mallorySession.client.callTool({
+        name: "approvals_resume",
+        arguments: { approvalId: pending.approvalId },
+      })) as never,
+    );
+    const unknown = parseEnvelope(
+      (await mallorySession.client.callTool({
+        name: "approvals_resume",
+        arguments: { approvalId: "apr_nope" },
+      })) as never,
+    );
+    expect(stolen).toEqual(unknown);
+    if (stolen.status !== "error") expect.unreachable();
+    expect(stolen.error.code).toBe("INTERNAL_ERROR");
+
+    // The record is untouched: its owner still executes it.
+    const final = parseEnvelope(
+      (await danaSession.client.callTool({
+        name: "approvals_resume",
+        arguments: { approvalId: pending.approvalId },
+      })) as never,
+    );
+    expect(final.status).toBe("ok");
+  });
+
+  test("approvals requested on another surface cannot be resumed over MCP", async () => {
+    const runtime = fixture();
+    const { client } = await connectedClient(runtime, {
+      createContext: () => ({ actor: dana, context: {} }),
+      approvals: { resumeTool: true },
+    });
+
+    // Same actor, but the suspension belongs to the app's own AI-SDK loop.
+    const pending = await runtime.invoke("orders.refund", REFUND, {
+      actor: dana,
+      context: {},
+      surface: "aiSdk",
+    });
+    if (pending.status !== "approval-required") expect.unreachable();
+    await runtime.approvals.decide(pending.approval.id, { status: "approved", approver: priya });
+
+    const crossed = parseEnvelope(
+      (await client.callTool({
+        name: "approvals_resume",
+        arguments: { approvalId: pending.approval.id },
+      })) as never,
+    );
+    if (crossed.status !== "error") expect.unreachable();
+    expect(crossed.error.code).toBe("INTERNAL_ERROR");
+  });
+
+  test("missing approvalId is refused with INPUT_INVALID, not a protocol error", async () => {
+    const { client } = await connectedClient(fixture(), {
+      createContext: () => ({ actor: dana, context: {} }),
+      approvals: { resumeTool: true },
+    });
+    const envelope = parseEnvelope(
+      (await client.callTool({ name: "approvals_resume", arguments: {} })) as never,
+    );
+    if (envelope.status !== "error") expect.unreachable();
+    expect(envelope.error.code).toBe("INPUT_INVALID");
+  });
+
+  test("custom name/description are honored; capability collisions throw at startup", async () => {
+    const { client } = await connectedClient(fixture(), {
+      createContext: () => ({ actor: dana, context: {} }),
+      approvals: { resumeTool: { name: "run_approved", description: "Run it." } },
+    });
+    const names = (await client.listTools()).tools.map((t) => t.name);
+    expect(names).toContain("run_approved");
+    expect(names).not.toContain("approvals_resume");
+
+    expect(() =>
+      createMCPServer(fixture(), {
+        createContext: () => ({ actor: dana, context: {} }),
+        approvals: { resumeTool: { name: "orders_refund" } },
+      }),
+    ).toThrowError(/collision/);
+  });
+});

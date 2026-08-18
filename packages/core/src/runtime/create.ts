@@ -1,4 +1,4 @@
-import type { ExposureSurface } from "../types";
+import type { Actor, ExposureSurface } from "../types";
 import type { ApprovalCoordinator } from "../approvals/types";
 import { createInMemoryApprovalCoordinator } from "../approvals/in-memory";
 import { NOOP_TRACING } from "../tracing";
@@ -117,7 +117,12 @@ export function createAgentRuntime<TContext = unknown>(
 
     resume<O = unknown>(
       approvalId: string,
-      resumeOptions: { context: TContext; signal?: AbortSignal },
+      resumeOptions: {
+        context: TContext;
+        signal?: AbortSignal;
+        expectedActor?: Actor;
+        expectedSurface?: ExposureSurface;
+      },
     ): Promise<ExecutionResult<O>> {
       if (typeof approvalId !== "string" || approvalId.length === 0) {
         throw new TypeError("resume: approvalId must be a non-empty string");
@@ -129,6 +134,10 @@ export function createAgentRuntime<TContext = unknown>(
         approvalId,
         context: resumeOptions.context,
         ...(resumeOptions.signal ? { signal: resumeOptions.signal } : {}),
+        ...(resumeOptions.expectedActor ? { expectedActor: resumeOptions.expectedActor } : {}),
+        ...(resumeOptions.expectedSurface
+          ? { expectedSurface: resumeOptions.expectedSurface }
+          : {}),
       });
     },
 

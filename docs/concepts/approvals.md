@@ -84,7 +84,9 @@ const final = await runtime.resume(approvalId, { context: freshContext });
 
 Resume runs as the **original actor** (identity is bound in the record; no re-attribution), with the approver recorded in `context.agent.approval`. The caller supplies fresh application context — live handles are not serializable, and stale context is exactly what execution-phase policies exist to catch.
 
-Every way this can fail has its own code — pending, rejected, expired, already consumed, input mismatch, self-approval — so the caller never has to guess which check refused ([reference/errors](../reference/errors.md)).
+When an *adapter* relays resume on behalf of an external session (the MCP resume tool), it passes the binding guards `expectedActor` / `expectedSurface`: the record's requester and surface must match, or the resume fails concealed — indistinguishable from an unknown id to the caller, truthfully coded in audit (`APPROVAL_RESUME_MISMATCH`). Guards restrict who may *trigger* execution; they never change who it runs as.
+
+Every way this can fail has its own code — pending, rejected, expired, already consumed, input mismatch, self-approval, guard mismatch — so the caller never has to guess which check refused ([reference/errors](../reference/errors.md)).
 
 ## Two operating modes
 
