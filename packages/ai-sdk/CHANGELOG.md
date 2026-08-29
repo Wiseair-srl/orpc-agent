@@ -1,5 +1,12 @@
 # @orpc-agent/ai-sdk
 
+## 4.0.0
+
+### Patch Changes
+
+- Updated dependencies [13c9ee4]
+  - @orpc-agent/core@4.0.0
+
 ## 3.0.0
 
 ### Patch Changes

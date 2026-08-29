@@ -1,5 +1,16 @@
 # @orpc-agent/cli
 
+## 4.0.0
+
+### Minor Changes
+
+- 13c9ee4: Add authoritative runtime-policy scopes. Inspect and snapshot resolved candidate capabilities, render runtime matches in the capability table, and classify scope drift.
+
+### Patch Changes
+
+- Updated dependencies [13c9ee4]
+  - @orpc-agent/core@4.0.0
+
 ## 3.0.0
 
 ### Patch Changes

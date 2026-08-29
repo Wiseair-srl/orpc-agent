@@ -1,5 +1,11 @@
 # @orpc-agent/core
 
+## 4.0.0
+
+### Minor Changes
+
+- 13c9ee4: Add authoritative runtime-policy scopes. Inspect and snapshot resolved candidate capabilities, render runtime matches in the capability table, and classify scope drift.
+
 ## 3.0.0
 
 ### Minor Changes
