@@ -1,5 +1,12 @@
 # @orpc-agent/opentelemetry
 
+## 4.0.0
+
+### Patch Changes
+
+- Updated dependencies [4750ca2]
+  - @orpc-agent/core@4.0.0
+
 ## 3.0.0
 
 ### Patch Changes
