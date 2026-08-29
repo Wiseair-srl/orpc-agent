@@ -214,17 +214,19 @@ function readConfig(cwd: string): FileConfig {
 }
 
 /**
- * Version 1 files are still accepted: they predate the `runtime` key, so they
- * simply read as "runtime policies never observed", which is what they were.
- * Rejecting them would break every committed snapshot on upgrade.
+ * Versions 1 and 2 remain readable. V1 predates `runtime`; v2 predates
+ * inspectable policy scope. Rejecting either would break committed baselines.
  */
 function readSnapshotFile(path: string): CapabilitySnapshot {
   const contents = readFileSync(path, "utf8");
   const parsed = JSON.parse(contents) as CapabilitySnapshot;
-  if ((parsed.version !== 1 && parsed.version !== 2) || !Array.isArray(parsed.capabilities)) {
+  if (
+    (parsed.version !== 1 && parsed.version !== 2 && parsed.version !== 3) ||
+    !Array.isArray(parsed.capabilities)
+  ) {
     throw new Error(
       `${path} is not a capability snapshot this version can read ` +
-        `(got version ${JSON.stringify(parsed.version)}, expected 1 or 2)`,
+        `(got version ${JSON.stringify(parsed.version)}, expected 1, 2 or 3)`,
     );
   }
   return parsed;

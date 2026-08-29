@@ -44,6 +44,7 @@ const REQUIRED = {
       "DescribeOptions",
       "DescribeScope",
       "AgentPolicy",
+      "PolicyScope",
       "PolicyDecision",
       "PolicyPhase",
       "PolicyRequest",

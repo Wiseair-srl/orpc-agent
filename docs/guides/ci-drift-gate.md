@@ -75,8 +75,8 @@ Capability drift — 3 changes, 2 widening
 
 WIDENING — the agent gained reach, or a control weakened
   orders.refund   expose      now exposed on mcp
-  (runtime)       policies    runtime policy removed: gate-model-writes — it applied to
-                              every invocation; any approval, denial or hiding it added is gone
+  (runtime)       policies    runtime policy removed: gate-model-writes — any approval,
+                              denial or hiding it added within its declared scope is gone
 
 NEUTRAL
   orders.search   description changed
@@ -84,7 +84,7 @@ NEUTRAL
 
 Three classifications, and the two counter-intuitive ones are deliberate:
 
-- **Widening** — a new surface, a capability that arrives already exposed, approval no longer required, risk lowered, a policy removed, redaction removed, retries added to a write. Also **`sideEffect` changed in either direction**: declaring `read` where you declared `write` silently stops every policy keyed on the old value from matching, which weakens governance exactly like a new exposure. And **`idempotent: false → true`**, because that flag is what permits retrying a write (SI-11).
+- **Widening** — a new surface, a capability that arrives already exposed, approval no longer required, risk lowered, a policy removed, runtime-policy scope narrowed, redaction removed, retries added to a write. Also **`sideEffect` changed in either direction**: declaring `read` where you declared `write` silently stops every policy keyed on the old value from matching, which weakens governance exactly like a new exposure. And **`idempotent: false → true`**, because that flag is what permits retrying a write (SI-11).
 - **Narrowing** — a capability or surface removed, approval added, risk raised, a policy or redaction added.
 - **Neutral** — description, input schema, tool name, tags, timeout, approval type, policy reorder. Not "ignorable": a changed description is a changed prompt, and a renamed tool breaks host configs pinned to the old name.
 
@@ -104,13 +104,13 @@ Only widening is then fatal; narrowing and neutral changes are reported and pass
 
 Stated up front, because a governance tool that overstates its coverage is worse than none:
 
-- **It never evaluates a policy.** Deciding anything needs a real actor, surface, input, and context, and may do I/O. The tool reports that a policy *exists* — its name and phases — never which capabilities it gates. A capability that a policy hides from every actor still appears in the inventory, and the header says `0 approval-gated (declared)` rather than `0 approval-gated` for exactly this reason.
+- **It never evaluates a policy.** Deciding anything needs a real actor, surface, input, and context, and may do I/O. The tool reports authoritative scope and current candidate capabilities, never which decision the policy returns. A capability that a policy hides from every actor still appears in the inventory, and the header says `declared gates` for exactly this reason.
 - **It compares against a baseline.** Code that was wrong from its first commit has nothing to drift from.
 - **Adapter-level `toolNaming` is invisible.** Wire names come from metadata; an adapter constructed with its own naming function overrides them.
 
 ## Upgrading an old snapshot
 
-Snapshots are written at version 2, which added the `runtime` key. Version 1 files still read as "runtime policies never observed" — accurate, and nothing breaks on upgrade. But **until you re-run `orpc-agent snapshot`, a runtime policy removal stays invisible**, so `check` prints a notice on stderr that survives `--fail-on widening`:
+Snapshots are written at version 3, which adds inspectable scope and candidate capabilities. Version 2 files remain readable and gain neutral `runtime.policyScope` drift until refreshed. Version 1 files still read as "runtime policies never observed" — accurate, and nothing breaks on upgrade. But **until you re-run `orpc-agent snapshot`, a runtime policy removal stays invisible**, so `check` prints a notice on stderr that survives `--fail-on widening`:
 
 ```
 orpc-agent: capabilities.snapshot.json predates runtime-policy recording. 2 runtime

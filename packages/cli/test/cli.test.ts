@@ -71,7 +71,7 @@ describeBuilt("orpc-agent", () => {
     const entry = ["--entry", join(apps, "app.ts")];
     const json = await run(["inspect", "--format", "json", ...entry]);
     expect(json.code).toBe(0);
-    expect((JSON.parse(json.stdout) as CapabilitySnapshot).version).toBe(2);
+    expect((JSON.parse(json.stdout) as CapabilitySnapshot).version).toBe(3);
 
     const bad = await run(["inspect", "--format", "nope", ...entry]);
     expect(bad.code).toBe(2);
@@ -86,7 +86,7 @@ describeBuilt("orpc-agent", () => {
     expect(first.stdout).toBe(second.stdout);
 
     const snapshot = JSON.parse(first.stdout) as CapabilitySnapshot;
-    expect(snapshot.version).toBe(2);
+    expect(snapshot.version).toBe(3);
     // --entry resolved a bare registry: not observed, and not faked as empty.
     expect(snapshot.runtime).toBeUndefined();
     expect(snapshot.capabilities.map((c) => c.id)).toEqual(["orders.list", "orders.refund"]);
@@ -266,7 +266,15 @@ describeBuilt("orpc-agent", () => {
 
     const committed = JSON.parse(readFileSync(path, "utf8")) as CapabilitySnapshot;
     expect(committed.runtime?.policies).toEqual([
-      { name: "gate-model-writes", phases: ["invocation"] },
+      {
+        name: "gate-model-writes",
+        phases: ["invocation"],
+        scope: {
+          capabilities: { sideEffects: ["destructive"] },
+          surfaces: ["aiSdk", "mcp"],
+        },
+        capabilities: ["customers.purge"],
+      },
     ]);
 
     // runtime-ungated.ts is the same app with `policies: [gateModelWrites]`
@@ -298,7 +306,7 @@ describeBuilt("orpc-agent", () => {
     expect(stdout).toContain("runtime policies not observed");
     expect(stdout).toContain("Runtime policies — NOT OBSERVED");
     // The header count must never read as a bare claim about the application.
-    expect(stdout).toContain("0 approval-gated (declared)");
+    expect(stdout).toContain("declared gates: 0 approval");
   });
 
   it("prefers the runtime when a module exports it alongside its own registry", async () => {
@@ -306,6 +314,8 @@ describeBuilt("orpc-agent", () => {
 
     expect(code).toBe(0);
     expect(stdout).toContain("1 runtime policy");
+    expect(stdout).toContain("runtime:gate-model-writes");
+    expect(stdout).toContain("effect(destructive)");
   });
 
   it("still reads a committed v1 snapshot without failing widening-only CI", async () => {

@@ -61,7 +61,33 @@ function runtimeSnapshotOf(governance: AgentGovernance): RuntimeSnapshot {
     policies: [...governance.manifest].map((policy) => ({
       name: policy.name,
       phases: [...policy.phases].sort() as PolicyPhase[],
+      ...(policy.scope !== undefined ? { scope: cloneScope(policy.scope) } : {}),
+      capabilities: [...policy.capabilities],
     })),
+  };
+}
+
+function cloneScope(scope: NonNullable<AgentGovernance["manifest"][number]["scope"]>) {
+  return {
+    ...(scope.capabilities !== undefined
+      ? {
+          capabilities: {
+            ...(scope.capabilities.ids !== undefined
+              ? { ids: [...scope.capabilities.ids] }
+              : {}),
+            ...(scope.capabilities.tags !== undefined
+              ? { tags: [...scope.capabilities.tags] }
+              : {}),
+            ...(scope.capabilities.sideEffects !== undefined
+              ? { sideEffects: [...scope.capabilities.sideEffects] }
+              : {}),
+            ...(scope.capabilities.risks !== undefined
+              ? { risks: [...scope.capabilities.risks] }
+              : {}),
+          },
+        }
+      : {}),
+    ...(scope.surfaces !== undefined ? { surfaces: [...scope.surfaces] } : {}),
   };
 }
 

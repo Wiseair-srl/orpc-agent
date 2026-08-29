@@ -1,6 +1,8 @@
 import type { CapabilityEntry, CapabilitySnapshot, Change } from "./types";
+import { canonicalJson } from "./canonical";
 
 const RISK_RANK: Record<string, number> = { low: 0, medium: 1, high: 2, critical: 3 };
+const ALL_SURFACES = ["direct", "aiSdk", "mcp", "workflow", "test"] as const;
 
 /**
  * Classifies every difference between two snapshots.
@@ -128,8 +130,8 @@ function diffRuntime(before: CapabilitySnapshot, after: CapabilitySnapshot): Cha
         "widening",
         "(runtime)",
         "runtime.policies",
-        `runtime policy removed: ${removed.map((p) => p.name).join(", ")} — it applied to ` +
-          "every invocation; any approval, denial or hiding it added is gone",
+        `runtime policy removed: ${removed.map((p) => p.name).join(", ")} — any approval, ` +
+          "denial or hiding it added within its declared scope is gone",
       ),
     );
   }
@@ -167,6 +169,116 @@ function diffRuntime(before: CapabilitySnapshot, after: CapabilitySnapshot): Cha
           "(runtime)",
           "runtime.policies",
           `runtime policy ${name} now also evaluates in: ${gained.join(", ")}`,
+        ),
+      );
+    }
+
+    const beforeCandidates = beforePolicy.capabilities;
+    const afterCandidates = afterPolicy.capabilities;
+    if (beforeCandidates === undefined && afterCandidates !== undefined) {
+      changes.push(
+        change(
+          "neutral",
+          "(runtime)",
+          "runtime.policyScope",
+          `runtime policy ${name} scope is now inspectable (${afterCandidates.length} candidate ` +
+            `${afterCandidates.length === 1 ? "capability" : "capabilities"})`,
+        ),
+      );
+      continue;
+    }
+    if (beforeCandidates !== undefined && afterCandidates === undefined) {
+      changes.push(
+        change(
+          "widening",
+          "(runtime)",
+          "runtime.policyScope",
+          `runtime policy ${name} scope is no longer inspectable`,
+        ),
+      );
+      continue;
+    }
+    if (beforeCandidates === undefined || afterCandidates === undefined) continue;
+
+    const beforeSurfaces = beforePolicy.scope?.surfaces ?? ALL_SURFACES;
+    const afterSurfaces = afterPolicy.scope?.surfaces ?? ALL_SURFACES;
+    const lostSurfaces = beforeSurfaces.filter((surface) => !afterSurfaces.includes(surface));
+    const gainedSurfaces = afterSurfaces.filter((surface) => !beforeSurfaces.includes(surface));
+    if (lostSurfaces.length > 0) {
+      changes.push(
+        change(
+          "widening",
+          "(runtime)",
+          "runtime.policyScope",
+          `runtime policy ${name} no longer matches surfaces: ${lostSurfaces.join(", ")}`,
+        ),
+      );
+    }
+    if (gainedSurfaces.length > 0) {
+      changes.push(
+        change(
+          "narrowing",
+          "(runtime)",
+          "runtime.policyScope",
+          `runtime policy ${name} now also matches surfaces: ${gainedSurfaces.join(", ")}`,
+        ),
+      );
+    }
+
+    // A capability added or removed has its own row. Compare policy coverage
+    // only over ids present in both contracts to avoid contradictory duplicate
+    // classifications for the derived association.
+    const commonIds = new Set(
+      before.capabilities
+        .map((capability) => capability.id)
+        .filter((id) => after.capabilities.some((capability) => capability.id === id)),
+    );
+    const lostCandidates = beforeCandidates.filter(
+      (id) => commonIds.has(id) && !afterCandidates.includes(id),
+    );
+    const gainedCandidates = afterCandidates.filter(
+      (id) => commonIds.has(id) && !beforeCandidates.includes(id),
+    );
+    if (lostCandidates.length > 0) {
+      changes.push(
+        change(
+          "widening",
+          "(runtime)",
+          "runtime.policyScope",
+          `runtime policy ${name} no longer matches: ${lostCandidates.join(", ")}`,
+        ),
+      );
+    }
+    if (gainedCandidates.length > 0) {
+      changes.push(
+        change(
+          "narrowing",
+          "(runtime)",
+          "runtime.policyScope",
+          `runtime policy ${name} now also matches: ${gainedCandidates.join(", ")}`,
+        ),
+      );
+    }
+
+    if (
+      lostCandidates.length === 0 &&
+      gainedCandidates.length === 0 &&
+      lostSurfaces.length === 0 &&
+      gainedSurfaces.length === 0 &&
+      canonicalJson(beforePolicy.scope) !== canonicalJson(afterPolicy.scope)
+    ) {
+      const classification =
+        beforePolicy.scope === undefined
+          ? "narrowing"
+          : afterPolicy.scope === undefined
+            ? "widening"
+            : "neutral";
+      changes.push(
+        change(
+          classification,
+          "(runtime)",
+          "runtime.policyScope",
+          `runtime policy ${name} selector changed; current candidate set is unchanged`,
         ),
       );
     }

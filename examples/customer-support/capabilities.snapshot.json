@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "capabilities": [
     {
       "id": "cases.escalate",
@@ -237,13 +237,38 @@
         "name": "org-isolation",
         "phases": [
           "invocation"
+        ],
+        "capabilities": [
+          "cases.escalate",
+          "customers.get",
+          "customers.search",
+          "messages.draft",
+          "messages.getCustomerThread",
+          "messages.send",
+          "orders.checkRefundEligibility",
+          "orders.get",
+          "orders.list",
+          "orders.refund"
         ]
       },
       {
         "name": "mcp-read-only",
         "phases": [
           "invocation"
-        ]
+        ],
+        "scope": {
+          "capabilities": {
+            "sideEffects": [
+              "write",
+              "destructive",
+              "external"
+            ]
+          },
+          "surfaces": [
+            "mcp"
+          ]
+        },
+        "capabilities": []
       }
     ]
   }

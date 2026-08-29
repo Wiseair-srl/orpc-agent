@@ -32,16 +32,18 @@ npx orpc-agent inspect
 ```
 
 ```
-10 capabilities · 10 exposed · 1 approval-gated (declared) · 1 runtime policy
+10 capabilities · 10 exposed
+risk 6 low · 3 medium · 1 high · declared gates: 1 approval · 4 policy-scoped capabilities · 1 runtime policy
 
-CAPABILITY                     SIDE EFFECT  RISK    EXPOSE                    APPROVAL  POLICIES
+CAPABILITY                     EFFECT    RISK    EXPOSE                    APPROVAL  POLICIES
 cases.escalate                 write        medium  aiSdk, direct, test       —         —
 customers.get                  read         high    aiSdk, direct, mcp, test  —         —
 messages.send                  external     high    aiSdk, direct, test       required  —
-orders.refund                  write        high    aiSdk, direct, test       —         refund-limit
+orders.refund                  write        high    aiSdk, direct, test       —         runtime:gate-model-writes, refund-limit
 
-Runtime policies — evaluated on every invocation, before capability policies
-  gate-model-writes  invocation
+Runtime policy scope — evaluated before capability policies when scope matches
+POLICY             PHASES      SCOPE                                     MATCHES
+gate-model-writes  invocation  effect(destructive|write) · surface(aiSdk)  3
 ```
 
 Point `--entry` at a [`defineGovernance`](https://orpc-agent.dev/reference/core#definegovernance) value — it names the registry **and** the runtime-level policies, and it is safe at module scope, so it does not matter that the runtimes serving traffic are built inside a factory the CLI will not call:
@@ -58,7 +60,8 @@ const runtime = createAgentRuntime({ governance, approvals: { coordinator } });
 An `AgentRuntime` works too — it carries the governance it was built from. A bare registry also works, and names no policies at all; when that is what the entry resolves, the output says so in place of the count:
 
 ```
-10 capabilities · 10 exposed · 1 approval-gated (declared) · runtime policies not observed
+10 capabilities · 10 exposed
+risk 6 low · 3 medium · 1 high · declared gates: 1 approval · 1 policy-scoped capability · runtime policies not observed
 ```
 
 ## The gate
@@ -94,8 +97,8 @@ Also widening: a lowered `risk`, a removed policy, removed redaction, a new capa
 
 ```
 WIDENING — the agent gained reach, or a control weakened
-  (runtime)  runtime.policies  runtime policy removed: gate-model-writes — it applied to
-                               every invocation; any approval, denial or hiding it added is gone
+  (runtime)  runtime.policies  runtime policy removed: gate-model-writes — any approval,
+                               denial or hiding it added within its declared scope is gone
 ```
 
 Losing sight of them is widening as well: if a snapshot recorded runtime policies and a later run does not observe any (because `--entry` was repointed at a bare registry), `check` fails rather than quietly reverting to a weaker check.
@@ -152,15 +155,15 @@ Exports are found by shape: a value from `defineGovernance`, an `AgentRuntime`, 
 
 ### Snapshot versions
 
-Snapshots are written at **version 2**, which adds the `runtime` key. Version 1 files are still read: they predate the key, so they mean "runtime policies were never observed", which is exactly what they were. Upgrading therefore does not break a committed snapshot or a `--fail-on widening` gate — but until you re-run `orpc-agent snapshot`, the removal check has nothing to compare against. `check` prints a notice saying so.
+Snapshots are written at **version 3**, which adds runtime-policy scope and resolved candidate capabilities. Version 2 files remain readable and gain neutral scope-observability drift until refreshed. Version 1 files still mean "runtime policies were never observed". Upgrading does not break a committed snapshot or a `--fail-on widening` gate.
 
 ## What this does not see
 
 This is a static inventory. It reports what the registry, the metadata and the runtime configuration declare, and deliberately does not pretend to more:
 
-- **It does not evaluate policies, and never will.** `evaluate` needs a real actor, surface, input and context, and may do I/O. So the tool reports that a policy *exists* — its name and phases — and never which capabilities it gates or under what conditions. A capability a policy would hide from everyone still appears here, and the `APPROVAL` column shows only what `meta.approval` declares.
+- **It does not evaluate policies, and never will.** `evaluate` needs a real actor, surface, input and context, and may do I/O. The tool reports authoritative scope and current candidate capabilities, never the decision returned for a real invocation. A capability a policy would hide from everyone still appears here, and the `APPROVAL` column shows only what `meta.approval` declares.
 
-  This is why the header count reads `1 approval-gated (declared)` rather than `1 approval-gated`, and why a `0` there is never on its own a statement that nothing is gated. Read it together with the runtime policies block. `check` is a diff of declarations, not a proof of reachability.
+  This is why the headline says `declared gates` and runtime candidates carry a `runtime:` prefix. `check` is a diff of declarations and applicability, not a proof of runtime verdicts.
 - **Runtime policies are only in scope when a runtime is.** `--entry` resolving a bare registry means they were never observed — reported as `runtime policies not observed`, which is *unknown*, not *none*. A snapshot taken that way cannot detect a runtime policy being deleted.
 - **Adapter-level `toolNaming` is invisible.** `toolNames` is derived from metadata; an adapter configured with its own naming function overrides it.
 - **Composite capability-scoped policies appear under the composite's name**, not their members'. Runtime-level composites are flattened, matching what audit events record.

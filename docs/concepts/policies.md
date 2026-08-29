@@ -7,13 +7,16 @@ A **policy** is a deterministic function that evaluates an execution request and
 ```ts
 import { definePolicy, allow, deny, hide, requireApproval } from "@orpc-agent/core";
 
-export const refundLimit = definePolicy("refund-limit", ({ capability, input }) => {
-  if (capability.id !== "orders.refund") return allow();
-  const { amount } = input as { amount: number };
-  if (amount >= 5000) return deny("REFUND_TOO_LARGE", "Refunds of $5000 or more cannot be issued by agents.");
-  if (amount > 500)  return requireApproval({ reason: `Refund of $${amount} exceeds $500`, approvalType: "manager" });
-  return allow();
-});
+export const refundLimit = definePolicy(
+  "refund-limit",
+  ({ input }) => {
+    const { amount } = input as { amount: number };
+    if (amount >= 5000) return deny("REFUND_TOO_LARGE", "Refunds of $5000 or more cannot be issued by agents.");
+    if (amount > 500)  return requireApproval({ reason: `Refund of $${amount} exceeds $500`, approvalType: "manager" });
+    return allow();
+  },
+  { scope: { capabilities: { ids: ["orders.refund"] } } },
+);
 ```
 
 ## The four decisions
@@ -26,6 +29,23 @@ export const refundLimit = definePolicy("refund-limit", ({ capability, input }) 
 | `requireApproval({ reason, approvalType?, expiresInMs? })` | Gate at pipeline stage 8 | Thresholds, sensitive targets |
 
 `deny` vs `hide`: deny admits the capability exists ("you can't"); hide does not ("there is no such thing"). Choose hide when knowing the capability exists leaks information.
+
+## Scope: inspectable applicability
+
+`scope` is an authoritative upper bound on where a policy evaluates, not documentation. Outside it the runtime skips the policy. Missing scope means every capability and surface; a present empty array matches nothing.
+
+```ts
+definePolicy("model-writes", evaluate, {
+  scope: {
+    capabilities: { sideEffects: ["write", "destructive"] },
+    surfaces: ["aiSdk", "mcp"],
+  },
+});
+```
+
+Selector fields compose with **AND**; values within one field use **ANY**. The example means write-or-destructive capabilities on AI SDK or MCP. Available capability selectors are exact `ids`, `tags`, `sideEffects`, and `risks`. `defineGovernance` rejects an explicit id absent from its registry, and resolves every scope into current candidate capability ids for tooling.
+
+Scope answers **where the policy can evaluate**, never what it decides. A matched policy may still return `allow()` for a particular actor, input, or context. `orpc-agent inspect` therefore labels matches as runtime candidates and keeps the runtime verdict caveat beside the table.
 
 ## Phases
 
@@ -70,16 +90,23 @@ Patterns that compose well:
 
 ```ts
 // Target by classification, not by id list
-const destructiveNeedsApproval = definePolicy("destructive-approval", ({ capability }) =>
-  capability.meta.sideEffect === "destructive"
-    ? requireApproval({ reason: "Destructive operation", approvalType: "manager" })
-    : allow());
+const destructiveNeedsApproval = definePolicy(
+  "destructive-approval",
+  () => requireApproval({ reason: "Destructive operation", approvalType: "manager" }),
+  { scope: { capabilities: { sideEffects: ["destructive"] } } },
+);
 
 // Surface-aware tightening
-const mcpReadOnly = definePolicy("mcp-read-only", ({ surface, capability }) =>
-  surface === "mcp" && capability.meta.sideEffect !== "read" && capability.meta.sideEffect !== "none"
-    ? deny("MCP_READ_ONLY", "Write operations are not available over MCP.")
-    : allow());
+const mcpReadOnly = definePolicy(
+  "mcp-read-only",
+  () => deny("MCP_READ_ONLY", "Write operations are not available over MCP."),
+  {
+    scope: {
+      capabilities: { sideEffects: ["write", "destructive", "external"] },
+      surfaces: ["mcp"],
+    },
+  },
+);
 
 // Tenancy backstop (middleware remains authoritative; this is defense in depth)
 const orgIsolation = definePolicy("org-isolation", ({ actor, context }) => {

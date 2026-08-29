@@ -89,7 +89,12 @@ function defineGovernance(config: {
 type AgentGovernance = {
   readonly registry: CapabilityRegistry;
   readonly policies: readonly AgentPolicy[];
-  readonly manifest: readonly { name: string; phases: readonly PolicyPhase[] }[];
+  readonly manifest: readonly {
+    name: string;
+    phases: readonly PolicyPhase[];
+    scope?: PolicyScope;
+    capabilities: readonly string[];
+  }[];
 };
 ```
 
@@ -100,7 +105,7 @@ type AgentGovernance = {
 1. **Runtimes cannot disagree about what is governed.** An application legitimately builds several over one surface — coordinator-backed for its dashboard, inline-confirm for chat. A runtime built from a governance has no `policies` key to append to, so every one of them evaluates exactly the published list.
 2. **Tooling reads it without a runtime instance.** Construction is pure and does no I/O, so a governance is safe at module scope — which is where [`@orpc-agent/cli`](cli.md) can see it.
 
-**`manifest`** is the statically knowable identity of those policies: name and phases, composites flattened to match what the pipeline evaluates and audit records. `evaluate` is deliberately not reachable from it. Recording a removal from this list is how `orpc-agent check` catches a deleted gate.
+**`manifest`** is the statically knowable identity and applicability of those policies: name, phases, normalized scope, and the current registry capabilities matching it. Composites are flattened to match what the pipeline evaluates and audit records. `evaluate` is deliberately not reachable from it. Recording this data is how `orpc-agent check` catches a deleted gate or narrowed policy scope.
 
 ```ts
 export const governance = defineGovernance({
@@ -148,14 +153,24 @@ capabilities.ids(); // ["customers.search", "customers.get", "orders.search", "o
 function definePolicy(
   name: string,
   evaluate: (req: PolicyRequest) => PolicyDecision | Promise<PolicyDecision>,
-  options?: { phases?: PolicyPhase[] },   // default ["invocation"]
+  options?: { phases?: PolicyPhase[]; scope?: PolicyScope },
 ): AgentPolicy;
 ```
 
-**Purpose.** Wraps a decision function with a stable name (used in audit events) and phase declaration. Full semantics — evaluation order, precedence, fail-closed, determinism expectations — in [concepts/policies.md](../concepts/policies.md).
+**Purpose.** Wraps a decision function with a stable name (used in audit events), phase declaration, and optional authoritative scope. Full semantics — applicability, evaluation order, precedence, fail-closed, determinism expectations — in [concepts/policies.md](../concepts/policies.md).
 
 ```ts
 type PolicyPhase = "discovery" | "invocation" | "execution";
+
+type PolicyScope = {
+  capabilities?: {
+    ids?: readonly string[];
+    tags?: readonly string[];
+    sideEffects?: readonly SideEffect[];
+    risks?: readonly RiskLevel[];
+  };
+  surfaces?: readonly ExposureSurface[];
+};
 
 type PolicyRequest = {
   phase: PolicyPhase;
@@ -174,7 +189,7 @@ type PolicyDecision =
   | { type: "require-approval"; reason: string; approvalType?: string; expiresInMs?: number };
 ```
 
-**Lifecycle.** Runs at pipeline stage 7 (invocation), stage 9 (execution, opt-in), and during `describe` (discovery, opt-in via phases). Throw/timeout ⇒ deny (`POLICY_FAILED`, SI-7).
+**Lifecycle.** Runs at pipeline stage 7 (invocation), stage 9 (execution, opt-in), and during `describe` (discovery, opt-in via phases), only when its scope matches. Throw/timeout ⇒ deny (`POLICY_FAILED`, SI-7).
 
 ---
 

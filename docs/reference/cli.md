@@ -36,9 +36,9 @@ A module exporting all three is not ambiguous: whichever carries the most govern
 
 Stated first, because a governance tool that overstates its coverage is worse than none:
 
-- **It does not evaluate policies, and never will.** `evaluate` needs a real actor, surface, input and context, and may do I/O. The tool reports that a policy *exists* — its name and phases — and never which capabilities it gates or under what conditions. A capability a policy would hide from every actor still appears here, and the `APPROVAL` column shows only what `meta.approval` declares.
+- **It does not evaluate policies, and never will.** `evaluate` needs a real actor, surface, input and context, and may do I/O. The tool reports a policy's authoritative scope and current candidate capabilities, never which decision it returns for a real invocation. A capability a policy would hide from every actor still appears here, and the `APPROVAL` column shows only what `meta.approval` declares.
 
-  This is why the header reads `1 approval-gated (declared)` rather than `1 approval-gated`: a `0` there is a statement about metadata, never on its own a statement that nothing is gated. Read it with the runtime policies block. `check` diffs *declarations*, not reachability.
+  This is why the header says `declared gates: 1 approval` and the table prefixes candidate matches with `runtime:`. `check` diffs declarations and applicability, not runtime verdicts.
 - **Runtime policies are in scope only when the entry names them.** `--entry` resolving a bare registry reports `runtime policies not observed` — *unknown*, not *none*. A snapshot taken that way cannot detect a runtime policy being deleted.
 - **Adapter-level `toolNaming` is invisible.** `toolNames` comes from metadata (`meta.adapters.<surface>.toolName ?? defaultToolName(id)`); an adapter constructed with its own naming function overrides it.
 - **Composite policies:** runtime-level composites are **flattened** to their members, matching what the pipeline evaluates and audit records — otherwise removing a member from a composite would leave the composite's name unchanged and the removal invisible. Capability-scoped `meta.policies` still appear under the composite's name; the asymmetry is deliberate, since changing it would rewrite values in every committed snapshot for no security gain.
@@ -105,7 +105,7 @@ Deterministic by construction — no timestamps, no generator version, no absolu
 
 ```json
 {
-  "version": 2,
+  "version": 3,
   "capabilities": [
     {
       "id": "orders.refund",
@@ -125,7 +125,15 @@ Deterministic by construction — no timestamps, no generator version, no absolu
   "excluded": ["internal.debug"],
   "unexposed": ["orders.void"],
   "runtime": {
-    "policies": [{ "name": "gate-model-writes", "phases": ["invocation"] }]
+    "policies": [{
+      "name": "gate-model-writes",
+      "phases": ["invocation"],
+      "scope": {
+        "capabilities": { "sideEffects": ["write", "destructive"] },
+        "surfaces": ["aiSdk", "mcp"]
+      },
+      "capabilities": ["orders.refund"]
+    }]
   }
 }
 ```
@@ -133,6 +141,7 @@ Deterministic by construction — no timestamps, no generator version, no absolu
 Field notes:
 
 - `runtime` is present **only when the entry named the runtime-level policies**, and absence is a different fact from emptiness. Absent means they were never observed (`--entry` resolved a bare registry, or a runtime from a core too old to carry its governance) — *unknown*. Present with `"policies": []` means observed, and genuinely none. The diff acts on the difference, so the key is never defaulted to empty.
+- Each runtime policy records normalized `scope` plus `capabilities`, the sorted current candidates resolved against the registry. Missing scope means all capabilities and surfaces. The capability table renders those candidates as `runtime:<name>`; this says the policy can evaluate, not what it decides.
 
 - `expose` lists only surfaces set to exactly `true` — an explicit `false` and an absent surface are the same fact (SI-1) and serialize identically.
 - `policies` keeps **declaration order**, not sorted: evaluation order decides which policy is recorded as the denier and how the batch timeout budget is spent. `tags` are sorted, being a set.
@@ -164,11 +173,11 @@ WIDENING — the agent gained reach, or a control weakened
                                every invocation; any approval, denial or hiding it added is gone
 ```
 
-A policy that keeps its name but **drops a phase** is widening too — it stops running there. Gaining one is narrowing; reordering is neutral, mirroring the capability-scoped rule, since order decides the recorded denier and the timeout budget.
+A policy that keeps its name but **drops a phase, surface, or candidate capability** is widening too — it stops running there. Gaining one is narrowing; reordering is neutral, mirroring the capability-scoped rule, since order decides the recorded denier and the timeout budget. A selector rewrite that resolves to the same current candidates is neutral but still reported because it can affect future capabilities.
 
 ### Snapshot versions
 
-Snapshots are written at **version 2**, which added the `runtime` key. Version 1 files are still read: they predate the key and therefore mean "runtime policies were never observed", which is accurate. Upgrading breaks no committed snapshot and turns no `--fail-on widening` gate red.
+Snapshots are written at **version 3**, which adds runtime-policy scope and resolved candidate capabilities. Version 2 files still read with policy applicability unknown; making it inspectable is neutral. Version 1 files predate the `runtime` key and still mean "runtime policies were never observed". Upgrading breaks no committed snapshot and turns no `--fail-on widening` gate red.
 
 The cost of that safety: **until you re-run `orpc-agent snapshot`, a runtime policy removal is still invisible**, because the baseline has nothing to compare against. The transition is classed neutral — the application did not change, the tool started looking — so `check` prints a notice on stderr that survives `--fail-on widening`:
 
@@ -188,7 +197,7 @@ policies are configured and NOT covered by this gate yet. Run: orpc-agent snapsh
 `--verbosity` scales the same view rather than swapping layouts, in both renderers:
 
 - `min` — the headline alone: counts, gates, whether runtime policies were observed, and any unexposed or excluded procedures.
-- `normal` — the default: headline, table, runtime-policy state, unexposed and excluded lists.
+- `normal` — the default: two-line headline, six-column table ending in `POLICIES`, runtime-policy scope, unexposed and excluded lists. Runtime matches appear in the capability row as `runtime:<name>`.
 - `detail` — adds each capability's description and its declared execution metadata under the row: tags, per-surface tool names, approval type, idempotency, retry, timeout, redaction. `--detail` is the shorthand. On `check`, detail also prints the inventory the gate compared, after the drift report — the reason to ask a gate for detail is to read what it gated — while `--verbosity min` keeps only the drift headline and per-kind counts.
 
 The same flag, levels and colour vocabulary drive the sibling [agent-surface CLI](https://agent-surface.dev), so a reader who knows one tool can skim the other.

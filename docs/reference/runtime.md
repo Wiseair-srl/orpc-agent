@@ -51,7 +51,7 @@ readonly manifest: readonly { name: string; phases: readonly PolicyPhase[] }[];
 
 Name and phases only — never `evaluate`, since a decision is meaningful only inside the pipeline (shared batch deadline, fail-closed on throw, audit record). The names are the ones audit events already record in `PolicyDecisionRecord.policy`.
 
-This is the configuration, not its effect. **Tooling may report that these policies exist; it may not conclude which capabilities they gate** — that depends on the actor, surface, input, and context of a real invocation.
+This is the configuration, not its effect. **Tooling reports each policy's declared scope and candidate capabilities; it may not conclude which decision the policy returns** — that depends on the actor, surface, input, and context of a real invocation.
 
 ---
 

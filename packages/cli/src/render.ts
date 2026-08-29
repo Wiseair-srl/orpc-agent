@@ -1,4 +1,11 @@
-import type { CapabilityEntry, CapabilitySnapshot, Change, ChangeKind, EntrySource } from "./types";
+import type {
+  CapabilityEntry,
+  CapabilitySnapshot,
+  Change,
+  ChangeKind,
+  EntrySource,
+  RuntimeSnapshot,
+} from "./types";
 
 /**
  * Plain writes, no rendering framework. This module is what `check` prints on
@@ -62,21 +69,38 @@ const SIDE_EFFECT_STYLE: Record<string, string> = {
   external: "magenta",
 };
 
-export function inventoryHeadline(snapshot: CapabilitySnapshot, entrySource: EntrySource): string {
+export function inventoryHeadline(
+  snapshot: CapabilitySnapshot,
+  entrySource: EntrySource,
+): [string, string] {
   const exposedCount = snapshot.capabilities.filter((c) => c.expose.length > 0).length;
   const approvalCount = snapshot.capabilities.filter((c) => c.approval?.required).length;
-  // The headline is the line that gets pasted somewhere on its own, so it has
-  // to carry its own qualification: the count is of DECLARED gates, and whether
-  // runtime-level policies were even in scope is part of the headline fact.
-  const parts = [
+  const policedCount = snapshot.capabilities.filter(
+    (capability) => capabilityPolicies(snapshot, capability).length > 0,
+  ).length;
+  const risks = (["low", "medium", "high", "critical"] as const)
+    .map(
+      (risk) =>
+        [risk, snapshot.capabilities.filter((capability) => capability.risk === risk).length] as const,
+    )
+    .filter(([, count]) => count > 0)
+    .map(([risk, count]) => `${count} ${risk}`)
+    .join(" · ");
+  // The two lines travel together in pasted output: gate counts are explicitly
+  // declarations, and runtime-policy observation is part of the headline fact.
+  const size = [
     `${snapshot.capabilities.length} capabilities`,
     `${exposedCount} exposed`,
-    `${approvalCount} approval-gated (declared)`,
+  ];
+  if (snapshot.unexposed.length > 0) size.push(`${snapshot.unexposed.length} unexposed`);
+  if (snapshot.excluded.length > 0) size.push(`${snapshot.excluded.length} excluded`);
+  const governance = [
+    `risk ${risks || "—"}`,
+    `declared gates: ${approvalCount} approval · ${policedCount} policy-scoped ` +
+      `${policedCount === 1 ? "capability" : "capabilities"}`,
     runtimeHeadline(snapshot, entrySource),
   ];
-  if (snapshot.unexposed.length > 0) parts.push(`${snapshot.unexposed.length} unexposed`);
-  if (snapshot.excluded.length > 0) parts.push(`${snapshot.excluded.length} excluded`);
-  return parts.join(" · ");
+  return [size.join(" · "), governance.join(" · ")];
 }
 
 /**
@@ -108,24 +132,40 @@ export function capabilityMeta(capability: CapabilityEntry): string[] {
   return lines.filter((line): line is string => Boolean(line));
 }
 
+/** Declared capability policies plus runtime-policy candidates, in execution order. */
+export function capabilityPolicies(
+  snapshot: CapabilitySnapshot,
+  capability: CapabilityEntry,
+): string[] {
+  const runtime =
+    snapshot.runtime?.policies
+      .filter(
+        (policy) =>
+          policy.capabilities === undefined || policy.capabilities.includes(capability.id),
+      )
+      .map((policy) => `runtime:${policy.name}`) ?? [];
+  return [...runtime, ...capability.policies];
+}
+
 export function renderInventory(
   snapshot: CapabilitySnapshot,
   mode: ColorMode,
   entrySource: EntrySource = "registry",
   verbosity: Verbosity = "normal",
 ): string {
-  const lines: string[] = [paint(inventoryHeadline(snapshot, entrySource), "bold", mode)];
+  const [size, governance] = inventoryHeadline(snapshot, entrySource);
+  const lines: string[] = [paint(size, "bold", mode), governance];
   if (verbosity === "min") return lines.join("\n");
   lines.push("");
 
-  const headers = ["CAPABILITY", "SIDE EFFECT", "RISK", "EXPOSE", "APPROVAL", "POLICIES"];
+  const headers = ["CAPABILITY", "EFFECT", "RISK", "EXPOSE", "APPROVAL", "POLICIES"];
   const rows = snapshot.capabilities.map((capability) => [
     capability.id,
     capability.sideEffect,
     capability.risk,
     capability.expose.join(", ") || "—",
     capability.approval?.required ? "required" : "—",
-    capability.policies.join(", ") || "—",
+    capabilityPolicies(snapshot, capability).join(", ") || "—",
   ]);
   const widths = headers.map((header, index) =>
     Math.max(header.length, ...rows.map((row) => (row[index] ?? "").length)),
@@ -151,7 +191,7 @@ export function renderInventory(
       lines.push(...capabilityMeta(capability).map((line) => paint(`  ${line}`, "dim", mode)));
     }
   });
-  lines.push("", ...renderRuntimeSection(snapshot, entrySource, mode));
+  lines.push("", ...renderRuntimeSection(snapshot, entrySource, mode, verbosity));
 
   if (snapshot.unexposed.length > 0) {
     lines.push(
@@ -178,14 +218,14 @@ function runtimeHeadline(snapshot: CapabilitySnapshot, entrySource: EntrySource)
 }
 
 /**
- * The blind spot, stated in the output rather than only in the README. The
- * columns above are declarations; a runtime policy can add approval, denial or
- * hiding conditionally, and nothing static can say to which capabilities.
+ * The boundary, stated in output rather than only in the README. Scope makes
+ * candidate capabilities static; the decision for a real invocation is not.
  */
 function renderRuntimeSection(
   snapshot: CapabilitySnapshot,
   entrySource: EntrySource,
   mode: ColorMode,
+  verbosity: Verbosity,
 ): string[] {
   if (!snapshot.runtime) {
     const why =
@@ -207,19 +247,60 @@ function renderRuntimeSection(
     return [paint("Runtime policies — none configured", "bold", mode)];
   }
 
-  return [
-    paint("Runtime policies — evaluated on every invocation, before capability policies", "bold", mode),
-    ...snapshot.runtime.policies.map((policy) => `  ${policy.name}  ${policy.phases.join(", ")}`),
+  const headers = ["POLICY", "PHASES", "SCOPE", "MATCHES"];
+  const rows = snapshot.runtime.policies.map((policy) => [
+    policy.name,
+    policy.phases.join(", "),
+    runtimeScope(policy),
+    policy.capabilities === undefined ? "unknown" : String(policy.capabilities.length),
+  ]);
+  const widths = headers.map((header, index) =>
+    Math.max(header.length, ...rows.map((row) => (row[index] ?? "").length)),
+  );
+  const line = (row: string[]) =>
+    row.map((value, index) => (index === row.length - 1 ? value : value.padEnd(widths[index] ?? 0))).join("  ");
+  const result = [
+    paint("Runtime policy scope — evaluated before capability policies when scope matches", "bold", mode),
+    paint(line(headers), "dim", mode),
+  ];
+  snapshot.runtime.policies.forEach((policy, index) => {
+    result.push(line(rows[index] ?? []));
+    if (verbosity === "detail" && policy.capabilities !== undefined) {
+      result.push(
+        paint(
+          `  candidates ${policy.capabilities.join(", ") || "—"}`,
+          "dim",
+          mode,
+        ),
+      );
+    }
+  });
+  result.push(
     "",
     paint(
-      "  The APPROVAL and POLICIES columns above are per-capability declarations. A runtime\n" +
-        "  policy can require approval, deny, or hide conditionally — on surface, actor, input\n" +
-        "  or context. Which capabilities these affect, and when, is not knowable without\n" +
-        "  evaluating them against a real invocation, which this tool never does.",
+      "A runtime match means the policy can evaluate for that capability; its verdict still\n" +
+        "depends on the surface, actor, input and context of a real invocation.",
       "dim",
       mode,
     ),
-  ];
+  );
+  return result;
+}
+
+export function runtimeScope(policy: RuntimeSnapshot["policies"][number]): string {
+  if (!policy.scope) return "all (implicit)";
+  const parts: string[] = [];
+  const capabilities = policy.scope.capabilities;
+  if (capabilities?.ids !== undefined) parts.push(`ids(${capabilities.ids.length})`);
+  if (capabilities?.tags !== undefined) parts.push(`tags(${capabilities.tags.join("|") || "—"})`);
+  if (capabilities?.sideEffects !== undefined) {
+    parts.push(`effect(${capabilities.sideEffects.join("|") || "—"})`);
+  }
+  if (capabilities?.risks !== undefined) parts.push(`risk(${capabilities.risks.join("|") || "—"})`);
+  if (policy.scope.surfaces !== undefined) {
+    parts.push(`surface(${policy.scope.surfaces.join("|") || "—"})`);
+  }
+  return parts.join(" · ") || "all (explicit)";
 }
 
 export function renderChanges(changes: Change[], mode: ColorMode, verbosity: Verbosity = "normal"): string {
@@ -305,4 +386,3 @@ function escapeAnnotation(text: string): string {
 function escapePipes(text: string): string {
   return text.replace(/\|/g, "\\|");
 }
-
