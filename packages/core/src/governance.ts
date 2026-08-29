@@ -1,5 +1,6 @@
 import type { CapabilityRegistry } from "./registry";
 import { flattenPolicy } from "./policy/define";
+import { isPolicyCandidate } from "./policy/scope";
 import type { AgentPolicy, PolicyManifestEntry } from "./policy/types";
 
 /**
@@ -25,8 +26,8 @@ export type AgentGovernance = {
   /** As configured, in evaluation order. Consumed by `createAgentRuntime`. */
   readonly policies: readonly AgentPolicy[];
   /**
-   * The statically knowable identity of those policies, composites flattened
-   * to match what the pipeline evaluates and audit records. This is what
+   * The statically knowable identity and applicability of those policies,
+   * composites flattened to match evaluation and audit records. This is what
    * governance tooling reads; `evaluate` is deliberately not reachable from
    * it, since a decision is only meaningful inside the pipeline.
    */
@@ -56,7 +57,7 @@ export function defineGovernance(config: {
   return Object.freeze({
     registry: config.registry,
     policies,
-    manifest: policyManifest(policies),
+    manifest: policyManifest(config.registry, policies),
   });
 }
 
@@ -66,13 +67,31 @@ export function defineGovernance(config: {
  * read of configuration, not a handle on it.
  */
 export function policyManifest(
+  registry: CapabilityRegistry,
   policies: readonly AgentPolicy[],
 ): readonly PolicyManifestEntry[] {
+  const capabilities = registry.capabilities();
+  const capabilityIds = new Set(capabilities.map((capability) => capability.id));
   return Object.freeze(
     [...policies]
       .flatMap(flattenPolicy)
-      .map((policy) =>
-        Object.freeze({ name: policy.name, phases: Object.freeze([...policy.phases]) }),
-      ),
+      .map((policy) => {
+        const unknownId = policy.scope?.capabilities?.ids?.find((id) => !capabilityIds.has(id));
+        if (unknownId) {
+          throw new TypeError(
+            `defineGovernance: policy "${policy.name}" scopes unknown capability "${unknownId}"`,
+          );
+        }
+        const ids = capabilities
+          .filter((capability) => isPolicyCandidate(policy.scope, capability))
+          .map((capability) => capability.id)
+          .sort();
+        return Object.freeze({
+          name: policy.name,
+          phases: Object.freeze([...policy.phases]),
+          ...(policy.scope !== undefined ? { scope: policy.scope } : {}),
+          capabilities: Object.freeze(ids),
+        });
+      }),
   );
 }

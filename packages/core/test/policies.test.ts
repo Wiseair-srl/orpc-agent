@@ -125,6 +125,43 @@ describe("evaluation semantics", () => {
     expect(order).toEqual(["runtime-level", "cap-level"]);
   });
 
+  test("declarative scope is authoritative and skips evaluation outside it", async () => {
+    const evaluated: string[] = [];
+    const scoped = definePolicy(
+      "writes-only",
+      ({ capability }) => {
+        evaluated.push(capability.id);
+        return deny();
+      },
+      { scope: { capabilities: { sideEffects: ["write", "destructive"] } } },
+    );
+    const { runtime, audit } = runtimeWith([scoped]);
+
+    const result = await runtime.invoke("target", { amount: 1 }, options);
+
+    expect(result.status).toBe("completed");
+    expect(evaluated).toEqual([]);
+    expect(audit.ofType("capability.denied")).toEqual([]);
+  });
+
+  test("surface scope evaluates only on listed surfaces", async () => {
+    const evaluated: string[] = [];
+    const scoped = definePolicy(
+      "model-only",
+      ({ surface }) => {
+        evaluated.push(surface);
+        return allow();
+      },
+      { scope: { surfaces: ["aiSdk"] } },
+    );
+    const { runtime } = runtimeWith([scoped]);
+
+    await runtime.invoke("target", { amount: 1 }, options);
+    await runtime.invoke("target", { amount: 1 }, { ...options, surface: "aiSdk" });
+
+    expect(evaluated).toEqual(["aiSdk"]);
+  });
+
   test("deny public message reaches the model; policy name and code go to details", async () => {
     const { runtime } = runtimeWith([
       definePolicy("limit", () => deny("REFUND_TOO_LARGE", "Refunds of $5000 or more cannot be issued by agents.")),

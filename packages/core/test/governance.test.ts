@@ -21,8 +21,12 @@ describe("defineGovernance", () => {
     const governance = defineGovernance({ registry: registry(), policies: [a, b] });
 
     expect(governance.manifest).toEqual([
-      { name: "a", phases: ["invocation"] },
-      { name: "b", phases: ["discovery", "invocation"] },
+      { name: "a", phases: ["invocation"], capabilities: ["orders.search"] },
+      {
+        name: "b",
+        phases: ["discovery", "invocation"],
+        capabilities: ["orders.search"],
+      },
     ]);
     expect(governance.manifest.some((entry) => "evaluate" in entry)).toBe(false);
   });
@@ -46,6 +50,46 @@ describe("defineGovernance", () => {
 
   it("records an empty policy list as a fact, distinct from never declaring one", () => {
     expect(defineGovernance({ registry: registry() }).manifest).toEqual([]);
+  });
+
+  it("publishes normalized scope and resolved candidate capabilities", () => {
+    const scoped = definePolicy("scoped", () => allow(), {
+      scope: {
+        capabilities: { ids: ["orders.search"], tags: ["orders", "orders"] },
+      },
+    });
+    const governance = defineGovernance({ registry: registry(), policies: [scoped] });
+
+    expect(governance.manifest).toEqual([
+      {
+        name: "scoped",
+        phases: ["invocation"],
+        scope: {
+          capabilities: { ids: ["orders.search"], tags: ["orders"] },
+        },
+        capabilities: ["orders.search"],
+      },
+    ]);
+  });
+
+  it("excludes candidates unreachable on every scoped surface", () => {
+    const scoped = definePolicy("scoped", () => allow(), {
+      scope: { surfaces: ["aiSdk", "mcp"] },
+    });
+
+    expect(defineGovernance({ registry: registry(), policies: [scoped] }).manifest[0]).toMatchObject({
+      capabilities: [],
+    });
+  });
+
+  it("rejects explicit capability ids absent from the governance registry", () => {
+    const scoped = definePolicy("scoped", () => allow(), {
+      scope: { capabilities: { ids: ["orders.missing"] } },
+    });
+
+    expect(() => defineGovernance({ registry: registry(), policies: [scoped] })).toThrow(
+      /unknown capability "orders\.missing"/,
+    );
   });
 
   it("rejects a config that is not a registry", () => {

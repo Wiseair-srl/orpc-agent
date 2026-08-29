@@ -1,7 +1,13 @@
-import type { ExposureSurface, PolicyPhase, RiskLevel, SideEffect } from "@orpc-agent/core";
+import type {
+  ExposureSurface,
+  PolicyPhase,
+  PolicyScope,
+  RiskLevel,
+  SideEffect,
+} from "@orpc-agent/core";
 
-/** Written as 2; version 1 files are still read (they predate `runtime`). */
-export const SNAPSHOT_VERSION = 2;
+/** v2 added `runtime`; v3 adds inspectable runtime-policy scope and matches. */
+export const SNAPSHOT_VERSION = 3;
 
 /**
  * The committed governance contract of an application. Every field is
@@ -9,7 +15,7 @@ export const SNAPSHOT_VERSION = 2;
  * A snapshot that churns between identical runs is a bug, not a diff.
  */
 export type CapabilitySnapshot = {
-  version: 1 | 2;
+  version: 1 | 2 | 3;
   /** Sorted by id. */
   capabilities: CapabilityEntry[];
   /** Procedures present in the registry defs but excluded for lacking `meta.agent`. Sorted. */
@@ -35,10 +41,16 @@ export type RuntimeSnapshot = {
    * decides which policy is recorded as the denier and how the batch timeout
    * budget is spent). Composites are flattened, matching audit identity.
    *
-   * Names and phases only. Which capabilities a policy gates, and under what
-   * conditions, is not statically knowable — see the README.
+   * Scope is an authoritative upper bound. `capabilities` resolves it against
+   * the current registry so the inventory can show policy coverage per row.
+   * It remains optional only so version-2 snapshots stay readable.
    */
-  policies: { name: string; phases: PolicyPhase[] }[];
+  policies: {
+    name: string;
+    phases: PolicyPhase[];
+    scope?: PolicyScope;
+    capabilities?: string[];
+  }[];
 };
 
 export type CapabilityEntry = {

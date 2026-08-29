@@ -147,10 +147,9 @@ export type CapabilityDescriptor = {
 export interface AgentRuntime<TContext = unknown> {
   /**
    * The governed surface this runtime executes. `governance.manifest` carries
-   * the runtime-level policy identity — the configuration, not its effect: a
+   * runtime-level policy identity and scope — configuration, not effect. A
    * decision depends on the actor, surface, input and context of a real
-   * invocation, so tooling may report that these policies exist but may not
-   * conclude which capabilities they gate.
+   * invocation, so tooling reports candidates but never a runtime verdict.
    */
   readonly governance: AgentGovernance;
 

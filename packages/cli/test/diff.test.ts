@@ -134,8 +134,19 @@ describe("diffSnapshots", () => {
   });
 
   describe("runtime policies", () => {
-    const gate = { name: "gate-model-writes", phases: ["invocation" as const] };
-    const withRuntime = (policies: { name: string; phases: ("invocation" | "discovery")[] }[]) =>
+    const gate = {
+      name: "gate-model-writes",
+      phases: ["invocation" as const],
+      capabilities: ["orders.refund"],
+    };
+    const withRuntime = (
+      policies: {
+        name: string;
+        phases: ("invocation" | "discovery")[];
+        scope?: { capabilities?: { ids?: string[] } };
+        capabilities?: string[];
+      }[],
+    ) =>
       snapshot([entry()], { runtime: { policies } });
 
     it("classifies a removed runtime policy as widening", () => {
@@ -174,12 +185,74 @@ describe("diffSnapshots", () => {
     });
 
     it("reports a reordering as neutral, matching capability-scoped policies", () => {
-      const a = { name: "a", phases: ["invocation" as const] };
-      const b = { name: "b", phases: ["invocation" as const] };
+      const a = { name: "a", phases: ["invocation" as const], capabilities: ["orders.refund"] };
+      const b = { name: "b", phases: ["invocation" as const], capabilities: ["orders.refund"] };
 
       expect(on(diffSnapshots(withRuntime([a, b]), withRuntime([b, a])), "runtime.policies")?.kind).toBe(
         "neutral",
       );
+    });
+
+    it("classifies lost and gained runtime-policy matches", () => {
+      const entries = [entry(), entry({ id: "orders.cancel" })];
+      const before = snapshot(entries, {
+        runtime: {
+          policies: [{ ...gate, capabilities: ["orders.cancel", "orders.refund"] }],
+        },
+      });
+      const after = snapshot(entries, {
+        runtime: { policies: [{ ...gate, capabilities: ["orders.refund"] }] },
+      });
+
+      expect(on(diffSnapshots(before, after), "runtime.policyScope")?.kind).toBe("widening");
+      expect(on(diffSnapshots(after, before), "runtime.policyScope")?.kind).toBe("narrowing");
+    });
+
+    it("classifies lost and gained runtime-policy surfaces", () => {
+      const aiOnly = {
+        ...gate,
+        scope: { capabilities: { ids: ["orders.refund"] }, surfaces: ["aiSdk" as const] },
+      };
+      const modelSurfaces = {
+        ...gate,
+        scope: {
+          capabilities: { ids: ["orders.refund"] },
+          surfaces: ["aiSdk" as const, "mcp" as const],
+        },
+      };
+
+      expect(
+        on(diffSnapshots(withRuntime([modelSurfaces]), withRuntime([aiOnly])), "runtime.policyScope")
+          ?.kind,
+      ).toBe("widening");
+      expect(
+        on(diffSnapshots(withRuntime([aiOnly]), withRuntime([modelSurfaces])), "runtime.policyScope")
+          ?.kind,
+      ).toBe("narrowing");
+    });
+
+    it("treats version-2 policy scope becoming inspectable as neutral", () => {
+      const before = withRuntime([{ name: gate.name, phases: gate.phases }]);
+      const after = withRuntime([gate]);
+
+      expect(on(diffSnapshots(before, after), "runtime.policyScope")?.kind).toBe("neutral");
+    });
+
+    it("classifies adding and removing an authoritative selector", () => {
+      const implicit = { ...gate, scope: undefined };
+      const selected = {
+        ...gate,
+        scope: { capabilities: { ids: ["orders.refund"] } },
+      };
+
+      expect(
+        on(diffSnapshots(withRuntime([implicit]), withRuntime([selected])), "runtime.policyScope")
+          ?.kind,
+      ).toBe("narrowing");
+      expect(
+        on(diffSnapshots(withRuntime([selected]), withRuntime([implicit])), "runtime.policyScope")
+          ?.kind,
+      ).toBe("widening");
     });
   });
 

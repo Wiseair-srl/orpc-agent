@@ -1,4 +1,5 @@
 import type { AgentPolicy, PolicyDecision, PolicyPhase, PolicyRequest } from "./types";
+import { normalizePolicyScope, policyApplies } from "./scope";
 
 /**
  * Wraps a decision function with a stable name (used in audit events) and
@@ -7,7 +8,7 @@ import type { AgentPolicy, PolicyDecision, PolicyPhase, PolicyRequest } from "./
 export function definePolicy(
   name: string,
   evaluate: (req: PolicyRequest) => PolicyDecision | Promise<PolicyDecision>,
-  options?: { phases?: PolicyPhase[] },
+  options?: { phases?: PolicyPhase[]; scope?: AgentPolicy["scope"] },
 ): AgentPolicy {
   if (typeof name !== "string" || name.length === 0) {
     throw new TypeError("definePolicy: name must be a non-empty string");
@@ -18,6 +19,7 @@ export function definePolicy(
   return {
     name,
     phases: options?.phases ?? ["invocation"],
+    ...(options?.scope !== undefined ? { scope: normalizePolicyScope(options.scope) } : {}),
     evaluate,
   };
 }
@@ -40,7 +42,7 @@ export function composePolicies(...policies: AgentPolicy[]): AgentPolicy {
     async evaluate(req) {
       const decisions: PolicyDecision[] = [];
       for (const policy of flattened) {
-        if (!policy.phases.includes(req.phase)) continue;
+        if (!policyApplies(policy, req.phase, req)) continue;
         decisions.push(await policy.evaluate(req));
       }
       return combineByPrecedence(decisions);

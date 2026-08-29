@@ -19,19 +19,23 @@ If the sentence holds for *every caller* (not just agents), stop — that's midd
 // src/policies/refund-limit.ts
 import { definePolicy, allow, requireApproval, deny } from "@orpc-agent/core";
 
-export const refundLimit = definePolicy("refund-limit", ({ capability, input }) => {
-  if (capability.id !== "orders.refund") return allow();
-  const { amount } = input as { amount: number };
-  if (amount >= 5000) return deny("REFUND_TOO_LARGE", "Refunds of $5000 or more cannot be issued by agents.");
-  if (amount > 500)  return requireApproval({ reason: `Refund of $${amount} exceeds $500`, approvalType: "manager" });
-  return allow();
-});
+export const refundLimit = definePolicy(
+  "refund-limit",
+  ({ input }) => {
+    const { amount } = input as { amount: number };
+    if (amount >= 5000) return deny("REFUND_TOO_LARGE", "Refunds of $5000 or more cannot be issued by agents.");
+    if (amount > 500)  return requireApproval({ reason: `Refund of $${amount} exceeds $500`, approvalType: "manager" });
+    return allow();
+  },
+  { scope: { capabilities: { ids: ["orders.refund"] } } },
+);
 ```
 
 Habits that pay off:
 
 - **Name policies like log lines** — the `name` lands in every audit record's `policyDecisions`.
-- **Target classifications, not id lists**, when the rule is general: `capability.meta.sideEffect === "destructive"` survives new capabilities; `["orders.refund", "orders.cancel", ...]` rots.
+- **Declare scope**, so applicability is enforced and inspectable rather than buried in the function body.
+- **Target classifications, not id lists**, when the rule is general: `scope: { capabilities: { sideEffects: ["destructive"] } }` automatically covers new destructive capabilities; exact ids fit operation-specific rules like the refund threshold.
 - **Default to `allow()` explicitly** at the end — a policy that falls through to `undefined` is a bug the runtime treats as `POLICY_FAILED` (deny, SI-7), which is safe but noisy.
 - **Type your context once**: write a tiny `appPolicy` helper that casts `context` to `AppContext` so every policy body stays clean.
 
@@ -82,7 +86,7 @@ const runtime = createAgentRuntime({ governance, approvals: { coordinator } });
 
 Point `--entry` at that export and [`orpc-agent`](ci-drift-gate.md) records the list, classifying a removal as *widening*. It works whether or not the serving runtime is reachable, which matters because runtimes are usually built inside a factory and the CLI reads values rather than calling functions ([ADR-016](../architecture/decisions.md#adr-016-runtime-policies-are-part-of-the-governance-contract)).
 
-The tool records that a policy exists, never what it decides. Which capabilities it gates depends on actor, surface, input and context, and is only knowable by evaluating it.
+The tool records the policy, its authoritative scope, and the capabilities currently matching it. It never claims what the policy decides: approval, denial, hiding, or allowing still depends on the real actor, surface, input and context.
 
 ## Compose reusable sets
 

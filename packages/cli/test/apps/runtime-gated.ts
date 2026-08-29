@@ -15,11 +15,15 @@ import {
  * conditionally on surface, with no `meta.approval` anywhere. The app's own UI
  * and cron actors run on `direct` and pass ungated; the model loop suspends.
  */
-const gateModelWrites = definePolicy("gate-model-writes", (req) =>
-  req.capability.meta.sideEffect === "destructive" &&
-  (req.surface === "aiSdk" || req.surface === "mcp")
-    ? requireApproval({ reason: "destructive capability reached from a model surface" })
-    : allow(),
+const gateModelWrites = definePolicy(
+  "gate-model-writes",
+  () => requireApproval({ reason: "destructive capability reached from a model surface" }),
+  {
+    scope: {
+      capabilities: { sideEffects: ["destructive"] },
+      surfaces: ["aiSdk", "mcp"],
+    },
+  },
 );
 
 const purge = os

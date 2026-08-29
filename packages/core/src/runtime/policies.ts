@@ -1,5 +1,6 @@
 import type { AgentPolicy, PolicyDecision, PolicyPhase, PolicyRequest } from "../policy/types";
 import { flattenPolicy } from "../policy/define";
+import { policyApplies } from "../policy/scope";
 import type { PolicyDecisionRecord } from "../events";
 
 export type RequireApprovalDecision = Extract<PolicyDecision, { type: "require-approval" }>;
@@ -37,7 +38,7 @@ export async function evaluatePolicies(
   const deadline = performance.now() + timeoutMs;
 
   for (const policy of policies) {
-    if (!policy.phases.includes(phase)) continue;
+    if (!policyApplies(policy, phase, request)) continue;
 
     const remaining = deadline - performance.now();
     if (remaining <= 0) {

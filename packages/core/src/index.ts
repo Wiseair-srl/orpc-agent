@@ -29,6 +29,7 @@ export type {
   PolicyManifestEntry,
   PolicyPhase,
   PolicyRequest,
+  PolicyScope,
 } from "./policy/types";
 
 // ---- Approvals ----

@@ -1,6 +1,12 @@
 import React from "react";
 import { Box, Text } from "ink";
-import { capabilityMeta, type Verbosity } from "../render";
+import {
+  capabilityMeta,
+  capabilityPolicies,
+  inventoryHeadline,
+  runtimeScope,
+  type Verbosity,
+} from "../render";
 import type { CapabilitySnapshot, EntrySource } from "../types";
 import { Badge, Callout, Heading, RISK_COLOR, SIDE_EFFECT_COLOR } from "./theme";
 
@@ -19,9 +25,7 @@ export function Inventory({
   entrySource: EntrySource;
   verbosity?: Verbosity;
 }) {
-  const exposed = snapshot.capabilities.filter((c) => c.expose.length > 0).length;
-  const gated = snapshot.capabilities.filter((c) => c.approval?.required).length;
-  const observed = snapshot.runtime !== undefined;
+  const [size, governance] = inventoryHeadline(snapshot, entrySource);
 
   const widths = {
     id: Math.max(10, ...snapshot.capabilities.map((c) => c.id.length)),
@@ -31,50 +35,16 @@ export function Inventory({
     approval: 8,
   };
 
-  const headlineTail = [
-    snapshot.unexposed.length > 0 ? `${snapshot.unexposed.length} unexposed` : undefined,
-    snapshot.excluded.length > 0 ? `${snapshot.excluded.length} excluded` : undefined,
-  ].filter(Boolean);
-
   return (
     <Box flexDirection="column">
-      <Box>
-        <Text bold>{snapshot.capabilities.length} capabilities</Text>
-        <Text dimColor> · </Text>
-        <Text bold>{exposed} exposed</Text>
-        <Text dimColor> · </Text>
-        <Text bold color={gated > 0 ? "green" : undefined}>
-          {gated} approval-gated
-        </Text>
-        <Text dimColor> (declared) · </Text>
-        {observed ? (
-          <Text bold color={snapshot.runtime!.policies.length > 0 ? "cyan" : undefined}>
-            {snapshot.runtime!.policies.length === 0
-              ? "no runtime policies"
-              : `${snapshot.runtime!.policies.length} runtime ${
-                  snapshot.runtime!.policies.length === 1 ? "policy" : "policies"
-                }`}
-          </Text>
-        ) : (
-          <Text bold color="yellow">
-            runtime policies not observed
-          </Text>
-        )}
-        {headlineTail.map((part) => (
-          <Text key={part}>
-            <Text dimColor> · </Text>
-            <Text bold color="yellow">
-              {part}
-            </Text>
-          </Text>
-        ))}
-      </Box>
+      <Text bold>{size}</Text>
+      <Text dimColor>{governance}</Text>
 
       {verbosity !== "min" && (
         <>
           <Box marginTop={1}>
             <Text dimColor>
-              {"CAPABILITY".padEnd(widths.id)}  {"SIDE EFFECT".padEnd(widths.effect)}{" "}
+              {"CAPABILITY".padEnd(widths.id)}  {"EFFECT".padEnd(widths.effect)}{" "}
               {"RISK".padEnd(widths.risk)} {"EXPOSE".padEnd(widths.expose)}{" "}
               {"APPROVAL".padEnd(widths.approval)} POLICIES
             </Text>
@@ -100,8 +70,8 @@ export function Inventory({
                   {(capability.approval?.required ? "required" : "—").padEnd(widths.approval)}
                 </Text>
                 <Text>{" "}</Text>
-                <Text dimColor={capability.policies.length === 0}>
-                  {capability.policies.join(", ") || "—"}
+                <Text dimColor={capabilityPolicies(snapshot, capability).length === 0}>
+                  {capabilityPolicies(snapshot, capability).join(", ") || "—"}
                 </Text>
               </Box>
               {verbosity === "detail" &&
@@ -114,7 +84,7 @@ export function Inventory({
             </Box>
           ))}
 
-          <RuntimePanel snapshot={snapshot} entrySource={entrySource} />
+          <RuntimePanel snapshot={snapshot} entrySource={entrySource} verbosity={verbosity} />
 
           {snapshot.unexposed.length > 0 && (
             <>
@@ -147,9 +117,11 @@ export function Inventory({
 function RuntimePanel({
   snapshot,
   entrySource,
+  verbosity,
 }: {
   snapshot: CapabilitySnapshot;
   entrySource: EntrySource;
+  verbosity: Verbosity;
 }) {
   if (!snapshot.runtime) {
     return (
@@ -182,21 +154,33 @@ function RuntimePanel({
     );
   }
 
-  const width = Math.max(...snapshot.runtime.policies.map((p) => p.name.length));
+  const widths = {
+    name: Math.max("POLICY".length, ...snapshot.runtime.policies.map((p) => p.name.length)),
+    phases: Math.max("PHASES".length, ...snapshot.runtime.policies.map((p) => p.phases.join(", ").length)),
+    scope: Math.max("SCOPE".length, ...snapshot.runtime.policies.map((p) => runtimeScope(p).length)),
+  };
   return (
-    <Callout tone="info" title="Runtime policies — evaluated on every invocation, before capability policies">
+    <Callout tone="info" title="Runtime policy scope — evaluated before capability policies when scope matches">
+      <Text dimColor>
+        {"POLICY".padEnd(widths.name)}  {"PHASES".padEnd(widths.phases)}  {"SCOPE".padEnd(widths.scope)}  MATCHES
+      </Text>
       {snapshot.runtime.policies.map((policy) => (
-        <Box key={policy.name}>
-          <Text color="cyan">{policy.name.padEnd(width)}</Text>
-          <Text dimColor>{"  "}{policy.phases.join(", ")}</Text>
+        <Box key={policy.name} flexDirection="column">
+          <Text>
+            <Text color="cyan">{policy.name.padEnd(widths.name)}</Text>
+            {"  "}{policy.phases.join(", ").padEnd(widths.phases)}{"  "}
+            {runtimeScope(policy).padEnd(widths.scope)}{"  "}
+            {policy.capabilities === undefined ? "unknown" : policy.capabilities.length}
+          </Text>
+          {verbosity === "detail" && policy.capabilities !== undefined ? (
+            <Text dimColor>{"  "}candidates {policy.capabilities.join(", ") || "—"}</Text>
+          ) : null}
         </Box>
       ))}
       <Box marginTop={1}>
         <Text dimColor>
-          The APPROVAL and POLICIES columns are per-capability declarations. A runtime policy
-          can require approval, deny, or hide conditionally — on surface, actor, input or
-          context. Which capabilities these affect, and when, is not knowable without
-          evaluating them against a real invocation, which this tool never does.
+          A runtime match means the policy can evaluate for that capability; its verdict still
+          depends on the surface, actor, input and context of a real invocation.
         </Text>
       </Box>
     </Callout>

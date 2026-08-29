@@ -3,6 +3,7 @@ import { z } from "zod";
 import { buildSnapshot } from "../src/snapshot";
 import { canonicalJson, snapshotJson } from "../src/canonical";
 import { alwaysAllow, procedure, registryOf } from "./fixtures";
+import { allow, defineGovernance, definePolicy } from "@orpc-agent/core";
 
 describe("buildSnapshot", () => {
   it("records only surfaces exposed with exactly true", () => {
@@ -122,6 +123,33 @@ describe("buildSnapshot", () => {
     });
 
     expect(snapshotJson(buildSnapshot(registry))).toBe(snapshotJson(buildSnapshot(registry)));
+  });
+
+  it("records authoritative runtime-policy scope and resolved candidates", () => {
+    const registry = registryOf({
+      read: procedure({ sideEffect: "read" }),
+      write: procedure({ sideEffect: "write", tags: ["billing"] }),
+    });
+    const policy = definePolicy("billing-writes", () => allow(), {
+      scope: {
+        capabilities: { tags: ["billing"], sideEffects: ["write"] },
+        surfaces: ["aiSdk"],
+      },
+    });
+
+    expect(buildSnapshot(defineGovernance({ registry, policies: [policy] })).runtime).toEqual({
+      policies: [
+        {
+          name: "billing-writes",
+          phases: ["invocation"],
+          scope: {
+            capabilities: { tags: ["billing"], sideEffects: ["write"] },
+            surfaces: ["aiSdk"],
+          },
+          capabilities: ["write"],
+        },
+      ],
+    });
   });
 });
 
