@@ -21,6 +21,9 @@ export type AgentMeta = {
   /** Sensitivity of the operation, independent of sideEffect. Required. Never inferred. */
   risk: RiskLevel;
 
+  /** Model presentation only; contextual capabilities remain governed and invocable. */
+  discovery?: "discoverable" | "contextual";
+
   /** Free-form labels for filtering and policy targeting. */
   tags?: string[];
 

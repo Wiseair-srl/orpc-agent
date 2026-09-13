@@ -135,3 +135,9 @@ Don't test through a model. `@orpc-agent/testing` invokes with `surface: "aiSdk"
 ## Related
 
 - [Adapter model](../architecture/adapter-model.md) · [Migrating hand-written tools](../guides/migrating-existing-tools.md) · [Reference: configuration](../reference/configuration.md#adapter-options)
+
+## Remote capability clients
+
+`toAISDKTools(client: CapabilityClient, options: RemoteAISDKToolsOptions)` builds tools without a backend registry. Import `CapabilityClient` from `@orpc-agent/core/client`, or construct one with `createHttpCapabilityClient` from `@orpc-agent/core/http`. Options support `scope`, `filter`, `signal`, `correlationId`, and a required asynchronous `invocationId({ capabilityId, input, toolCallId })` allocator. Persist the mapping before the allocator resolves; replay must recover the same ID independently of regenerated model call IDs.
+
+The server fixes actor, application namespace and exposure surface. Resolved `toolNames.aiSdk` travels in the descriptor. Contextual descriptors are excluded from this unbound tool list. `RemoteAISDKToolResult` extends `AISDKToolResult` with `{ status: "outcome-unknown", invocationId, message }`; reconcile that invocation before issuing another write. Approval results also carry the stable invocation ID. The existing local overload and its result shape are retained. Build both local and remote toolsets per authenticated request; do not share actor-filtered discovery across users.

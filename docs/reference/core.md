@@ -275,3 +275,7 @@ type AgentInvocationInfo = {
 ```
 
 `Actor` is the authenticated requesting entity — never the model (SI-3). `AgentInvocationInfo` is injected as `context.agent` at pipeline stage 11 so middleware and handlers can react to agent-originated calls.
+
+## Distributed subpaths
+
+`@orpc-agent/core/client` is a browser-safe structural client/descriptor API. `@orpc-agent/core/http` implements it using native oRPC RPCLink. `@orpc-agent/core/server` creates the authenticated governed gateway and exports static contracts plus invocation journal interfaces. `@orpc-agent/core/schema/zod` statically imports Zod for bundlers; call `registerZodSchemaConverter()` before constructing registries. See the [complete contract and lifecycle](../guides/distributed.md).

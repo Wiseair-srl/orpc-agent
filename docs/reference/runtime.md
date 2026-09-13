@@ -70,6 +70,7 @@ type ExecutionOptions<TContext> = {
   surface?: ExposureSurface;         // default "direct"
   signal?: AbortSignal;
   correlationId?: string;            // threads conversation/run ids into events and traces
+  idempotencyKey?: string;           // trusted adapter stable effect key; default generated per execution
 };
 ```
 
@@ -250,3 +251,14 @@ Core calls this neutral interface; `@orpc-agent/opentelemetry` implements it. Sp
 ## Concurrency and state
 
 The runtime object is stateless per invocation (all mutable state lives in the coordinator and sinks) and safe for concurrent `invoke` calls. Two runtimes over one registry are independent — useful for per-deployment policy sets.
+
+## Request audit draining
+
+`runtime.drainAudit({ timeoutMs?: number }): Promise<void>` joins audit writes owned by this runtime, including off-path terminal events. Default deadline: 5 seconds. Failures reject with `AggregateError`; timeout rejects without pretending writes were delivered. Create request-scoped runtimes over shared immutable governance and shared connection pools; sharing one emitter across concurrent requests shares its drain scope. Batching sinks may expose `flush(): Promise<void>`; the runtime calls it before joining pending writes.
+
+Resume additionally accepts `correlationId?: string` and `idempotencyKey?: string` from trusted adapters. It checks current exposure and reevaluates invocation policies before atomic consumption, then execution policies and ordinary procedure middleware. If `expectedActor` matches requester ID/kind, its freshly authenticated attributes are used; approver authority is never substituted. A withdrawn exposure fails `CAPABILITY_NOT_FOUND`. New invocation-policy denials prevent consumption. A pending approval cannot override a newer policy denial.
+
+The [distributed gateway](../guides/distributed.md) persists correlation/effect identity in its invocation journal and additionally binds resumption to deployment contract revision. Local applications supplying these options own their durable correlation storage.
+
+
+Failed/cancelled results may carry `effectStatus: "unknown"` when execution entered the procedure call path. The handler or middleware may have committed an effect before error/cancellation; failed output validation/redaction also carries this flag. It never asserts rollback or successful cancellation. The distributed gateway retains a pending claim and returns `outcome-unknown` for these results so callers reconcile the domain effect.

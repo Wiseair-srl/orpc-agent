@@ -20,7 +20,8 @@
     "docs:preview": "vitepress preview docs",
     "changeset": "changeset",
     "version-packages": "changeset version",
-    "release": "pnpm build && changeset publish"
+    "release": "pnpm build && changeset publish",
+    "check:bundles": "node scripts/check-distributed-bundles.mjs"
   },
   "devDependencies": {
     "@changesets/cli": "^2.30.0",

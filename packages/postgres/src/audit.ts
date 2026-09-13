@@ -75,6 +75,7 @@ export function createPgAuditSink(options: PgAuditSinkOptions): PgAuditSink {
   let buffer: Buffered[] = [];
   let timer: ReturnType<typeof setTimeout> | undefined;
   let closed = false;
+  const writes = new Set<Promise<void>>();
 
   function rowParams(event: AgentAuditEvent): unknown[] {
     return [
@@ -91,7 +92,7 @@ export function createPgAuditSink(options: PgAuditSinkOptions): PgAuditSink {
     ];
   }
 
-  async function insert(events: AgentAuditEvent[]): Promise<void> {
+  async function insertRows(events: AgentAuditEvent[]): Promise<void> {
     const params: unknown[] = [];
     const tuples = events.map((event, index) => {
       params.push(...rowParams(event));
@@ -107,7 +108,14 @@ export function createPgAuditSink(options: PgAuditSinkOptions): PgAuditSink {
     await query(`insert into ${table} (${COLUMNS}) values ${tuples.join(",")}`, params);
   }
 
-  async function flush(): Promise<void> {
+  function insert(events: AgentAuditEvent[]): Promise<void> {
+    const write = insertRows(events);
+    writes.add(write);
+    void write.then(() => writes.delete(write), () => writes.delete(write));
+    return write;
+  }
+
+  async function flushBuffer(): Promise<void> {
     if (timer !== undefined) {
       clearTimeout(timer);
       timer = undefined;
@@ -124,6 +132,10 @@ export function createPgAuditSink(options: PgAuditSinkOptions): PgAuditSink {
       for (const entry of drained) entry.reject(error);
       throw error;
     }
+  }
+
+  async function flush(): Promise<void> {
+    await Promise.all([flushBuffer(), ...writes]);
   }
 
   function scheduledFlush(): void {

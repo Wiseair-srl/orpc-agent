@@ -50,11 +50,14 @@ export type InvokeArgs = {
   surface: ExposureSurface;
   signal?: AbortSignal;
   correlationId?: string;
+  idempotencyKey?: string;
 };
 
 export type ResumeArgs = {
   approvalId: string;
   context: unknown;
+  correlationId?: string;
+  idempotencyKey?: string;
   signal?: AbortSignal;
   /** Binding guard for adapter-relayed resume: record.actor must match (id + kind). */
   expectedActor?: Actor;
@@ -81,11 +84,13 @@ type ExecutionFrame = {
   inputHash: string | undefined;
   callerSignal: AbortSignal | undefined;
   correlationId: string | undefined;
+  idempotencyKey?: string;
   approval?: { id: string; approver: Actor; record?: ApprovalRecord };
   span: SpanHandle;
   startedAt: Date;
   /** Records of every policy evaluated so far (stage 7 and 9). */
   policyRecords: PolicyDecisionRecord[];
+  effectStarted?: boolean;
 };
 
 // ---------------------------------------------------------------------------
@@ -160,7 +165,7 @@ function finalizeDenied(
   frame.span.recordError(error);
   frame.span.setAttributes({ "orpc_agent.outcome": "failed", "orpc_agent.error_code": error.code });
   frame.span.end("error");
-  return { status: "failed", executionId: frame.executionId!, error };
+  return { status: "failed", executionId: frame.executionId!, error, ...(frame.effectStarted ? { effectStatus: "unknown" as const } : {}) };
 }
 
 function finalizeFailed(
@@ -182,7 +187,7 @@ function finalizeFailed(
   frame.span.recordError(error);
   frame.span.setAttributes({ "orpc_agent.outcome": "failed", "orpc_agent.error_code": error.code });
   frame.span.end("error");
-  return { status: "failed", executionId: frame.executionId!, error };
+  return { status: "failed", executionId: frame.executionId!, error, ...(frame.effectStarted ? { effectStatus: "unknown" as const } : {}) };
 }
 
 function finalizeCancelled(
@@ -197,10 +202,11 @@ function finalizeCancelled(
   frame.span.recordError(error);
   frame.span.setAttributes({ "orpc_agent.outcome": "cancelled", "orpc_agent.error_code": error.code });
   frame.span.end("error");
-  return { status: "cancelled", executionId: frame.executionId!, error };
+  return { status: "cancelled", executionId: frame.executionId!, error, ...(frame.effectStarted ? { effectStatus: "unknown" as const } : {}) };
 }
 
 type ExecutionFrameLike = {
+  effectStarted?: boolean;
   deps: PipelineDeps;
   surface: ExposureSurface;
   actor: Actor;
@@ -325,6 +331,7 @@ export async function invokePipeline<O>(
       inputHash,
       callerSignal: args.signal,
       correlationId: args.correlationId,
+      idempotencyKey: args.idempotencyKey,
       span,
       startedAt,
       policyRecords: stage7.records,
@@ -397,6 +404,7 @@ export async function resumePipeline<O>(
     executionId,
     capabilityId: record.capabilityId,
     inputHash: record.inputHash,
+    correlationId: args.correlationId,
     span,
   };
   const fail = (code: ErrorCode) =>
@@ -474,6 +482,10 @@ export async function resumePipeline<O>(
         new CapabilityError({ code: "CAPABILITY_NOT_FOUND" }),
       );
     }
+    // Deployments may withdraw model exposure while an approval is pending.
+    if (capability.meta.expose[record.surface] !== true) {
+      return finalizeDenied(frameBase, "not-exposed", new CapabilityError({ code: "CAPABILITY_NOT_FOUND" }));
+    }
     let validatedInput: unknown = record.input;
     if (capability.inputSchema) {
       const result = await capability.inputSchema["~standard"].validate(record.input);
@@ -488,6 +500,15 @@ export async function resumePipeline<O>(
       }
       validatedInput = result.value;
     }
+
+    const policies = collectPolicies(deps.policies, capability.meta.policies);
+    const stage7 = await runPolicyBatch(deps, span, policies, "invocation", {
+      phase: "invocation", capability: { id: capability.id, meta: capability.meta },
+      surface: record.surface, actor: args.expectedActor ?? record.actor,
+      context: args.context, input: validatedInput,
+    });
+    const denied = policyOutcomeToDenial(frameBase, stage7);
+    if (denied) return denied;
 
     // Atomic single-use consumption — an approval executes at most once.
     try {
@@ -504,18 +525,19 @@ export async function resumePipeline<O>(
       deps,
       executionId,
       capability,
-      actor: record.actor,
+      actor: args.expectedActor ?? record.actor,
       context: args.context,
       surface: record.surface,
       validatedInput,
       inputForCall: record.input,
       inputHash: record.inputHash,
       callerSignal: args.signal,
-      correlationId: undefined,
+      correlationId: args.correlationId,
+      idempotencyKey: args.idempotencyKey,
       approval: { id: record.id, approver, record },
       span,
       startedAt,
-      policyRecords: [],
+      policyRecords: stage7.records,
     };
     return executeGoverned<O>(frame);
   } catch (unexpected) {
@@ -791,12 +813,15 @@ async function executeGoverned<O>(frame: ExecutionFrame): Promise<ExecutionResul
     actor: frame.actor,
     ...(frame.approval ? { approval: { id: frame.approval.id, approver: frame.approval.approver } } : {}),
     ...(frame.correlationId !== undefined ? { correlationId: frame.correlationId } : {}),
-    idempotencyKey: newId("idk"),
+    idempotencyKey: frame.idempotencyKey ?? newId("idk"),
   };
 
   let output: unknown;
   // eslint-disable-next-line no-constant-condition
   while (true) {
+    if (frame.callerSignal?.aborted) {
+      return finalizeCancelled(frame, new CapabilityError({ code: "CANCELLED", cause: frame.callerSignal.reason }));
+    }
     attempts += 1;
     const composite = createCompositeSignal(frame.callerSignal, timeoutMs);
     const attemptSpan = deps.tracing.startSpan(
@@ -809,6 +834,7 @@ async function executeGoverned<O>(frame: ExecutionFrame): Promise<ExecutionResul
       frame.span,
     );
 
+    frame.effectStarted = true;
     const callPromise = call(capability.procedure as AnyProcedure, frame.inputForCall, {
       context: { ...(frame.context as Record<string, unknown>), agent: agentInfo },
       signal: composite.signal,

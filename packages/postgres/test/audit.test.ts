@@ -277,3 +277,16 @@ describe("strict mode with a real runtime", () => {
     expect(errors).toContain("capability.completed");
   });
 });
+
+test("flush joins already-running unbatched inserts", async () => {
+  let release!: () => void;
+  const sink = createPgAuditSink({ query: () => new Promise((resolve) => { release = () => resolve({ rows: [] }); }) });
+  const write = sink(event({ type: "capabilities.discovered", data: { count: 0, surface: "aiSdk", digest: "empty" } }));
+  let flushed = false;
+  const draining = sink.flush().then(() => { flushed = true; });
+  await Promise.resolve();
+  expect(flushed).toBe(false);
+  release();
+  await Promise.all([write, draining]);
+  expect(flushed).toBe(true);
+});

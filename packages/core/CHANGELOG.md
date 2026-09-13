@@ -1,5 +1,11 @@
 # @orpc-agent/core
 
+## 5.0.0
+
+### Major Changes
+
+- Major: AgentRuntime implementations must provide drainAudit, and approval resumption now rechecks current exposure/invocation policies. Add a distributed governed capability gateway over native oRPC, browser-safe portable clients/contracts, HTTP client, remote AI SDK tools, stable invocation journals with Postgres storage, correlated approval continuation, static Zod conversion and bounded request audit draining. Server authentication, namespace and exposure remain authoritative. Pending effects are never automatically replayed; domain idempotency and explicit reconciliation remain required. Resume now checks current exposure and invocation policies using fresh requester attributes before approval consumption. Existing local runtime and adapter entry points remain available.
+
 ## 4.0.0
 
 ### Minor Changes

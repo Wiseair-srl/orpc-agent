@@ -139,3 +139,6 @@ subpath @orpc-agent/core/schema: toJsonSchema, registerSchemaConverter
 - A dependency-cruiser (or equivalent) rule fails CI if core imports from any adapter, or an adapter imports from another adapter.
 - Core's published `package.json` lists no runtime dependency on `ai`, `@modelcontextprotocol/sdk`, or `@opentelemetry/*`.
 - The testing package's test suite runs with network access disabled.
+
+
+The distributed boundary remains in additive core subpaths: `core/client` contains structural types and lightweight adaptation, `core/http` imports the native `@orpc/client` HTTP codec, and `core/server` imports ordinary `@orpc/server` procedures. Browser consumers must use `core/client` or `core/http`, never the server/runtime entry. `core/schema/zod` is an opt-in static import for standalone bundles. Postgres implements invocation journaling without a database driver dependency. These boundaries add no model-provider SDK to core.

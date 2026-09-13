@@ -104,6 +104,7 @@ export function createAgentRuntime<TContext = unknown>(
         actor: invokeOptions.actor,
         context: invokeOptions.context,
         surface: invokeOptions.surface ?? "direct",
+        idempotencyKey: invokeOptions.idempotencyKey,
         ...(invokeOptions.signal ? { signal: invokeOptions.signal } : {}),
         ...(invokeOptions.correlationId !== undefined
           ? { correlationId: invokeOptions.correlationId }
@@ -122,6 +123,8 @@ export function createAgentRuntime<TContext = unknown>(
         signal?: AbortSignal;
         expectedActor?: Actor;
         expectedSurface?: ExposureSurface;
+        correlationId?: string;
+        idempotencyKey?: string;
       },
     ): Promise<ExecutionResult<O>> {
       if (typeof approvalId !== "string" || approvalId.length === 0) {
@@ -133,6 +136,8 @@ export function createAgentRuntime<TContext = unknown>(
       return resumePipeline<O>(deps, {
         approvalId,
         context: resumeOptions.context,
+        correlationId: resumeOptions.correlationId,
+        idempotencyKey: resumeOptions.idempotencyKey,
         ...(resumeOptions.signal ? { signal: resumeOptions.signal } : {}),
         ...(resumeOptions.expectedActor ? { expectedActor: resumeOptions.expectedActor } : {}),
         ...(resumeOptions.expectedSurface
@@ -141,6 +146,7 @@ export function createAgentRuntime<TContext = unknown>(
       });
     },
 
+    drainAudit: (options) => audit.drain(options),
     approvals: wrapCoordinator(coordinator, deps),
   };
 }

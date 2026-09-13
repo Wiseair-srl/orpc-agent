@@ -81,3 +81,11 @@ The package's own suite runs the shared coordinator contract (`test-fixtures/app
 ## Related
 
 - [Guide: human approval](../guides/human-approval.md) · [Guide: auditing](../guides/auditing.md) · [Reference: configuration](../reference/configuration.md)
+
+## Invocation journal
+
+`createPgInvocationJournal({ query, table?: string }): InvocationJournal` and `INVOCATIONS_DDL` add durable remote invocation admission/receipts. Default table: `orpc_agent_invocations`. Apply its DDL through application migrations. The driver seam remains `PgQuery`.
+
+The primary key is authenticated scope plus invocation ID. Initial claims use insert-if-absent; approval continuation uses compare-and-set; settlement requires the current owner token. A pending row never becomes eligible for automatic re-execution. Keep receipts for the full application replay horizon; deleting them can re-enable an old effect. Rows contain original JSON inputs for fresh resource authorization plus model-safe outputs, so apply domain-data access controls and retention.
+
+`flush()` now also awaits already-running unbatched inserts. For Lambda, call `runtime.drainAudit()` on a request runtime so sink failures are reported and bounded. Neither audit draining nor the invocation journal makes the business effect and receipt transactional. Use domain idempotency/transactions/outboxes and explicit reconciliation, as described in the [distributed guide](../guides/distributed.md).

@@ -142,6 +142,7 @@ export default defineConfig({
           { text: "Adding policies", link: "/guides/adding-policies" },
           { text: "Human approval", link: "/guides/human-approval" },
           { text: "Auditing", link: "/guides/auditing" },
+          { text: "Distributed runtimes", link: "/guides/distributed" },
           { text: "Application context", link: "/guides/application-context" },
           { text: "Testing capabilities", link: "/guides/testing-capabilities" },
           { text: "A drift gate in CI", link: "/guides/ci-drift-gate" },
