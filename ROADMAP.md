@@ -81,3 +81,8 @@ These are boundaries, not backlog ([overview](docs/architecture/overview.md#what
 ## How this roadmap changes
 
 Scope moves between tiers only via ADR (for architectural shifts) or maintainer consensus recorded in [GOVERNANCE.md](GOVERNANCE.md). Open questions graduate here when resolved; nothing ships to "Now" while its blocking question is open.
+
+
+## Distributed runtimes — 5.0
+
+Implemented: native oRPC governed gateway, portable descriptors/browser-safe clients, remote AI SDK composition, contextual presentation metadata, Postgres invocation journal, correlated approval continuation, static Zod bundling and request-scoped audit drain. See [distributed integration](docs/guides/distributed.md). Cloud process recovery, host run ownership and domain effect reconciliation remain application integration work.

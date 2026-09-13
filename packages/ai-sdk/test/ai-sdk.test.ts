@@ -394,3 +394,17 @@ describe("scope pass-through", () => {
     expect(result.status).toBe("completed");
   });
 });
+
+test("remote tools need no registry, preserve names and await persistent invocation allocation", async () => {
+  const order: string[] = [];
+  const tools = await toAISDKTools({
+    describe: async () => [{ version: 1 as const, id: "resource.write", path: ["resource", "write"], description: "Write", inputSchema: { type: "object" }, sideEffect: "write" as const, risk: "high" as const, tags: [], toolNames: { aiSdk: "named_write", mcp: "named_write" }, contractDigest: "digest", discovery: "discoverable" as const }],
+    invoke: async (_id, _input, options) => { order.push(`invoke:${options.invocationId}`); return { status: "outcome-unknown" as const, invocationId: options.invocationId }; },
+    getInvocation: async () => null,
+    getApproval: async () => null,
+    resumeApproval: async (_id, options) => ({ status: "outcome-unknown" as const, invocationId: options.invocationId }),
+  }, { invocationId: async ({ toolCallId }) => { await Promise.resolve(); order.push(`persist:${toolCallId}`); return "durable-id"; } });
+  const result = await tools.named_write!.execute!({}, { toolCallId: "model-call", messages: [] });
+  expect(order).toEqual(["persist:model-call", "invoke:durable-id"]);
+  expect(result).toMatchObject({ status: "outcome-unknown", invocationId: "durable-id" });
+});

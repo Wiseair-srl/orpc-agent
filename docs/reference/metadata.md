@@ -149,3 +149,7 @@ Fail-fast at startup, never at first invocation.
 ## Related
 
 - Concepts: [capabilities](../concepts/capabilities.md) · Guides: [defining capabilities](../guides/defining-capabilities.md), [capability exposure](../guides/capability-exposure.md)
+
+## Contextual discovery
+
+`AgentMeta.discovery?: "discoverable" | "contextual"` marks model presentation. Default: `discoverable`. Portable descriptors include the resolved value; the remote AI SDK adapter excludes contextual entries from its unbound tool list. A browser bridge may supply a bound presentation. This flag grants no authority and does not disable exposure or execution. Contextual model actions must still call an agent gateway; they must never switch to `surface: "direct"` to bypass approvals.

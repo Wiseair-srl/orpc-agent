@@ -88,6 +88,8 @@ export type ExecutionOptions<TContext> = {
   /** Default "direct". Adapters hardcode theirs. */
   surface?: ExposureSurface;
   signal?: AbortSignal;
+  /** Trusted adapter-supplied stable business effect key. Never accept directly from model input. */
+  idempotencyKey?: string;
   /** Threads conversation/run ids into events and traces. */
   correlationId?: string;
 };
@@ -107,8 +109,8 @@ export type ExecutionRequest<TContext = unknown> = {
 export type ExecutionResult<O = unknown> =
   | { status: "completed"; executionId: string; output: O }
   | { status: "approval-required"; executionId: string; approval: ApprovalRecord }
-  | { status: "failed"; executionId: string; error: CapabilityError }
-  | { status: "cancelled"; executionId: string; error: CapabilityError };
+  | { status: "failed"; executionId: string; error: CapabilityError; effectStatus?: "unknown" }
+  | { status: "cancelled"; executionId: string; error: CapabilityError; effectStatus?: "unknown" };
 
 /**
  * Discovery shaping only, never an authority boundary (SI-2): `invoke` does
@@ -193,8 +195,13 @@ export interface AgentRuntime<TContext = unknown> {
       signal?: AbortSignal;
       expectedActor?: Actor;
       expectedSurface?: ExposureSurface;
+      correlationId?: string;
+      idempotencyKey?: string;
     },
   ): Promise<ExecutionResult<O>>;
+
+  /** Join audit writes emitted by this request runtime; rejects on failure or deadline. */
+  drainAudit(options?: { timeoutMs?: number }): Promise<void>;
 
   /** The configured coordinator; `decide` emits approval audit events. */
   readonly approvals: ApprovalCoordinator;

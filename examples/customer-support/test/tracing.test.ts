@@ -38,7 +38,8 @@ test("the documented span tree, payload-free", async () => {
     "agent.approval_request",
     "agent.capability_call", // suspension (exe_01)
     "agent.capability_call", // resumption (exe_02)
-    "agent.policy_evaluation",
+    "agent.policy_evaluation", // original invocation
+    "agent.policy_evaluation", // fresh invocation policies on resume
     "agent.procedure_execution",
   ]);
 

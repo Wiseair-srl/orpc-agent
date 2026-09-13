@@ -1,6 +1,6 @@
 {
   "name": "@orpc-agent/core",
-  "version": "4.0.0",
+  "version": "5.0.0",
   "description": "Neutral capability model and governed agent runtime for oRPC procedures. Independent community project, not affiliated with or endorsed by the oRPC maintainers.",
   "license": "MIT",
   "author": "Paolo Barbato",
@@ -22,6 +22,22 @@
     "./schema": {
       "types": "./dist/schema/index.d.ts",
       "import": "./dist/schema/index.js"
+    },
+    "./client": {
+      "types": "./dist/client/index.d.ts",
+      "import": "./dist/client/index.js"
+    },
+    "./server": {
+      "types": "./dist/server/index.d.ts",
+      "import": "./dist/server/index.js"
+    },
+    "./http": {
+      "types": "./dist/http.d.ts",
+      "import": "./dist/http.js"
+    },
+    "./schema/zod": {
+      "types": "./dist/schema/zod.d.ts",
+      "import": "./dist/schema/zod.js"
     }
   },
   "scripts": {
@@ -30,7 +46,8 @@
     "prepublishOnly": "node ../../scripts/copy-license.cjs"
   },
   "dependencies": {
-    "@standard-schema/spec": "^1.1.0"
+    "@standard-schema/spec": "^1.1.0",
+    "@orpc/client": "^1.14.10"
   },
   "peerDependencies": {
     "@orpc/server": "^1.14.10",

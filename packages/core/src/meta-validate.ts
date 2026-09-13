@@ -41,6 +41,10 @@ export function validateAgentMeta(meta: unknown): string[] {
     problems.push(`missing or invalid required "risk" (one of ${RISK_LEVELS.join(", ")})`);
   }
 
+  if (m.discovery !== undefined && m.discovery !== "discoverable" && m.discovery !== "contextual") {
+    problems.push('"discovery" must be "discoverable" or "contextual"');
+  }
+
   if (m.tags !== undefined) {
     if (!Array.isArray(m.tags) || m.tags.some((t) => typeof t !== "string")) {
       problems.push('"tags" must be an array of strings');

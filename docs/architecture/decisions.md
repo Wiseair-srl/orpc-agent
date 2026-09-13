@@ -354,3 +354,14 @@ The CLI records these fields in snapshot version 3, prints matching runtime poli
 **Consequences.** Existing policies remain source- and behavior-compatible: absent scope still evaluates everywhere. Version 1 and 2 snapshots remain readable; a v2 policy gaining inspectable scope is neutral until the baseline is refreshed. Scoped-out policies no longer consume timeout budget or emit an `allow` audit stance. Snapshot and terminal output can now answer where a runtime policy can evaluate without pretending to know its verdict.
 
 **Unresolved.** Whether a future selector grammar needs boolean groups beyond AND-across-fields and ANY-within-field.
+
+
+## ADR-019: distributed capability authority over native oRPC
+
+**Status:** accepted, 5.0.0.
+
+The backend owns governance across process boundaries. `core/client` is a browser-safe structural contract; `core/http` uses existing native oRPC transport; `core/server` fixes trusted actor/context/namespace/surface and requires explicit authorization per operation. Descriptor digests bind static metadata plus application deployment revision without granting authority. Contextual presentation remains independently selectable from agent execution exposure.
+
+Durability is an invocation journal seam, implemented by Postgres with atomic claims and fenced settlement. No lease expiry authorizes replay of a pending effect. Domain transaction/idempotency and reconciliation remain application responsibilities. Approval resume uses the original invocation/effect identity, fresh requester attributes, current exposure, current invocation policies, and the original approved input. Unknown responses are modeled explicitly.
+
+Runtime audit emitters support bounded request draining; sinks retain audit-before-effect behavior. The new required `AgentRuntime.drainAudit` method and stricter resume checks ship in a major release. This does not make effects, approval consumption, audit and receipts one transaction. See the [distributed guide](../guides/distributed.md) for the public contract and migration obligations.

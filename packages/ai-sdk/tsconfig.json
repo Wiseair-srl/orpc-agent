@@ -3,6 +3,7 @@
   "compilerOptions": {
     "paths": {
       "@orpc-agent/core": ["../core/src/index.ts"],
+      "@orpc-agent/core/client": ["../core/src/client/index.ts"],
       "@orpc-agent/core/schema": ["../core/src/schema/index.ts"],
       "@orpc-agent/testing": ["../testing/src/index.ts"]
     }

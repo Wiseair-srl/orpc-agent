@@ -81,3 +81,8 @@ Pinned `@orpc/server ^1.14.10`; the runtime invokes procedures through oRPC's `c
 
 **Q8 — Reference persistent stores** <a id="q8"></a>
 One package, `@orpc-agent/postgres`, exporting both `createPgApprovalCoordinator` and `createPgAuditSink` over a driver-agnostic query seam. Bounds: [ADR-013](architecture/decisions.md#adr-013-postgres-reference-persistence-package). The hand-rolled recipes in [human approval](guides/human-approval.md#production-coordinator) and [auditing](guides/auditing.md#minimal-wiring) remain the custom-store path.
+
+
+## Distributed execution boundary
+
+Resolved in 5.0: stateless backend authority can be consumed by a separate agent host through native oRPC, portable descriptors and a durable invocation journal. Approval decisions remain application-owned. Journal admission does not solve transactional domain effects or host run ownership; those remain explicitly outside the library's recovery guarantees. Contract: [distributed guide](guides/distributed.md), decision: [ADR-019](architecture/decisions.md#adr-019-distributed-capability-authority-over-native-orpc).

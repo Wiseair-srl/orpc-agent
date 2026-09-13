@@ -69,11 +69,29 @@ const REQUIRED = {
     values: ["toJsonSchema", "registerSchemaConverter"],
     types: [],
   },
+  "core/client": {
+    entry: "packages/core/dist/client/index.js", dts: "packages/core/dist/client/index.d.ts",
+    values: ["createCapabilityClient"],
+    types: ["CapabilityClient", "CapabilityRPCClient", "CapabilityOutcome", "InvocationReceipt", "PortableCapabilityDescriptor", "PortableApproval", "InvocationOptions", "CapabilityInvokeRequest", "CapabilityResumeRequest", "PublicCapabilityError"],
+  },
+  "core/server": {
+    entry: "packages/core/dist/server/index.js", dts: "packages/core/dist/server/index.d.ts",
+    values: ["createCapabilityGateway", "createInMemoryInvocationJournal", "exportCapabilityContract"],
+    types: ["InvocationJournal", "InvocationRecord", "CapabilityGatewayOptions", "CapabilityGatewayOperation", "CapabilityPrincipal"],
+  },
+  "core/http": {
+    entry: "packages/core/dist/http.js", dts: "packages/core/dist/http.d.ts",
+    values: ["createHttpCapabilityClient"], types: ["HttpCapabilityClientOptions"],
+  },
+  "core/schema/zod": {
+    entry: "packages/core/dist/schema/zod.js", dts: "packages/core/dist/schema/zod.d.ts",
+    values: ["registerZodSchemaConverter"], types: [],
+  },
   "ai-sdk": {
     entry: "packages/ai-sdk/dist/index.js",
     dts: "packages/ai-sdk/dist/index.d.ts",
     values: ["toAISDKTools"],
-    types: ["AISDKToolsOptions", "AISDKToolResult"],
+    types: ["AISDKToolsOptions", "AISDKToolResult", "RemoteAISDKToolsOptions", "RemoteAISDKToolResult"],
   },
   mcp: {
     entry: "packages/mcp/dist/index.js",
@@ -112,8 +130,8 @@ const REQUIRED = {
   postgres: {
     entry: "packages/postgres/dist/index.js",
     dts: "packages/postgres/dist/index.d.ts",
-    values: ["createPgApprovalCoordinator", "createPgAuditSink", "APPROVALS_DDL", "AUDIT_DDL"],
-    types: ["PgQuery", "PgApprovalCoordinatorOptions", "PgAuditSinkOptions", "PgAuditSink"],
+    values: ["createPgApprovalCoordinator", "createPgAuditSink", "APPROVALS_DDL", "AUDIT_DDL", "createPgInvocationJournal", "INVOCATIONS_DDL"],
+    types: ["PgQuery", "PgApprovalCoordinatorOptions", "PgAuditSinkOptions", "PgAuditSink", "PgInvocationJournalOptions"],
   },
 };
 

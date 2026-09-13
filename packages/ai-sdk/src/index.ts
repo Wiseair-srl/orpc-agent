@@ -1,4 +1,5 @@
 import { jsonSchema, tool, type Tool, type ToolSet } from "ai";
+import type { CapabilityClient, CapabilityOutcome, PortableCapabilityDescriptor } from "@orpc-agent/core/client";
 import { defaultToolName } from "@orpc-agent/core";
 import type {
   Actor,
@@ -36,7 +37,7 @@ export type AISDKToolsOptions<TContext = unknown> = {
 
 export type AISDKToolResult =
   | { status: "ok"; data: unknown }
-  | { status: "approval-required"; approvalId: string; message: string }
+  | { status: "approval-required"; approvalId: string; message: string; invocationId?: string }
   | {
       status: "error";
       error: { code: string; message: string; retryable: boolean; details?: unknown };
@@ -47,10 +48,25 @@ export type AISDKToolResult =
  * already exposure- and discovery-policy-filtered for this actor. Build PER
  * REQUEST; caching a tool set across users leaks visibility decisions.
  */
-export async function toAISDKTools<TContext = unknown>(
-  runtime: AgentRuntime<TContext>,
-  options: AISDKToolsOptions<TContext>,
-): Promise<ToolSet> {
+export type RemoteAISDKToolResult = AISDKToolResult | { status: "outcome-unknown"; invocationId: string; message: string };
+
+export type RemoteAISDKToolsOptions = {
+  scope?: DescribeScope;
+  filter?: (descriptor: PortableCapabilityDescriptor) => boolean;
+  signal?: AbortSignal;
+  correlationId?: string;
+  /** Persist the returned operation ID before dispatch; model call IDs alone are not replay identity. */
+  invocationId(request: { capabilityId: string; input: unknown; toolCallId: string }): string | Promise<string>;
+};
+
+export function toAISDKTools<TContext = unknown>(runtime: AgentRuntime<TContext>, options: AISDKToolsOptions<TContext>): Promise<ToolSet>;
+export function toAISDKTools(client: CapabilityClient, options: RemoteAISDKToolsOptions): Promise<ToolSet>;
+export async function toAISDKTools<TContext = unknown>(runtime: AgentRuntime<TContext> | CapabilityClient, options: AISDKToolsOptions<TContext> | RemoteAISDKToolsOptions): Promise<ToolSet> {
+  if (!("registry" in runtime)) return remoteTools(runtime, options as RemoteAISDKToolsOptions);
+  return localTools(runtime, options as AISDKToolsOptions<TContext>);
+}
+
+async function localTools<TContext>(runtime: AgentRuntime<TContext>, options: AISDKToolsOptions<TContext>): Promise<ToolSet> {
   if (!options || !options.actor) {
     throw new TypeError("toAISDKTools: options with actor and context are required");
   }
@@ -153,4 +169,36 @@ function serializeError(error: CapabilityError): AISDKToolResult extends never
       ? { details: error.details }
       : {}),
   };
+}
+
+async function remoteTools(client: CapabilityClient, options: RemoteAISDKToolsOptions): Promise<ToolSet> {
+  if (typeof options?.invocationId !== "function") throw new TypeError("Remote AI SDK tools require a durable invocationId allocator");
+  const descriptors = await client.describe({ scope: options.scope });
+  const tools: ToolSet = Object.create(null);
+  for (const descriptor of descriptors) {
+    if (descriptor.discovery === "contextual" || (options.filter && !options.filter(descriptor))) continue;
+    const name = descriptor.toolNames.aiSdk;
+    if (Object.hasOwn(tools, name)) throw new Error(`toAISDKTools: tool name collision for "${name}"`);
+    tools[name] = tool({
+      description: descriptor.description + (descriptor.requiresApproval ? " Requires approval." : ""),
+      inputSchema: jsonSchema<Record<string, unknown>>(descriptor.inputSchema as never),
+      execute: async (input, executeOptions): Promise<RemoteAISDKToolResult> => {
+        const invocationId = await options.invocationId({ capabilityId: descriptor.id, input, toolCallId: executeOptions.toolCallId });
+        const result = await client.invoke(descriptor.id, input, {
+          invocationId, correlationId: options.correlationId, contractDigest: descriptor.contractDigest,
+          signal: composeSignals(options.signal, executeOptions.abortSignal),
+        });
+        return translateRemoteResult(result);
+      },
+    });
+  }
+  return tools;
+}
+function translateRemoteResult(result: CapabilityOutcome): RemoteAISDKToolResult {
+  switch (result.status) {
+    case "completed": return { status: "ok", data: result.output };
+    case "approval-required": return { status: "approval-required", invocationId: result.invocationId, approvalId: result.approval.id, message: "Awaiting approval." };
+    case "failed": case "cancelled": return { status: "error", error: result.error };
+    case "outcome-unknown": return { status: "outcome-unknown", invocationId: result.invocationId, message: "The operation outcome is unknown. Reconcile this invocation before issuing another action." };
+  }
 }
