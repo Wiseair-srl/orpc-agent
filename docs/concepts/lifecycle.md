@@ -31,7 +31,7 @@ The adapter turns this into a structured tool result; the model tells Dana: *"Th
 
 ## Act 3 — A human decides
 
-The support dashboard lists pending approvals (via `runtime.approvals.list`). Manager Priya reviews apr_9 — the UI shows `redact.approvalInput(input)`: order, amount, reason — and approves:
+The support dashboard lists pending approvals (via `runtime.approvals.list`). Manager Priya reviews apr_9 — the UI shows `redactApprovalInput(registry, record, { context })` — `redact.approvalInput` applied with the surface the request came in on: order, amount, reason — and approves:
 
 ```ts
 await runtime.approvals.decide("apr_9", { status: "approved", approver: { id: "u_priya", kind: "user" } });

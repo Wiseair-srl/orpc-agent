@@ -74,7 +74,7 @@ await runtime.approvals.decide(approvalId, {
 
 *Who may approve* is your application's authorization question — gate the decide endpoint like any privileged operation. The runtime enforces the structural rules: pending-only transitions, expiry, and approver ≠ requester (`APPROVAL_SELF_APPROVAL`; disable only via `rejectSelfApproval: false` with a documented reason).
 
-Approval UIs display `redact.approvalInput(input)` when defined — approvers see what they need; the hash still binds the full input.
+Approval UIs display what `redactApprovalInput(runtime.registry, record, { context })` returns — `redact.approvalInput` applied with the record's own surface and actor, or the stored input when the capability declares no hook. Approvers see what they need; the hash still binds the full input.
 
 ## Resuming
 

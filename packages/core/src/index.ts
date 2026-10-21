@@ -12,9 +12,14 @@ export type {
   Actor,
   AgentInvocationInfo,
   ExposureSurface,
+  RedactionInfo,
   RiskLevel,
   SideEffect,
 } from "./types";
+
+// ---- Redaction ----
+export { redactApprovalInput } from "./redaction";
+export type { ApprovalDisplaySource } from "./redaction";
 
 // ---- Governance ----
 export { defineGovernance } from "./governance";

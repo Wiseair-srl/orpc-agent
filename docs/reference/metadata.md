@@ -42,12 +42,14 @@ type AgentMeta = {
     expiresInMs?: number;     // default: runtime defaults.approvalExpiresInMs (900 000)
   };
 
-  /** Redaction hooks. Applied per the pipeline (stages 8 and 13). */
+  /** Redaction hooks. Both receive a read-only RedactionInfo (surface, capabilityId,
+      actor, context); one-argument hooks keep working. Pure and total. */
   redact?: {
-    /** Maps validated output to its model-safe form before adapter serialization. */
-    output?: (output: unknown) => unknown;
-    /** Maps validated input to what approval UIs may display. */
-    approvalInput?: (input: unknown) => unknown;
+    /** Maps validated output to its model-safe form. Applied by the runtime at stage 13. */
+    output?: (output: unknown, info: RedactionInfo) => unknown;
+    /** Maps the stored input to what approval surfaces display. Applied by the
+        application through redactApprovalInput. */
+    approvalInput?: (input: unknown, info: RedactionInfo) => unknown;
   };
 
   /** Capability-scoped policies, evaluated after runtime-level policies. */
@@ -101,7 +103,18 @@ Full rules in [security/idempotency-and-retries.md](../security/idempotency-and-
 
 ### `redact`
 
-`redact.output` runs after output validation, before anything leaves the runtime (adapter results and any opt-in trace/audit payload). `redact.approvalInput` shapes what approval UIs render; the *hash* still binds the full validated input. Redaction functions must be pure and total (throwing fails the execution with `EXECUTION_FAILED`).
+`redact.output` runs after output validation (stage 13), before anything leaves the runtime (adapter results and any opt-in trace/audit payload). `redact.approvalInput` shapes what approval surfaces render — the application applies it through [`redactApprovalInput`](core.md#redactapprovalinput); the *hash* still binds the full validated input. Redaction functions must be pure and total (throwing fails the execution with `EXECUTION_FAILED`).
+
+Both hooks receive a second argument, [`RedactionInfo`](core.md#supporting-types) — `{ surface, capabilityId, actor, context }` — so one capability can return personal data in clear to an internal console on the `aiSdk` surface and redact it for external MCP clients:
+
+```ts
+redact: {
+  output: (o, { surface }) =>
+    surface === "mcp" ? { ...(o as Customer), manager: undefined } : o,
+}
+```
+
+The surface is the one the invocation was made on, taken from the authenticated frame — on a resumed approval, the surface recorded when the request was created — never from model input or request JSON (SI-2, SI-3). `info` is frozen and its `actor` is a frozen copy: a hook reads the frame and cannot write to it. A hook that ignores the second argument is unchanged ([ADR-020](../architecture/decisions.md#adr-020-redaction-hooks-are-surface-aware)).
 
 ### `adapters`
 

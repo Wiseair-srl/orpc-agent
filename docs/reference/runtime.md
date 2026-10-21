@@ -165,7 +165,7 @@ resume<O = unknown>(
 ): Promise<ExecutionResult<O>>;
 ```
 
-**Lifecycle.** Re-enters the pipeline at stage 8: verifies the record (`approved`, unexpired, unconsumed, approver ≠ requester per config), re-hashes and compares stored input (SI-5), re-validates against the current schema, marks the record consumed atomically, then continues stages 9–15 under a **new** `executionId`, running as the **original actor** with `context.agent.approval = { id, approver }`.
+**Lifecycle.** Re-enters the pipeline at stage 8: verifies the record (`approved`, unexpired, unconsumed, approver ≠ requester per config), re-hashes and compares stored input (SI-5), re-validates against the current schema, marks the record consumed atomically, then continues stages 9–15 under a **new** `executionId`, running as the **original actor** on the **recorded surface** (policies, `context.agent`, audit, and redaction hooks all see it) with `context.agent.approval = { id, approver }`.
 
 No `actor` parameter by design: the requesting identity is bound in the record; resumption must not re-attribute the execution. The caller supplies fresh `context` because application context (db handles, loaders) is not serializable.
 

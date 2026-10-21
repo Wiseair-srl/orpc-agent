@@ -38,7 +38,9 @@ Your app owns this UI (dashboard page, Slack message, CLI). It reads pending req
 // GET /admin/approvals
 const pending = await runtime.approvals.list?.({ status: "pending" });
 // render: capabilityId, requester, reasons, expiresAt,
-// and the display input: meta.redact.approvalInput?.(input) ?? input
+// and the display input — redact.approvalInput applied with the record's own
+// surface and actor; it throws rather than falling back to the raw input:
+//   redactApprovalInput(runtime.registry, record, { context: approverContext })
 
 // POST /admin/approvals/:id/decision   (behind requirePermission("approvals:decide"))
 await runtime.approvals.decide(id, {
@@ -134,7 +136,7 @@ Contract points that matter: `decide` and `markConsumed` are compare-and-set ope
 
 - [ ] Gates on operations where a human pause changes outcomes (not everything)
 - [ ] Approver endpoint behind real authorization
-- [ ] Approval card readable in ten seconds (`redact.approvalInput` set for rich inputs)
+- [ ] Approval card readable in ten seconds (`redact.approvalInput` set for rich inputs, rendered through `redactApprovalInput`)
 - [ ] Outcome posted back to the requesting conversation/UI
 - [ ] Production coordinator persistent + atomic; in-memory only in dev
 - [ ] Tests: pending → approve → resume → consumed; reject; expire; self-approval ([testing-capabilities.md](testing-capabilities.md))

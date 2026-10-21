@@ -92,3 +92,27 @@ export const capabilities = createCapabilityRegistry({
 });
 
 export const REFUND_INPUT = { orderId: "ord_42", amount: 100, reason: "damaged" };
+
+/**
+ * Surface-aware redaction: the manager's contact is personal data for external
+ * MCP clients and plain data for the internal console (aiSdk).
+ */
+export const managerLookup = createCapabilityRegistry({
+  customers: {
+    manager: base
+      .meta({
+        agent: {
+          description: "Who manages a customer.",
+          expose: { aiSdk: true, mcp: true, test: true },
+          sideEffect: "read",
+          risk: "high",
+          redact: {
+            output: (o, info) =>
+              info.surface === "mcp" ? { ...(o as { manager: unknown }), manager: "[redacted]" } : o,
+          },
+        },
+      })
+      .input(z.object({ id: z.string() }))
+      .handler(async () => ({ id: "c_1", manager: { name: "Priya", email: "priya@example.com" } })),
+  },
+});

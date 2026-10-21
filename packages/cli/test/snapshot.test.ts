@@ -70,6 +70,19 @@ describe("buildSnapshot", () => {
     expect(first?.retry).toEqual({ maxAttempts: 2, retryOn: true });
   });
 
+  it("reads a surface-aware hook as redacted, exactly like a one-argument one", () => {
+    const registry = registryOf({
+      a: procedure({
+        redact: {
+          output: (o, info) => (info.surface === "mcp" ? null : o),
+          approvalInput: (i, info) => ({ ...(i as object), surface: info.surface }),
+        },
+      }),
+    });
+
+    expect(buildSnapshot(registry).capabilities[0]?.redact).toEqual({ output: true, approvalInput: true });
+  });
+
   it("lists procedures without meta.agent as excluded, and staged capabilities as unexposed", () => {
     const registry = registryOf({
       plain: procedure(undefined),
