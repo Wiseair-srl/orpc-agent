@@ -7,7 +7,7 @@
 - Changesets-driven; independent package versions within one coordinated release train (a release publishes all changed packages together, keeping intra-repo peer ranges valid).
 - **Semver, strictly, from 1.0 onward**: major = a breaking change to any documented API; minor = additive; patch = fixes. A breaking change never ships in a minor, whatever the migration notes say — that was the pre-1.0 allowance and it is over.
 - The published surface is what the [reference](../reference/core.md) documents. Anything reachable but undocumented is not part of the contract.
-- Peer-dependency ranges are part of the contract: widening one is a minor, narrowing one is a major. Note that changesets bumps a package **major** when a package it peer-depends on is bumped at all — intended, since a peer range change is breaking downstream.
+- Peer-dependency ranges are part of the contract: widening one is a minor, narrowing one is a major. Changesets bumps a package **major** only when a package it peer-depends on moves **out of the declared range** (`onlyUpdatePeerDependentsWhenOutOfRange`): a core minor that still satisfies the CLI's `^` peer range leaves the CLI untouched, while a core major cascades. Before this option, 3.0.0 and 4.0.0 shipped minor-only changes as majors because the peer bump cascaded through the `linked` group.
 
 ## Release checklist
 
