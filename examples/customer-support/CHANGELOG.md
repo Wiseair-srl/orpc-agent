@@ -1,5 +1,12 @@
 # customer-support-example
 
+## 0.1.11
+
+### Patch Changes
+
+- Updated dependencies [071f152]
+  - @orpc-agent/core@5.1.0
+
 ## 0.1.10
 
 ### Patch Changes
