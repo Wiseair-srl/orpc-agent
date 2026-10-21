@@ -53,6 +53,22 @@ export type AgentInvocationInfo = {
   idempotencyKey: string;
 };
 
+/**
+ * Second argument of the `meta.redact` hooks. Built by the runtime from the
+ * authenticated execution frame (stage 13) or by `redactApprovalInput` from
+ * the stored approval record — never from model output or request JSON
+ * (SI-2, SI-3). Frozen: a hook reads it; nothing writes through it.
+ */
+export type RedactionInfo = {
+  /** The surface the invocation was made on; on resume, the recorded one. */
+  readonly surface: ExposureSurface;
+  readonly capabilityId: string;
+  /** A frozen copy of the requester. */
+  readonly actor: Actor;
+  /** The application's context for this call, by reference. */
+  readonly context: unknown;
+};
+
 export function isWellFormedActor(value: unknown): value is Actor {
   if (typeof value !== "object" || value === null) return false;
   const actor = value as Record<string, unknown>;

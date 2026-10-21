@@ -365,3 +365,33 @@ The backend owns governance across process boundaries. `core/client` is a browse
 Durability is an invocation journal seam, implemented by Postgres with atomic claims and fenced settlement. No lease expiry authorizes replay of a pending effect. Domain transaction/idempotency and reconciliation remain application responsibilities. Approval resume uses the original invocation/effect identity, fresh requester attributes, current exposure, current invocation policies, and the original approved input. Unknown responses are modeled explicitly.
 
 Runtime audit emitters support bounded request draining; sinks retain audit-before-effect behavior. The new required `AgentRuntime.drainAudit` method and stricter resume checks ship in a major release. This does not make effects, approval consumption, audit and receipts one transaction. See the [distributed guide](../guides/distributed.md) for the public contract and migration obligations.
+
+---
+
+## ADR-020: Redaction hooks are surface-aware
+
+**Status:** accepted, 5.1.0.
+
+**Context.** One deployment exposes the same procedures on two surfaces with two trust levels: external MCP clients, where personal data (who manages an account, who wrote a note, who spent credits) must stay redacted, and an internal console that reaches the same capabilities through the 5.0 gateway on the `aiSdk` surface and must see that data in clear. `redact.output` was `(output) => unknown` and the runtime called it with nothing else, so a hook could not tell who was asking. The only workarounds were two procedures per operation, or redaction decided by application context — an object the runtime does not own and could not vouch for.
+
+A second finding shaped the design: `redact.approvalInput` was documented, validated, and tracked by the drift gate, but no runtime stage ever called it. Approval surfaces applied it themselves, each with its own fallback to the raw input.
+
+**Decision.**
+
+1. **Both hooks take a second argument, `RedactionInfo`:** `{ surface, capabilityId, actor, context }` — the same vocabulary as `AgentInvocationInfo`, minus what a hook has no business with. TypeScript accepts a function that declares fewer parameters, so every existing one-argument hook compiles and behaves as before. Nothing is removed; this is a minor.
+
+2. **The surface is the frame's or the record's, never the caller's.** At stage 13 the runtime builds `info` from the execution frame, whose surface an adapter or the gateway set from its own configuration. On a resumed approval the frame carries the surface recorded at stage 8, so a request that came in on `mcp` is redacted as `mcp` whether the dashboard worker, the gateway, or the MCP resume tool triggers the execution — never `direct`, and never a value from request JSON or model input (SI-2, SI-3).
+
+3. **`info` is read-only.** The object is frozen and the actor is a frozen deep copy of its plain data; a hook cannot write through `info` into the frame. Context travels by reference: it is the application's own object, the one middleware and handlers already receive, and copying or freezing it would change the application's semantics. A write to a frozen object throws in strict mode and fails the execution closed; in sloppy mode it is ignored and the frame is untouched either way.
+
+4. **`approvalInput` gets a mechanism, not a stage.** `redactApprovalInput(registry, record, { context })` applies the display hook with the record's own surface and actor, returns the stored input when no hook is declared, and throws (`EXECUTION_FAILED` for a hook failure, `CAPABILITY_NOT_FOUND` for a capability that left the registry) instead of falling back to the raw input. The runtime still stores the full validated input at stage 8 because the hash binds it (SI-5) and resumption executes it; display redaction changes what approvers see, not what runs.
+
+**Alternatives considered.**
+- *Per-surface hook maps* (`redact: { output: { mcp: fn, aiSdk: fn } }`) — rejected: duplicates the common part of every hook, and either breaks the existing shape or adds a second one.
+- *Persisting a redacted `displayInput` on the approval record at stage 8* — deferred: every coordinator would need a new column (a DDL migration for Postgres deployments), and a record without the field would be indistinguishable from "no hook declared", which invites exactly the raw-input fallback this change removes. It can return when a coordinator schema bump is due for other reasons.
+- *Writing the surface into the application context* — rejected: the runtime does not own that object, and a hook reading it could not tell a runtime-written value from an application-written one.
+
+**Consequences.** Additive for every package: adapters, the gateway, and the testing runtime already set their surface and need no change. The CLI inventory still reduces hooks to presence flags (`redact: { output: true }`), so adopting the second argument produces no drift. Documentation now says who applies each hook: the runtime for `output`, the application through `redactApprovalInput` for `approvalInput`.
+
+**Unresolved.** Whether the inventory should record that a hook is surface-aware. Function arity is the only static signal and it is weak (`(o, ...rest)` and `(o, { surface })` read differently from `(o, info)`), so a snapshot field would either lie or need a declared flag — left open until a consumer needs the diff.
+

@@ -28,10 +28,13 @@ const REQUIRED = {
       "requireApproval",
       "unwrap",
       "createInMemoryApprovalCoordinator",
+      "redactApprovalInput",
       "CapabilityError",
     ],
     types: [
       "AgentMeta",
+      "RedactionInfo",
+      "ApprovalDisplaySource",
       "AgentCapability",
       "CapabilityRegistry",
       "AgentRuntime",

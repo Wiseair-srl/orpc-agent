@@ -1,4 +1,5 @@
 import { ORPCError } from "@orpc/server";
+import { redactApprovalInput } from "@orpc-agent/core";
 import type { Session } from "./context";
 import type { App } from "./app";
 
@@ -12,18 +13,17 @@ import type { App } from "./app";
 export async function listPendingApprovals(app: App, session: Session) {
   requirePermission(session, "approvals:decide");
   const pending = (await app.runtime.approvals.list?.({ status: "pending" })) ?? [];
-  return pending.map((record) => {
-    const meta = app.runtime.registry.get(record.capabilityId)?.meta;
-    return {
-      id: record.id,
-      capabilityId: record.capabilityId,
-      requestedBy: record.actor.displayName ?? record.actor.id,
-      reasons: record.reasons,
-      expiresAt: record.expiresAt,
-      // Approvers see the redacted display input; the hash binds the full one.
-      displayInput: meta?.redact?.approvalInput?.(record.input) ?? record.input,
-    };
-  });
+  const context = app.contextFor(session);
+  return pending.map((record) => ({
+    id: record.id,
+    capabilityId: record.capabilityId,
+    requestedBy: record.actor.displayName ?? record.actor.id,
+    reasons: record.reasons,
+    expiresAt: record.expiresAt,
+    // Approvers see the display input redacted for the surface the request
+    // came in on (the record's, never the caller's); the hash binds the full one.
+    displayInput: redactApprovalInput(app.runtime.registry, record, { context }),
+  }));
 }
 
 export async function decideApproval(

@@ -17,6 +17,7 @@ import type { ExecutionResult } from "./types";
 import { canonicalJson, hashInput } from "../canonical";
 import { createCompositeSignal, delay } from "./signals";
 import { normalizeExecutionError, summarizeIssues } from "./normalize-error";
+import { redactionInfo } from "../redaction";
 import {
   collectPolicies,
   evaluatePolicies,
@@ -912,13 +913,23 @@ async function executeGoverned<O>(frame: ExecutionFrame): Promise<ExecutionResul
   // (delegated; failures surfaced as OUTPUT_INVALID above — see ADR-001
   // addendum for the Q2 resolution).
 
-  // Stage 13 — output redaction. Redaction failures fail the execution: the
-  // procedure already ran.
+  // Stage 13 — output redaction. The hook sees the frame's surface — on a
+  // resumed execution the recorded one — and a frozen info object it cannot
+  // write through. Redaction failures fail the execution: the procedure
+  // already ran.
   let redacted: unknown = output;
   const redact = capability.meta.redact?.output;
   if (redact) {
     try {
-      redacted = redact(output);
+      redacted = redact(
+        output,
+        redactionInfo({
+          surface: frame.surface,
+          capabilityId: capability.id,
+          actor: frame.actor,
+          context: frame.context,
+        }),
+      );
     } catch (cause) {
       return finalizeFailed(
         frame,

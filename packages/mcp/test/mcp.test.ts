@@ -525,6 +525,54 @@ describe("approval UX", () => {
     expect(again.error.code).toBe("APPROVAL_CONSUMED");
   });
 
+  test("resumed through the resume tool, redact.output sees the recorded surface: mcp", async () => {
+    const seen: string[] = [];
+    const gated = createCapabilityRegistry({
+      credits: {
+        spend: base
+          .meta({
+            agent: {
+              description: "Spend credits.",
+              expose: { mcp: true, aiSdk: true },
+              sideEffect: "write",
+              risk: "high",
+              approval: { required: true },
+              redact: {
+                output: (o, info) => {
+                  seen.push(info.surface);
+                  return info.surface === "mcp" ? { ...(o as { spentBy: string }), spentBy: "[redacted]" } : o;
+                },
+              },
+            },
+          })
+          .input(z.object({ amount: z.number().positive() }))
+          .handler(async ({ input }) => ({ spentBy: "dana", amount: input.amount })),
+      },
+    });
+    const runtime = createAgentRuntime<object>({ governance: defineGovernance({ registry: gated }) });
+    const { client } = await connectedClient(runtime, {
+      createContext: () => ({ actor: dana, context: {} }),
+      approvals: { resumeTool: true },
+    });
+
+    const pending = parseEnvelope(
+      (await client.callTool({ name: "credits_spend", arguments: { amount: 5 } })) as never,
+    );
+    if (pending.status !== "approval-required") expect.unreachable();
+    expect(seen).toEqual([]);
+
+    await runtime.approvals.decide(pending.approvalId, { status: "approved", approver: priya });
+    const final = parseEnvelope(
+      (await client.callTool({
+        name: "approvals_resume",
+        arguments: { approvalId: pending.approvalId },
+      })) as never,
+    );
+    if (final.status !== "ok") expect.unreachable();
+    expect(final.data).toEqual({ spentBy: "[redacted]", amount: 5 });
+    expect(seen).toEqual(["mcp"]);
+  });
+
   test("another session's actor cannot resume: byte-identical to an unknown id", async () => {
     const runtime = fixture();
     const danaSession = await connectedClient(runtime, {

@@ -68,6 +68,8 @@ const requiredSymbols = [
   "requireApproval",
   "unwrap",
   "createInMemoryApprovalCoordinator",
+  "redactApprovalInput",
+  "RedactionInfo",
   "CapabilityError",
   "DescribeScope",
   "toJsonSchema",

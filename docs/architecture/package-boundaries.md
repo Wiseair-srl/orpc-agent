@@ -56,9 +56,10 @@ Rules (binding):
 agentProcedure, createCapabilityRegistry, defineGovernance,
 createAgentRuntime, definePolicy, composePolicies,
 allow, deny, hide, requireApproval, unwrap, defaultToolName,
-createInMemoryApprovalCoordinator, CapabilityError
+createInMemoryApprovalCoordinator, redactApprovalInput, CapabilityError
 types: AgentMeta, AgentCapability, CapabilityRegistry, AgentGovernance,
   AgentRuntime, AgentRuntimeOptions, Actor, AgentInvocationInfo,
+  RedactionInfo, ApprovalDisplaySource,
   ExecutionRequest, ExecutionResult, ExecutionOptions,
   CapabilityDescriptor, DescribeScope, AgentPolicy, PolicyDecision,
   PolicyPhase, PolicyRequest, ApprovalRequest, ApprovalRecord,

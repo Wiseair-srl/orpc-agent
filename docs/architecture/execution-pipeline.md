@@ -88,7 +88,7 @@ Multiple `require-approval` decisions merge into **one** approval request (all r
 Approval is required when stage 7 produced `require-approval` or `meta.approval.required` is `true`. The runtime:
 
 1. Serializes the validated input to canonical JSON (sorted keys) and hashes it (SHA-256). Unserializable input fails with `APPROVAL_UNSERIALIZABLE_INPUT`.
-2. Creates an `ApprovalRequest` via the configured coordinator, storing input, hash, actor, capability id, reasons, risk, side effect, and expiry.
+2. Creates an `ApprovalRequest` via the configured coordinator, storing input, hash, actor, capability id, surface, reasons, risk, side effect, and expiry. The stored input is the full validated value — the hash binds it (SI-5). What an approver *sees* is the application's call to [`redactApprovalInput`](../reference/core.md#redactapprovalinput), which applies `meta.redact.approvalInput` with the record's own surface and actor.
 3. Emits `capability.approval_requested`, ends the span with status ok (the execution is suspended, not failed), and returns `{ status: "approval-required", approval }`.
 
 If an **inline approval handler** is configured instead of a coordinator, the runtime awaits it here and continues or fails in the same call ([concepts/approvals.md](../concepts/approvals.md)).
@@ -99,7 +99,7 @@ If an **inline approval handler** is configured instead of a coordinator, the ru
 2. Re-hashes the stored input and compares with the stored hash — mismatch is `APPROVAL_INPUT_MISMATCH` (SI-5).
 3. Re-validates the stored input against the *current* schema (the deploy may have changed since approval).
 4. Marks the record consumed atomically (`markConsumed`) so an approval executes at most once.
-5. Opens a **new** execution (new `executionId`, linked to the approval id in events) and continues at stage 9, running as the **original actor**, with the approver recorded in `ctx.agent.approval`.
+5. Opens a **new** execution (new `executionId`, linked to the approval id in events) and continues at stage 9, running as the **original actor** on the **recorded surface**, with the approver recorded in `ctx.agent.approval`. Policies, `ctx.agent`, audit, and the redaction hooks all see the surface the request was made on — never the resuming caller's, and never `direct` for a request that came in on another surface.
 
 Failure codes on resume: `APPROVAL_PENDING`, `APPROVAL_REJECTED`, `APPROVAL_EXPIRED`, `APPROVAL_CONSUMED`, `APPROVAL_INPUT_MISMATCH`, `APPROVAL_SELF_APPROVAL`.
 
@@ -136,6 +136,8 @@ The handler's return value is validated against the output schema. Failure is `O
 ### Stage 13 — Redaction
 
 `meta.redact.output`, when defined, maps the validated output to its model-safe form (drop internal ids, mask PII). Redaction happens after validation — the contract is checked on the true output — and before any adapter serialization or trace attribute (SI-10).
+
+The hook receives a second argument, `RedactionInfo` (`{ surface, capabilityId, actor, context }`), so the same capability can redact on one surface and pass through on another. The surface is the frame's — set by the adapter or the gateway from its own configuration, and on a resumed approval the one recorded at stage 8 — never a value from model input or request JSON (SI-2, SI-3). The object is frozen and the actor is a frozen copy: a hook cannot write through it to the frame. A throwing hook fails the execution (`EXECUTION_FAILED`, `executedBeforeFailure: true`), exactly as a one-argument hook does ([ADR-020](decisions.md#adr-020-redaction-hooks-are-surface-aware)).
 
 ### Stages 14–15 — Completion
 

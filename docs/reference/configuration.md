@@ -39,7 +39,7 @@ Single page for every knob, its default, and where it applies. Precedence for ov
 | `approval.type` | none | Merged into the approval request's `types` |
 | `approval.expiresInMs` | runtime default | |
 | `redact.output` | identity | Stage 13 |
-| `redact.approvalInput` | identity | Approval UI display |
+| `redact.approvalInput` | identity | Approval UI display, via `redactApprovalInput` |
 | `policies` | `[]` | After runtime-level policies |
 | `adapters.*.toolName` | id with `.`→`_` | Naming only |
 

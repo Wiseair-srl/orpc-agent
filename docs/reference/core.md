@@ -228,6 +228,31 @@ Convenience for direct/workflow callers: returns `output` for `completed`, throw
 
 ---
 
+## `redactApprovalInput`
+
+```ts
+function redactApprovalInput(
+  registry: CapabilityRegistry,
+  record: ApprovalDisplaySource,   // Pick<ApprovalRecord, "capabilityId" | "surface" | "actor" | "input">
+  options: { context: unknown },
+): unknown;
+```
+
+**Purpose.** What an approval surface may render for a request or record: `meta.redact.approvalInput` applied to the stored input, with a `RedactionInfo` built from the record's own `surface` and `actor` — the values the runtime wrote at stage 8, never ones the caller supplies. `context` is whatever the rendering code holds, typically the approver's session context. Without a hook, the stored input is returned as is.
+
+**Fails closed.** A throwing hook raises a `CapabilityError` with code `EXECUTION_FAILED` (`exposeToModel: false`, the hook's error as `cause`); a capability no longer in the registry raises `CAPABILITY_NOT_FOUND`. Render nothing in either case — never fall back to the raw input. The integrity hash still binds the full input (SI-5): display redaction changes what approvers see, not what executes.
+
+```ts
+const pending = (await runtime.approvals.list?.({ status: "pending" })) ?? [];
+const cards = pending.map((record) => ({
+  id: record.id,
+  reasons: record.reasons,
+  displayInput: redactApprovalInput(runtime.registry, record, { context: approverContext }),
+}));
+```
+
+---
+
 ## Schema utilities
 
 ```ts
@@ -272,9 +297,16 @@ type AgentInvocationInfo = {
   correlationId?: string;
   idempotencyKey: string;        // stable per execution (survives runtime retries)
 };
+
+type RedactionInfo = {
+  readonly surface: ExposureSurface;   // the invocation's surface; on resume, the recorded one
+  readonly capabilityId: string;
+  readonly actor: Actor;               // a frozen copy of the requester
+  readonly context: unknown;           // the application's context for this call
+};
 ```
 
-`Actor` is the authenticated requesting entity — never the model (SI-3). `AgentInvocationInfo` is injected as `context.agent` at pipeline stage 11 so middleware and handlers can react to agent-originated calls.
+`Actor` is the authenticated requesting entity — never the model (SI-3). `AgentInvocationInfo` is injected as `context.agent` at pipeline stage 11 so middleware and handlers can react to agent-originated calls. `RedactionInfo` is the second argument of both `meta.redact` hooks ([metadata.md#redact](metadata.md#redact)): the runtime builds it at stage 13 from the execution frame, `redactApprovalInput` from the approval record. It is frozen — a hook reads it and cannot write through it to the frame.
 
 ## Distributed subpaths
 

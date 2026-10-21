@@ -86,3 +86,8 @@ Scope moves between tiers only via ADR (for architectural shifts) or maintainer 
 ## Distributed runtimes — 5.0
 
 Implemented: native oRPC governed gateway, portable descriptors/browser-safe clients, remote AI SDK composition, contextual presentation metadata, Postgres invocation journal, correlated approval continuation, static Zod bundling and request-scoped audit drain. See [distributed integration](docs/guides/distributed.md). Cloud process recovery, host run ownership and domain effect reconciliation remain application integration work.
+
+## Surface-aware redaction — 5.1
+
+`redact.output` and `redact.approvalInput` receive a read-only `RedactionInfo` (`surface`, `capabilityId`, `actor`, `context`), so one capability can return personal data in clear to an internal console and redact it for external MCP clients. The surface is the frame's or the approval record's, never the model's ([ADR-020](docs/architecture/decisions.md#adr-020-redaction-hooks-are-surface-aware)). `redactApprovalInput` is the one way approval surfaces apply the display hook.
+

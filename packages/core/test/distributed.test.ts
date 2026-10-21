@@ -11,10 +11,11 @@ import { createCapabilityGateway, createInMemoryInvocationJournal } from "../src
 import { createCapabilityClient } from "../src/client/index";
 import { createHttpCapabilityClient } from "../src/http";
 import type { Actor, AgentInvocationInfo } from "../src/types";
+import type { AgentMeta } from "../src/meta";
 import type { AgentAuditEvent } from "../src/events";
 import type { CapabilityGatewayOperation } from "../src/server/index";
 
-function fixture({ approval = false, handler, audit, requestTimeoutMs }: { approval?: boolean; handler?: () => Promise<unknown>; audit?: (event: AgentAuditEvent) => Promise<void>; requestTimeoutMs?: number } = {}) {
+function fixture({ approval = false, handler, audit, requestTimeoutMs, redact }: { approval?: boolean; handler?: () => Promise<unknown>; audit?: (event: AgentAuditEvent) => Promise<void>; requestTimeoutMs?: number; redact?: AgentMeta["redact"] } = {}) {
   const invocations: AgentInvocationInfo[] = [];
   const actor: Actor = { id: "one", kind: "user", attributes: { role: "new" } };
   let namespace = "tenant-one";
@@ -24,7 +25,7 @@ function fixture({ approval = false, handler, audit, requestTimeoutMs }: { appro
   const coordinator = createInMemoryApprovalCoordinator();
   const journal = createInMemoryInvocationJournal();
   const operation = agentProcedure(os.$context<{ agent?: AgentInvocationInfo }>())
-    .meta({ agent: { description: "Write a resource", expose: { aiSdk: true }, sideEffect: "write", risk: "high", approval: { required: approval }, adapters: { aiSdk: { toolName: "resource_write" } } } })
+    .meta({ agent: { description: "Write a resource", expose: { aiSdk: true }, sideEffect: "write", risk: "high", approval: { required: approval }, adapters: { aiSdk: { toolName: "resource_write" } }, ...(redact ? { redact } : {}) } })
     .input(z.object({ resourceId: z.string() }))
     .handler(async ({ input, context }) => { invocations.push(context.agent!); return handler ? handler() : { resourceId: input.resourceId, at: new Date("2026-09-13T00:00:00Z") }; });
   const governance = defineGovernance({ registry: createCapabilityRegistry({ resource: { write: operation } }) });
@@ -109,6 +110,18 @@ describe("distributed governance", () => {
     expect(f.invocations).toHaveLength(1);
     expect(f.invocations[0]).toMatchObject({ correlationId: "run-1", actor: { id: "one", attributes: { role: "fresh" } }, approval: { approver: { id: "manager" } } });
     expect(f.invocations[0]?.idempotencyKey).toMatch(/^idk_[a-f0-9]{64}$/);
+  });
+
+  test("suspended on aiSdk and resumed through the gateway, redact.output runs with the recorded surface", async () => {
+    const seen: string[] = [];
+    const f = fixture({ approval: true, redact: { output: (o, info) => { seen.push(info.surface); return { ...(o as object), surface: info.surface }; } } });
+    const result = await f.client().invoke("resource.write", { resourceId: "a" }, { invocationId: "1" });
+    if (result.status !== "approval-required") throw new Error("Expected approval");
+    expect(seen).toEqual([]);
+    await f.coordinator.decide(result.approval.id, { status: "approved", approver: { id: "manager", kind: "user" } });
+    const resumed = await f.client().resumeApproval(result.approval.id, { invocationId: "1" });
+    expect(resumed).toMatchObject({ status: "completed", output: { resourceId: "a", surface: "aiSdk" } });
+    expect(seen).toEqual(["aiSdk"]);
   });
 
   test("changed deployment revision blocks stale approval before consumption", async () => {

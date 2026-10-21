@@ -9,7 +9,7 @@ Five places want to see execution data, with five different trust levels. The de
 | Model / adapter results | Validated output **after** `redact.output`; model-safe errors only | `redact.output`, output schema design |
 | Traces | Ids, classifications, durations, outcome, error code — **no payloads** | Custom span attributes (deliberate opt-in) |
 | Audit events | Envelope + hashes + decisions — **no payloads** | Custom sinks may enrich; on you |
-| Approval UIs | `redact.approvalInput(input)` if defined, else validated input | `redact.approvalInput` |
+| Approval UIs | `redactApprovalInput(registry, record, { context })`: `redact.approvalInput` if defined, else the stored input | `redact.approvalInput` |
 | Server logs | Everything, including `cause` | Your logging discipline |
 
 ### Model-visible results
@@ -30,6 +30,19 @@ redact: {
 
 Runs at pipeline stage 13, after output validation, before any adapter serialization — the unredacted value never leaves the runtime. One function per capability keeps review local: the reviewer of `customers.get` sees exactly what models may see.
 
+Both hooks take a second argument, `RedactionInfo` — `{ surface, capabilityId, actor, context }` — so one capability can serve two trust levels. A deployment that exposes the same procedures to external MCP clients and to an internal console through the `aiSdk` surface keeps personal data out of the first and in clear for the second:
+
+```ts
+redact: {
+  output: (o, { surface }) => {
+    const c = o as Customer;
+    return surface === "mcp" ? { ...c, manager: undefined } : c;
+  },
+}
+```
+
+The surface comes from the authenticated frame — on a resumed approval, the surface recorded when the request was made — never from the model or the request body, so a model cannot talk its way onto the lenient branch (SI-2, SI-3). `info` is frozen; a hook reads the frame and cannot alter it.
+
 ### Traces
 
 Core writes only the safe attribute set (`orpc_agent.capability_id`, `.surface`, `.outcome`, `.error_code`, …; full list in [reference/events.md](../reference/events.md#recommended-attributes)). Raw inputs/outputs are structurally absent — there is no configuration flag that turns them on globally, by design; adding payloads to spans requires writing code in your own tracing adapter, which is the review point. Actor *id* on spans is off by default in the OpenTelemetry adapter (`actorIdAttribute: false`) because trace backends often have broader access than audit stores.
@@ -40,7 +53,7 @@ Events carry `inputHash`, never input (SI-10). The hash lets you *prove* what wa
 
 ### Approval interfaces
 
-Approvers need enough to decide — not everything. `redact.approvalInput` shapes the display (`{ orderId, amount, reason }`, not the customer's full record); the integrity hash still binds the **full** validated input, so display redaction never weakens SI-5. If displayed data would be so thin the approver can't decide, that's a signal the capability's input carries data it shouldn't.
+Approvers need enough to decide — not everything. `redact.approvalInput` shapes the display (`{ orderId, amount, reason }`, not the customer's full record); the integrity hash still binds the **full** validated input, so display redaction never weakens SI-5. Render it through `redactApprovalInput(registry, record, { context })`, which applies the hook with the record's own surface and actor and throws instead of falling back to the raw input when the hook fails. If displayed data would be so thin the approver can't decide, that's a signal the capability's input carries data it shouldn't.
 
 ### Error messages
 

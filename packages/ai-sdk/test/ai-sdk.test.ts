@@ -118,6 +118,45 @@ describeAdapterConformance("ai-sdk", async (): Promise<ConformanceHarness> => {
 // Adapter-specific behavior
 // ---------------------------------------------------------------------------
 
+describe("surface-aware redaction over the ai-sdk adapter", () => {
+  test("a hook that redacts on mcp passes through here: the adapter's surface is aiSdk", async () => {
+    const seen: string[] = [];
+    const base = agentProcedure(os.$context<object>());
+    const registry = createCapabilityRegistry({
+      customers: {
+        manager: base
+          .meta({
+            agent: {
+              description: "Who manages a customer.",
+              expose: { aiSdk: true, mcp: true },
+              sideEffect: "read",
+              risk: "high",
+              redact: {
+                output: (o, info) => {
+                  seen.push(info.surface);
+                  return info.surface === "mcp" ? { ...(o as { manager: unknown }), manager: "[redacted]" } : o;
+                },
+              },
+            },
+          })
+          .input(z.object({ id: z.string() }))
+          .handler(async () => ({ id: "c_1", manager: { name: "Priya", email: "priya@example.com" } })),
+      },
+    });
+    const runtime = createAgentRuntime<object>({ governance: defineGovernance({ registry }) });
+    const tools = await toAISDKTools(runtime, { actor, context });
+    const result = (await tools["customers_manager"]!.execute!({ id: "c_1" } as never, {
+      toolCallId: "call_1",
+      messages: [],
+    })) as AISDKToolResult;
+    expect(result).toEqual({
+      status: "ok",
+      data: { id: "c_1", manager: { name: "Priya", email: "priya@example.com" } },
+    });
+    expect(seen).toEqual(["aiSdk"]);
+  });
+});
+
 describe("per-request tool sets", () => {
   const hideForDana = definePolicy(
     "hide-for-dana",

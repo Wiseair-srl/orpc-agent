@@ -113,6 +113,14 @@ test("model-visible output is redacted", async () => {
   expect(r.output.email).toMatch(/\*\*\*/);
 });
 
+test("the same capability redacts on mcp and passes through on aiSdk", async () => {
+  const t = makeRuntime();
+  const mcp = await t.invoke("customers.manager", { id: "c1" }, { surface: "mcp" });
+  expect(mcp.output.manager).toBe("[redacted]");
+  const console = await t.invoke("customers.manager", { id: "c1" }, { surface: "aiSdk" });
+  expect(console.output.manager.email).toBe("priya@example.com");
+});
+
 test("undeclared handler errors are concealed", async () => {
   const t = makeRuntime({ overrides: { "orders.search": async () => { throw new Error("pg: secret_table"); } } });
   const r = await t.invoke("orders.search", { query: "x" });

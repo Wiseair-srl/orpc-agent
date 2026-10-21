@@ -7,7 +7,7 @@ import {
   fakeActor,
   testClock,
 } from "../src/index";
-import { REFUND_INPUT, capabilities, orgIsolation } from "./fixtures";
+import { REFUND_INPUT, capabilities, managerLookup, orgIsolation } from "./fixtures";
 
 function makeRuntime(
   overrides: Partial<Parameters<typeof createAgentTestRuntime>[0]> = {},
@@ -135,6 +135,17 @@ describe("suite 4 — redaction and error faces (SI-9, SI-10)", () => {
     if (r.status !== "completed") expect.unreachable();
     expect(r.output.paymentMethods).toBeUndefined();
     expect(r.output.email).toMatch(/\*\*\*/);
+  });
+
+  test("redaction hooks see the surface of the call: redacted on mcp, in clear on aiSdk", async () => {
+    const t = createAgentTestRuntime({ registry: managerLookup });
+    const mcp = await t.invoke<{ manager: unknown }>("customers.manager", { id: "c_1" }, { surface: "mcp" });
+    if (mcp.status !== "completed") expect.unreachable();
+    expect(mcp.output.manager).toBe("[redacted]");
+
+    const console_ = await t.invoke<{ manager: unknown }>("customers.manager", { id: "c_1" }, { surface: "aiSdk" });
+    if (console_.status !== "completed") expect.unreachable();
+    expect(console_.output.manager).toEqual({ name: "Priya", email: "priya@example.com" });
   });
 
   test("undeclared handler errors are concealed", async () => {

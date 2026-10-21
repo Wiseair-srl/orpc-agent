@@ -1,4 +1,4 @@
-import type { ExposureSurface, RiskLevel, SideEffect } from "./types";
+import type { ExposureSurface, RedactionInfo, RiskLevel, SideEffect } from "./types";
 import type { AgentPolicy } from "./policy/types";
 import type { CapabilityError } from "./errors";
 
@@ -54,12 +54,20 @@ export type AgentMeta = {
     expiresInMs?: number;
   };
 
-  /** Redaction hooks. Applied per the pipeline (stages 8 and 13). */
+  /**
+   * Redaction hooks. Both receive a frozen `RedactionInfo` (surface,
+   * capabilityId, actor, context) as a second argument, so one capability can
+   * redact on one surface and pass through on another; one-argument hooks
+   * keep working. Must be pure and total: a throw fails closed.
+   */
   redact?: {
-    /** Maps validated output to its model-safe form before adapter serialization. */
-    output?: (output: unknown) => unknown;
-    /** Maps validated input to what approval UIs may display. */
-    approvalInput?: (input: unknown) => unknown;
+    /** Maps validated output to its model-safe form. Applied by the runtime at stage 13. */
+    output?: (output: unknown, info: RedactionInfo) => unknown;
+    /**
+     * Maps the stored input to what approval surfaces may display. Applied by
+     * the application through `redactApprovalInput`; the hash binds the full input.
+     */
+    approvalInput?: (input: unknown, info: RedactionInfo) => unknown;
   };
 
   /** Capability-scoped policies, evaluated after runtime-level policies. */
